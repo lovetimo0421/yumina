@@ -1,0 +1,307 @@
+/* Yumina Assistant - hide message buttons, style name yellow, disable avatar click */
+#chat .mes[ch_name="Yumina Assistant"] .mes_button {
+    display: none;
+}
+
+#chat .mes[ch_name="Yumina Assistant"] .name_text {
+    color: var(--golden);
+}
+
+#chat .mes[ch_name="Yumina Assistant"] .avatar {
+    pointer-events: none;
+    cursor: default;
+}
+
+.welcomePanel {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px;
+    width: 100%;
+}
+
+.welcomePanel:has(.showMoreChats) {
+    padding-bottom: 5px;
+}
+
+.welcomePanel.recentHidden .welcomeRecent,
+.welcomePanel.recentHidden .recentChatsTitle,
+.welcomePanel.recentHidden .hideRecentChats,
+.welcomePanel:not(.recentHidden) .showRecentChats {
+    display: none;
+}
+
+body.bubblechat .welcomePanel {
+    border-radius: 10px;
+    background-color: var(--SmartThemeBotMesBlurTintColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    margin-bottom: 5px;
+}
+
+body.hideChatAvatars .welcomePanel .recentChatList .recentChat .avatar {
+    display: none;
+}
+
+.welcomePanel .welcomeHeader {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.welcomePanel .recentChatsTitle {
+    flex-grow: 1;
+    font-size: calc(var(--mainFontSize) * 1.15);
+    font-weight: 600;
+}
+
+.welcomePanel .welcomeHeaderTitle {
+    margin: 0;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.welcomePanel .welcomeHeaderVersionDisplay {
+    font-size: calc(var(--mainFontSize) * 1.3);
+    font-weight: 600;
+    flex-grow: 1;
+}
+
+.welcomePanel .welcomeHeaderLogo {
+    height: 40px;
+    width: auto;
+    max-width: 200px;
+    object-fit: contain;
+}
+
+.welcomePanel .welcomeHeaderWordLogo {
+    height: 29px;
+    width: auto;
+    max-width: 242px;
+    object-fit: contain;
+    filter: brightness(1.2);
+}
+
+.welcomePanel .welcomeShortcuts {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.welcomePanel .welcomeShortcuts .welcomeShortcutsSeparator {
+    margin: 0 2px;
+    color: var(--SmartThemeBorderColor);
+    font-size: calc(var(--mainFontSize) * 1.1);
+}
+
+.welcomeRecent .recentChatList {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 2px;
+}
+
+.welcomeRecent .welcomePanelLoader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+}
+
+.welcomePanel .recentChatList .noRecentChat {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: baseline;
+    gap: 5px;
+    padding: 10px;
+}
+
+.welcomeRecent .recentChatList .recentChat {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    gap: 10px;
+    border: 1px solid var(--SmartThemeBorderColor);
+}
+
+.welcomeRecent .recentChatList .recentChat.pinned {
+    border-color: color-mix(in srgb, var(--SmartThemeAccent) 60%, var(--SmartThemeBorderColor));
+    background: color-mix(in srgb, var(--SmartThemeAccent) 12%, transparent);
+}
+
+.welcomeRecent .recentChatList .recentChat .recentChatPinnedIcon {
+    margin-left: 6px;
+    font-size: 0.85em;
+    color: var(--SmartThemeAccent);
+}
+
+.welcomeRecent .recentChatList .recentChat .avatar {
+    flex: 0;
+    align-self: center;
+}
+
+.welcomeRecent .recentChatList .recentChat:hover {
+    background-color: var(--white30a);
+}
+
+.welcomeRecent .recentChatList .recentChat .recentChatInfo {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    flex-grow: 1;
+    overflow: hidden;
+    justify-content: center;
+    align-self: flex-start;
+}
+
+.welcomeRecent .recentChatList .recentChat .chatNameContainer {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: calc(var(--mainFontSize) * 1);
+    gap: 5px;
+}
+
+.welcomeRecent .recentChatList .recentChat .chatNameContainer .chatName {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    flex: 1;
+}
+
+.welcomeRecent .recentChatList .recentChat .chatActions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.welcomeRecent .recentChatList .recentChat .chatActions button {
+    margin: 0;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+
+.welcomeRecent .recentChatList .recentChat .chatMessageContainer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+    font-size: calc(var(--mainFontSize) * 0.85);
+}
+
+.welcomeRecent .recentChatList .recentChat .chatMessageContainer .chatMessage {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+body.big-avatars .welcomeRecent .recentChatList .recentChat .chatMessageContainer .chatMessage {
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+}
+
+.welcomeRecent .recentChatList .recentChat .chatStats {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: baseline;
+    align-self: flex-start;
+    gap: 5px;
+}
+
+.welcomeRecent .recentChatList .recentChat .chatStats .counterBlock {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 5px;
+}
+
+.welcomeRecent .recentChatList .recentChat .chatStats .counterBlock::after {
+    content: "|";
+    color: var(--SmartThemeBorderColor);
+    font-size: calc(var(--mainFontSize) * 0.95);
+}
+
+.welcomeRecent .recentChatList .recentChat.hidden {
+    display: none;
+}
+
+.welcomeRecent .recentChatList .showMoreChats {
+    align-self: center;
+}
+
+.welcomeRecent .recentChatList .showMoreChats.rotated {
+    transform: rotate(180deg);
+}
+
+.recentChatContextMenu {
+    position: fixed;
+    z-index: 4000;
+    min-width: 190px;
+    padding: 8px;
+    border-radius: 12px;
+    background: rgba(20, 20, 22, 0.98);
+    border: 1px solid var(--SmartThemeBorderColor);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.recentChatContextMenu.open {
+    display: flex;
+}
+
+.recentChatContextMenu .recentChatContextAction {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    width: 100%;
+    justify-content: flex-start;
+    font-size: 0.95em;
+}
+
+.recentChatContextMenu .recentChatContextAction i {
+    width: 18px;
+    text-align: center;
+}
+
+.recentChatContextMenu .recentChatContextAction.is-active {
+    background: color-mix(in srgb, var(--SmartThemeAccent) 20%, transparent);
+    color: var(--SmartThemeAccent);
+}
+
+.recentChatContextMenu .recentChatContextAction.danger {
+    color: var(--SmartThemeErrorTextColor, #ff6b6b);
+}
+
+.recentChatContextMenu .recentChatContextAction.danger:hover {
+    background: color-mix(in srgb, var(--SmartThemeErrorTextColor, #ff6b6b) 20%, transparent);
+}
+
+@media screen and (max-width: 1000px) {
+    .welcomePanel .welcomeShortcuts a span {
+        display: none;
+    }
+}

@@ -1,0 +1,16 @@
+{
+  "display_name": "Yumina Engine",
+  "loading_order": 100,
+  "requires": [],
+  "optional": [],
+  "js": "dist/index.js",
+  "css": "dist/index.css",
+  "author": "BetterTavern",
+  "version": "4.6.5",
+  "homePage": "",
+  "auto_update": false,
+  "minimum_client_version": "1.12.13",
+  "i18n": {
+    "en": "i18n/en.json"
+  }
+}

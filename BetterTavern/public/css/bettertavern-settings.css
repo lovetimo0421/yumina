@@ -1,0 +1,782 @@
+/**
+ * BetterTavern Settings Modal Styles
+ * Full-screen modal for user settings (Account, Backgrounds, Data, Subscription)
+ */
+
+/* ============================================
+   MODAL OVERLAY & CONTAINER
+   ============================================ */
+
+.settings-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.settings-modal.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.settings-modal.hidden {
+    display: none;
+}
+
+.settings-container {
+    display: flex;
+    width: 90%;
+    max-width: 900px;
+    height: 80%;
+    max-height: 700px;
+    background: var(--SmartThemeBlurTintColor, rgba(30, 30, 30, 0.95));
+    border: 1px solid var(--SmartThemeBorderColor, rgba(100, 100, 100, 0.3));
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    transform: scale(0.95) translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.settings-modal.open .settings-container {
+    transform: scale(1) translateY(0);
+}
+
+/* ============================================
+   LEFT MENU SIDEBAR
+   ============================================ */
+
+.settings-menu {
+    width: 220px;
+    min-width: 220px;
+    background: rgba(0, 0, 0, 0.2);
+    border-right: 1px solid var(--SmartThemeBorderColor, rgba(100, 100, 100, 0.2));
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+}
+
+.settings-menu-header {
+    font-size: 1.4em;
+    font-weight: 600;
+    padding: 0 20px 20px 20px;
+    color: var(--SmartThemeBodyColor, #ddd);
+    border-bottom: 1px solid var(--SmartThemeBorderColor, rgba(100, 100, 100, 0.2));
+    margin-bottom: 10px;
+}
+
+.settings-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    margin: 4px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor, #aaa);
+    font-size: 0.95em;
+    transition: all 0.2s ease;
+}
+
+.settings-menu-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--SmartThemeBodyColor, #fff);
+}
+
+.settings-menu-item.active {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--SmartThemeBodyColor, #fff);
+    font-weight: 500;
+}
+
+.settings-menu-item i {
+    width: 20px;
+    text-align: center;
+    font-size: 1.1em;
+    opacity: 0.8;
+}
+
+.settings-menu-item.active i {
+    opacity: 1;
+}
+
+/* ============================================
+   CONTENT AREA
+   ============================================ */
+
+.settings-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.settings-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--SmartThemeBodyColor, #aaa);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.4em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.settings-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--SmartThemeBodyColor, #fff);
+}
+
+/* ============================================
+   SECTIONS
+   ============================================ */
+
+.settings-section {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    padding: 25px 30px;
+    overflow-y: auto;
+    animation: fadeIn 0.2s ease;
+}
+
+.settings-section.active {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateX(10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.settings-section-title {
+    font-size: 1.3em;
+    font-weight: 600;
+    color: var(--SmartThemeBodyColor, #fff);
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor, rgba(100, 100, 100, 0.2));
+}
+
+/* ============================================
+   ACCOUNT SECTION - PROFILE HEADER
+   ============================================ */
+
+.settings-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+}
+
+.settings-avatar-large {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 3px solid var(--SmartThemeBorderColor, rgba(100, 100, 100, 0.3));
+}
+
+.settings-avatar-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.settings-avatar-large i {
+    font-size: 3em;
+    color: var(--SmartThemeBodyColor, #666);
+}
+
+.settings-profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.settings-profile-info input[type="text"] {
+    font-size: 1.3em;
+    font-weight: 500;
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--SmartThemeBorderColor, rgba(100, 100, 100, 0.3));
+    border-radius: 8px;
+    color: var(--SmartThemeBodyColor, #fff);
+    width: 100%;
+    max-width: 300px;
+}
+
+.settings-profile-info input[type="text"]:focus {
+    outline: none;
+    border-color: var(--SmartThemeQuoteColor, #6b8afd);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.settings-avatar-upload {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--SmartThemeBorderColor, rgba(100, 100, 100, 0.3));
+    border-radius: 8px;
+    color: var(--SmartThemeBodyColor, #aaa);
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+    width: fit-content;
+}
+
+.settings-avatar-upload:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--SmartThemeBodyColor, #fff);
+}
+
+.settings-avatar-upload input[type="file"] {
+    display: none;
+}
+
+/* ============================================
+   FORM FIELDS
+   ============================================ */
+
+.settings-field {
+    margin-bottom: 25px;
+}
+
+.settings-field label {
+    display: block;
+    font-size: 0.95em;
+    font-weight: 500;
+    color: var(--SmartThemeBodyColor, #ccc);
+    margin-bottom: 8px;
+}
+
+.settings-field select,
+.settings-field textarea,
+.settings-field input[type="text"] {
+    width: 100%;
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--SmartThemeBorderColor, rgba(100, 100, 100, 0.3));
+    border-radius: 8px;
+    color: var(--SmartThemeBodyColor, #fff);
+    font-size: 0.95em;
+    font-family: inherit;
+}
+
+.settings-field select:focus,
+.settings-field textarea:focus,
+.settings-field input[type="text"]:focus {
+    outline: none;
+    border-color: var(--SmartThemeQuoteColor, #6b8afd);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.settings-field textarea {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.settings-field small {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.85em;
+    color: var(--SmartThemeBodyColor, #888);
+    opacity: 0.7;
+}
+
+.settings-field select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 35px;
+}
+
+/* ============================================
+   DIVIDER
+   ============================================ */
+
+.settings-divider {
+    height: 1px;
+    background: var(--SmartThemeBorderColor, rgba(100, 100, 100, 0.2));
+    margin: 25px 0;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.settings-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.settings-btn {
+    padding: 10px 24px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(100, 100, 100, 0.3));
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--SmartThemeBodyColor, #fff);
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.settings-btn.secondary {
+    background: transparent;
+    color: var(--SmartThemeBodyColor, #aaa);
+}
+
+.settings-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--SmartThemeBodyColor, #fff);
+}
+
+.settings-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   PLACEHOLDER SECTIONS
+   ============================================ */
+
+.placeholder-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: var(--SmartThemeBodyColor, #666);
+    gap: 15px;
+}
+
+.placeholder-content i {
+    opacity: 0.3;
+}
+
+.placeholder-content h3 {
+    font-size: 1.3em;
+    font-weight: 500;
+    margin: 0;
+    color: var(--SmartThemeBodyColor, #888);
+}
+
+.placeholder-content p {
+    margin: 0;
+    opacity: 0.6;
+}
+
+/* ============================================
+   BACKGROUNDS SECTION
+   ============================================ */
+
+#settings-backgrounds-container {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Override backgrounds panel styles when inside settings */
+#settings-backgrounds-container .background_controls {
+    padding: 0;
+    margin-bottom: 15px;
+}
+
+#settings-backgrounds-container .background_gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    padding: 0;
+}
+
+#settings-backgrounds-container .bg_example {
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    aspect-ratio: 16/9;
+    position: relative;
+}
+
+#settings-backgrounds-container .bg_example:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+#settings-backgrounds-container .bg_example.selected {
+    outline: 3px solid var(--SmartThemeQuoteColor, #6b8afd);
+}
+
+#settings-backgrounds-container .background-upload-container {
+    margin-bottom: 20px;
+}
+
+/* ============================================
+   API CONNECTIONS SECTION
+   ============================================ */
+
+#settings-api-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 5px;
+}
+
+#settings-api-container .settings-api-content {
+    max-width: 100%;
+}
+
+/* Style adjustments for API panel elements inside settings */
+#settings-api-container .range-block,
+#settings-api-container .inline-drawer {
+    background: transparent;
+    margin-bottom: 15px;
+}
+
+#settings-api-container .range-block-title {
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+#settings-api-container select,
+#settings-api-container input[type="text"],
+#settings-api-container input[type="password"] {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(100, 100, 100, 0.3));
+    background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.2));
+    color: var(--SmartThemeBodyColor, #fff);
+}
+
+#settings-api-container .menu_button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+#settings-api-container .menu_button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================
+   EMBEDDED PANELS (moved from original location)
+   These styles ensure the original panels fit properly
+   when moved into the Settings modal
+   ============================================ */
+
+/*
+ * Base styles for embedded panels
+ * Override drawer-content defaults while preserving internal layout
+ */
+.settings-embedded-panel,
+.settings-embedded-panel.drawer-content,
+.settings-embedded-panel.closedDrawer {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 300px !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    background: rgba(0, 0, 0, 0.15) !important;
+    z-index: auto !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    overflow: hidden !important;
+}
+
+/* Hide drawer-specific elements that don't apply in settings */
+.settings-embedded-panel .drawer-icon,
+.settings-embedded-panel .drawer-toggle,
+.settings-embedded-panel .drag-grabber {
+    display: none !important;
+}
+
+/* ============================================
+   API PANEL STYLING
+   ============================================ */
+
+#rm_api_block.settings-embedded-panel {
+    display: block !important;
+    padding: 15px !important;
+}
+
+#rm_api_block.settings-embedded-panel .scrollableInner {
+    max-height: none !important;
+    height: auto !important;
+    overflow-y: visible !important;
+    padding: 0 !important;
+}
+
+/* Clean up API panel layout */
+#rm_api_block.settings-embedded-panel .range-block {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+#rm_api_block.settings-embedded-panel .range-block-title {
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+#rm_api_block.settings-embedded-panel .inline-drawer {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+#rm_api_block.settings-embedded-panel .inline-drawer-header {
+    padding: 10px 12px;
+}
+
+#rm_api_block.settings-embedded-panel .inline-drawer-content {
+    padding: 0 12px 12px 12px;
+}
+
+/* ============================================
+   BACKGROUNDS PANEL STYLING
+   ============================================ */
+
+#Backgrounds.settings-embedded-panel {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Header section */
+#Backgrounds.settings-embedded-panel #bg-header-fixed {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px 8px 0 0;
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#Backgrounds.settings-embedded-panel .bg-header-row-1 {
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#Backgrounds.settings-embedded-panel .bg-header-row-1 h3 {
+    display: none; /* Hide duplicate title since section already has one */
+}
+
+#Backgrounds.settings-embedded-panel .bg-header-row-2 {
+    margin-top: 10px;
+}
+
+#Backgrounds.settings-embedded-panel #bg-filter {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Tabs section */
+#Backgrounds.settings-embedded-panel #bg_tabs {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1;
+    min-height: 300px;
+    overflow: hidden;
+}
+
+#Backgrounds.settings-embedded-panel #bg_tabs .bg_tabs_list {
+    padding: 10px;
+    gap: 8px;
+    margin: 0;
+}
+
+#Backgrounds.settings-embedded-panel #bg_tabs .bg_tab_button {
+    min-width: 6em;
+    padding: 8px 16px;
+}
+
+#Backgrounds.settings-embedded-panel #bg_tabs .bg_tab_button a {
+    padding: 0;
+}
+
+/* Background grid */
+#Backgrounds.settings-embedded-panel #bg_tabs .bg_tab_panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+#Backgrounds.settings-embedded-panel #bg_menu_content,
+#Backgrounds.settings-embedded-panel #bg_custom_content {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 12px !important;
+}
+
+#Backgrounds.settings-embedded-panel .bg_example {
+    aspect-ratio: 16/9;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    outline: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+#Backgrounds.settings-embedded-panel .bg_example:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    outline-color: rgba(255, 255, 255, 0.3);
+}
+
+#Backgrounds.settings-embedded-panel .bg_example.selected-background {
+    outline: 3px solid var(--SmartThemeQuoteColor, #6b8afd);
+}
+
+/* Hide zoom controls in embedded view */
+#Backgrounds.settings-embedded-panel .heading-controls {
+    display: none;
+}
+
+/* Ensure form elements fit the container width */
+.settings-embedded-panel select,
+.settings-embedded-panel input[type="text"],
+.settings-embedded-panel input[type="password"],
+.settings-embedded-panel input[type="number"] {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Button styling in embedded panels */
+.settings-embedded-panel .menu_button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+/* ============================================
+   RESPONSIVE — TABLET (600–1000px)
+   ============================================ */
+
+@media (min-width: 600px) and (max-width: 1000px) {
+    .settings-menu {
+        width: 180px;
+        min-width: 180px;
+    }
+
+    .settings-menu-item {
+        padding: 12px 16px;
+    }
+}
+
+/* ============================================
+   RESPONSIVE — PHONE (<600px)
+   ============================================ */
+
+@media (max-width: 599px) {
+    .settings-container {
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        max-height: none;
+        flex-direction: column;
+        border-radius: 0;
+    }
+
+    .settings-menu {
+        width: 100%;
+        min-width: 100%;
+        flex-direction: row;
+        padding: 10px;
+        overflow-x: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--SmartThemeBorderColor, rgba(100, 100, 100, 0.2));
+    }
+
+    .settings-menu-header {
+        display: none;
+    }
+
+    /* Compact horizontal tab bar with labels on phone */
+    .settings-menu-item {
+        flex-shrink: 0;
+        padding: 10px 14px;
+        margin: 0 2px;
+        white-space: nowrap;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 0.75em;
+        border-radius: 8px;
+    }
+
+    .settings-menu-item i {
+        margin: 0;
+        font-size: 1.3em;
+    }
+
+    .settings-content {
+        flex: 1;
+    }
+
+    .settings-section {
+        padding: 20px 15px;
+    }
+
+    .settings-profile-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .settings-profile-info {
+        align-items: center;
+    }
+
+    .settings-profile-info input[type="text"] {
+        text-align: center;
+    }
+}

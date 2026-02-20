@@ -1,0 +1,2603 @@
+/**
+ * BetterTavern UI Redesign
+ *
+ * This file contains CSS overrides for the UI redesign.
+ * It does NOT modify the original style.css - all changes are additive.
+ * To revert: simply remove this file and its import from index.html
+ *
+ * Phase 1: Hide unused panels
+ * Phase 2: Transform horizontal nav to vertical left sidebar
+ */
+
+/* =============================================================================
+   PHASE 1: HIDE UNUSED PANELS
+   ============================================================================= */
+
+/* Hide AI Response Formatting (text completion - not needed for chat completion) */
+#advanced-formatting-button {
+    display: none !important;
+}
+
+/* Hide User Settings panel (keeping defaults, may relocate later) */
+#user-settings-button {
+    display: none !important;
+}
+
+/* Hide Persona Management button (now in Settings modal) */
+#persona-management-button {
+    display: none !important;
+}
+
+/* Hide Backgrounds button (now in Settings modal) */
+#backgrounds-button {
+    display: none !important;
+}
+
+/* Hide API Connections button (now in Settings modal) */
+#sys-settings-button {
+    display: none !important;
+}
+
+
+/* Hide main API type selector (only Chat Completion is used, no need to show selector) */
+#main-API-selector-block {
+    display: none !important;
+}
+
+/* Hide deprecated Extras API section in Extensions panel
+   Structure: <hr> + header row + input row */
+
+/* Hide the hr separator above Extras API */
+#rm_extensions_block > .inline-drawer-content > hr.wide100p {
+    display: none !important;
+}
+
+/* Hide the "(DEPRECATED) Extras API:" header row (contains #extensions_status) */
+#rm_extensions_block .alignitemscenter.flex-container:has(#extensions_status) {
+    display: none !important;
+}
+
+/* Hide the Extras API input row (contains #extensions_url) */
+#rm_extensions_block .alignitemsflexstart.flex-container:has(#extensions_url) {
+    display: none !important;
+}
+
+/* Fallback: hide individual elements for browsers without :has() support */
+#extensions_url,
+#extensions_api_key,
+.extensions_url_block,
+#extensions_status,
+label[for="extensions_autoconnect"] {
+    display: none !important;
+}
+
+/* Note: World Info button (#WI-SP-button) is kept visible in the sidebar menu */
+
+/* Hide legacy panel lock toggles and character list button */
+#lm_button_panel_pin_div,
+#WI_panel_pin_div,
+#rm_button_panel_pin_div,
+#rm_button_characters {
+    display: none !important;
+}
+
+/* Hide Create New Character, Group Chat, and Import from URL buttons in contacts panel */
+#rm_button_create,
+#rm_button_group_chats,
+#external_import_button {
+    display: none !important;
+}
+
+/* Mark Yumina Assistant in character lists */
+.avatar.inline_avatar.assistant-avatar {
+    position: relative;
+}
+
+.assistant-avatar-label {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* =============================================================================
+   PHASE 2: VERTICAL LEFT SIDEBAR LAYOUT
+   ============================================================================= */
+
+/* CSS Variables for new layout */
+:root {
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 60px;
+    --chat-max-width: min(1200px, calc((100vw - var(--sidebar-width)) * 0.7));  /* Proportional: 70% of available space, capped at 1200px */
+    --panel-width: 550px;      /* Consistent panel width to prevent flash during transitions */
+    --bt-reply-bar-height: 128px;
+    --bt-reply-bar-radius: 16px;
+    --bt-reply-bar-gap: 12px;
+    --bt-reply-button-size: 36px;
+    --bt-reply-send-size: 36px;
+}
+
+/* Main body layout - create sidebar + main content grid */
+body {
+    display: grid !important;
+    grid-template-columns: var(--sidebar-width) 1fr;
+    grid-template-rows: 1fr auto;
+    grid-template-areas:
+        "sidebar main"
+        "sidebar input";
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+/* =============================================================================
+   LEFT SIDEBAR - Contains navigation icons vertically
+   ============================================================================= */
+
+#top-settings-holder {
+    /* Transform from horizontal to vertical */
+    grid-area: sidebar;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: var(--sidebar-width) !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+
+    /* Vertical flex layout */
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+
+    /* Styling */
+    background-color: var(--SmartThemeBlurTintColor);
+    border-right: 1px solid var(--SmartThemeBorderColor);
+    backdrop-filter: blur(var(--SmartThemeBlurStrength));
+
+    /* Ensure it's above content */
+    z-index: 3005;
+
+    /* Padding */
+    padding: 10px 0;
+    gap: 5px;
+
+    /* Allow scrolling if many items */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Each drawer in sidebar - stack vertically */
+#top-settings-holder .drawer,
+#sidebar-nav .drawer {
+    width: 100% !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    flex-shrink: 0;
+}
+
+/* Drawer toggle buttons - full width in sidebar, left-aligned icons */
+#top-settings-holder .drawer-toggle {
+    width: 100%;
+    padding: 10px 14px 10px 6px; /* Reduced left padding to move icons 2px left */
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    border-radius: 8px;
+    margin: 0 8px;
+    width: calc(100% - 16px);
+    transition: background-color 0.15s ease;
+}
+
+#top-settings-holder .drawer-toggle:hover {
+    background-color: var(--SmartThemeEmColor);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Icons in sidebar - consistent sizing, left-aligned */
+#top-settings-holder .drawer-icon {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    font-size: 18px;
+    width: auto;
+    text-align: left;
+    flex-shrink: 0;
+    gap: 12px; /* Use gap for spacing between icon and text label */
+    color: #ffffff !important; /* Force bright white to match Start New / Assistant icons */
+}
+
+/* Add text labels next to icons (using CSS ::after with data attributes) */
+#top-settings-holder .drawer-icon::before {
+    width: 24px;
+    min-width: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0; /* No margin - using gap on parent instead */
+}
+
+.drawer-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: #ffffff;
+    margin-left: -2px;
+}
+
+/* =============================================================================
+   DRAWER PANELS - Reposition for sidebar layout
+   Consistent width across ALL states to prevent flash during transitions
+   ============================================================================= */
+
+/* Base drawer content - set width for ALL states (open, closed, transitioning) */
+#top-settings-holder .drawer-content {
+    position: fixed !important;
+    left: var(--sidebar-width) !important;
+    top: 0 !important;
+    right: auto !important;
+    /* Use consistent width variable */
+    width: var(--panel-width) !important;
+    min-width: var(--panel-width) !important;
+    max-width: calc(100vw - var(--sidebar-width) - 20px) !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: 1px solid var(--SmartThemeBorderColor) !important;
+    margin: 0 !important;
+    /* Override ST's overflow-y: hidden on .drawer-content so panels can scroll */
+    overflow-y: auto !important;
+    /* Prevent width transitions that cause flash */
+    transition: opacity 0.15s ease, visibility 0.15s ease !important;
+}
+
+/* Override .fillLeft and .fillRight width calculations from original CSS */
+#top-settings-holder .drawer-content.fillLeft,
+#top-settings-holder .drawer-content.fillRight {
+    width: var(--panel-width) !important;
+    min-width: var(--panel-width) !important;
+    left: var(--sidebar-width) !important;
+    right: auto !important;
+}
+
+/* World Info and Extensions panels - full width (lots of content) */
+#WorldInfo,
+#rm_extensions_block,
+.drawer-content#WorldInfo,
+.drawer-content#rm_extensions_block,
+#top-settings-holder .drawer-content#WorldInfo,
+#top-settings-holder .drawer-content#rm_extensions_block {
+    --sheldWidth: calc(100vw - var(--sidebar-width)) !important;
+    width: calc(100vw - var(--sidebar-width)) !important;
+    min-width: calc(100vw - var(--sidebar-width)) !important;
+    max-width: none !important;
+    right: 0 !important;
+    border-right: none !important;
+}
+
+/* Left-filling drawers */
+#top-settings-holder .drawer-content.fillLeft {
+    left: var(--sidebar-width) !important;
+}
+
+/* Right-filling drawers - still open from sidebar */
+#top-settings-holder .drawer-content.fillRight {
+    left: var(--sidebar-width) !important;
+    right: auto !important;
+}
+
+/* =============================================================================
+   MAIN CONTENT AREA - Shift right to make room for sidebar
+   ============================================================================= */
+
+/* Hide the old top bar (it's now integrated into sidebar) */
+#top-bar {
+    display: none !important;
+}
+
+/* =============================================================================
+   CENTERED CHAT LAYOUT
+   Chat content is constrained to max-width and centered in available space.
+   This creates natural blank space on the sides for panels to overlay.
+   ============================================================================= */
+
+/* Main chat container - centered with max-width in available space */
+#sheld {
+    position: absolute !important;
+    /* Start from top - no gap for old top bar */
+    top: 0 !important;
+    /* Fill available space (right of sidebar) */
+    left: var(--sidebar-width) !important;
+    right: 0 !important;
+    transform: none !important;
+    /* Full viewport height - no deduction for top bar */
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    /* Center with auto margins, constrain to max-width */
+    width: auto !important;
+    max-width: var(--chat-max-width) !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+}
+
+/* Chat area positioning - #chat is INSIDE #sheld, so it just fills its parent */
+#chat {
+    margin-left: 0 !important;
+    width: 100% !important;
+}
+
+/* Form/input area at bottom - matches #sheld positioning exactly */
+#form_sheld {
+    position: fixed !important;
+    bottom: 0 !important;
+    /* Fill available space (right of sidebar) - same as #sheld */
+    left: var(--sidebar-width) !important;
+    right: 0 !important;
+    transform: none !important;
+    /* Center with auto margins, constrain to max-width */
+    width: auto !important;
+    max-width: var(--chat-max-width) !important;
+    margin: 0 auto !important;
+    z-index: 100;
+    box-sizing: border-box !important;
+}
+
+/* Ensure inner form components stay within bounds */
+#form_sheld #send_form {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+}
+
+#form_sheld #nonQRFormItems {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+#form_sheld #send_textarea {
+    flex: 1 !important;
+    min-width: 0 !important;  /* Allow textarea to shrink in flexbox */
+    box-sizing: border-box !important;
+}
+
+/* =============================================================================
+   REPLY BAR REFRESH
+   ============================================================================= */
+
+#chat {
+    /* No topBarBlockSize deduction - we hide the top bar */
+    max-height: calc(100vh - var(--bt-reply-bar-height)) !important;
+    max-height: calc(100dvh - var(--bt-reply-bar-height)) !important;
+}
+
+#form_sheld {
+    padding: 0 0 16px !important;
+    background: var(--SmartThemeChatTintColor);
+    border-top: none;
+}
+
+#form_sheld #send_form {
+    width: calc(100% - 32px) !important;
+    margin: 0 auto !important;
+    border-radius: var(--bt-reply-bar-radius) !important;
+    padding: 12px 14px 14px !important;
+    background: color-mix(in srgb, var(--SmartThemeBlurTintColor) 78%, rgba(255, 255, 255, 0.12));
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+#form_sheld #nonQRFormItems {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: var(--bt-reply-bar-gap);
+    padding: 6px 6px 4px;
+}
+
+#form_sheld #leftSendForm {
+    grid-column: 1;
+    grid-row: 2;
+    gap: 10px;
+    align-items: center;
+    position: relative;
+    z-index: 10;
+}
+
+/* rightSendForm positioning in grid - flex layout is defined in MODEL SELECTOR section */
+#form_sheld #rightSendForm {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+#form_sheld #send_textarea {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-height: 52px !important;
+    padding: 12px 14px !important;
+    border-radius: 12px !important;
+    border: none !important;
+    background: transparent !important;
+    resize: none !important;
+    position: relative;
+    z-index: 1;
+    text-align: left !important;
+}
+
+#form_sheld #send_textarea::placeholder {
+    text-align: left !important;
+}
+
+/* Left form items - keep original sizing */
+#leftSendForm > div {
+    width: var(--bt-reply-button-size);
+    height: var(--bt-reply-button-size);
+    border-radius: 10px;
+}
+
+/* Input menu button in leftSendForm */
+#bt-input-menu-btn {
+    width: var(--bt-reply-button-size);
+    height: var(--bt-reply-button-size);
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: var(--SmartThemeBodyColor);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+#bt-input-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Note: #rightSendForm button styles are now in the MODEL SELECTOR section below */
+
+#chat {
+    padding-bottom: calc(var(--bt-reply-bar-height) + 12px) !important;
+}
+
+/* Background container - full width behind sidebar */
+#bg1 {
+    left: 0 !important;
+}
+
+/* Options menu positioning */
+#options {
+    left: calc(var(--sidebar-width) + 10px) !important;
+}
+
+/* =============================================================================
+   RESPONSIVE: SMALL DESKTOP TIER (1001-1400px)
+   16-inch laptops (~1366px), iPad Pro landscape (~1194px), small monitors.
+   Sidebar and panels are slightly narrower to give chat more breathing room.
+   No ST mobile-styles.css to counter here (those only fire at ≤1000px).
+   ============================================================================= */
+
+@media screen and (min-width: 1001px) and (max-width: 1400px) {
+    :root {
+        --sidebar-width: 220px;
+        --panel-width: 420px;
+        /* --chat-max-width inherits proportional formula from :root */
+    }
+
+    /* Sidebar: slightly narrower */
+    #top-settings-holder {
+        width: var(--sidebar-width) !important;
+    }
+
+    /* Sidebar logo: scale down slightly */
+    .sidebar-logo-image {
+        height: 32px;
+    }
+
+    .sidebar-logo-word {
+        height: 20px;
+    }
+
+    /* Drawer toggles: tighter padding */
+    #top-settings-holder .drawer-toggle {
+        padding: 8px 12px 8px 6px;
+        gap: 10px;
+    }
+
+    /* Drawer icons: slightly smaller */
+    #top-settings-holder .drawer-icon {
+        font-size: 16px;
+    }
+
+    /* Drawer labels: slightly smaller */
+    .drawer-label {
+        font-size: 12px;
+    }
+
+    /* Chat area & reply bar: inherit proportional max-width from :root variable */
+
+    /* Panels: narrower to leave more chat visible */
+    #top-settings-holder .drawer-content {
+        width: var(--panel-width) !important;
+        min-width: var(--panel-width) !important;
+    }
+
+    #right-nav-panel,
+    #left-nav-panel {
+        width: var(--panel-width) !important;
+        min-width: var(--panel-width) !important;
+    }
+
+    /* World Info & Extensions: still use remaining width */
+    #WorldInfo,
+    #rm_extensions_block,
+    .drawer-content#WorldInfo,
+    .drawer-content#rm_extensions_block,
+    #top-settings-holder .drawer-content#WorldInfo,
+    #top-settings-holder .drawer-content#rm_extensions_block {
+        width: calc(100vw - var(--sidebar-width)) !important;
+        min-width: calc(100vw - var(--sidebar-width)) !important;
+        max-width: none !important;
+    }
+
+    /* Start New / Assistant buttons: tighter */
+    #bt-startnew-btn,
+    #bt-assistant-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    /* Options menu positioning */
+    #options {
+        left: calc(var(--sidebar-width) + 10px) !important;
+    }
+}
+
+/* =============================================================================
+   RESPONSIVE: TABLET TIER (600-1000px) — Counter ST's mobile-styles.css
+   iPads in portrait, iPad Mini landscape, small laptops.
+   BT CSS loads AFTER mobile-styles.css, so equal specificity + !important wins.
+   ============================================================================= */
+
+@media screen and (min-width: 600px) and (max-width: 1000px) {
+    :root {
+        --sidebar-width: 200px; /* Narrower sidebar to give chat more room */
+        --panel-width: min(400px, calc(100vw - var(--sidebar-width) - 20px));
+    }
+
+    /* Body: keep BT's grid layout, counter ST's mobile reflow.
+       Counter ST's position:fixed + touch-action:none at ≤1000px */
+    body {
+        display: grid !important;
+        grid-template-columns: var(--sidebar-width) 1fr !important;
+        position: static !important;
+        touch-action: manipulation !important;
+    }
+
+    /* Sidebar: counter ST's width:100dvw, use narrower width */
+    #top-settings-holder {
+        width: var(--sidebar-width) !important;
+        left: 0 !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        position: fixed !important;
+        top: 0 !important;
+    }
+
+    /* Sidebar logo: scale down for tablet */
+    .sidebar-logo-image {
+        height: 28px;
+    }
+
+    .sidebar-logo-word {
+        height: 18px;
+    }
+
+    /* Drawer toggles: tighter for tablet */
+    #top-settings-holder .drawer-toggle {
+        padding: 8px 10px 8px 6px;
+        gap: 8px;
+    }
+
+    /* Drawer icons: slightly smaller */
+    #top-settings-holder .drawer-icon {
+        font-size: 15px;
+    }
+
+    /* Drawer labels: compact */
+    .drawer-label {
+        font-size: 11px;
+        max-width: 130px;
+    }
+
+    /* Start New / Assistant buttons: compact */
+    #bt-startnew-btn,
+    #bt-assistant-btn {
+        padding: 7px 10px;
+        font-size: 11px;
+    }
+
+    /* Chat area: counter ST's width:100dvw, left:0 */
+    #sheld {
+        left: var(--sidebar-width) !important;
+        width: auto !important;
+        max-width: none !important;
+        top: 0 !important;
+        right: 0 !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        margin: 0 !important;
+        resize: none !important;
+        overflow: hidden !important;
+    }
+
+    /* Chat: flex child that fills remaining space, scrolls internally */
+    #chat {
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow-y: auto !important;
+        padding-bottom: 8px !important;
+    }
+
+    /* Reply bar: flex child at bottom instead of position:fixed.
+       position:fixed breaks on mobile due to html{-webkit-transform:translateZ(0)}
+       in ST's style.css creating a containing block. Flex is more robust. */
+    #form_sheld {
+        position: static !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Drawer panels: counter ST's left:0, width:100dvw */
+    #top-settings-holder .drawer-content {
+        left: var(--sidebar-width) !important;
+        top: 0 !important;
+        width: var(--panel-width) !important;
+        min-width: var(--panel-width) !important;
+        max-width: calc(100vw - var(--sidebar-width) - 20px) !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        position: fixed !important;
+    }
+
+    /* Nav panels: counter ST's min-width:100dvw, left:0, top:var(--topBarBlockSize) */
+    #right-nav-panel,
+    #left-nav-panel {
+        left: var(--sidebar-width) !important;
+        top: 0 !important;
+        width: var(--panel-width) !important;
+        min-width: var(--panel-width) !important;
+        max-width: calc(100vw - var(--sidebar-width) - 20px) !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+    }
+
+    /* World Info & Extensions: full remaining width */
+    #WorldInfo,
+    #rm_extensions_block,
+    .drawer-content#WorldInfo,
+    .drawer-content#rm_extensions_block,
+    #top-settings-holder .drawer-content#WorldInfo,
+    #top-settings-holder .drawer-content#rm_extensions_block {
+        width: calc(100vw - var(--sidebar-width)) !important;
+        min-width: calc(100vw - var(--sidebar-width)) !important;
+        max-width: none !important;
+    }
+
+    /* Counter ST's send form containers width collapse */
+    #form_sheld #leftSendForm,
+    #form_sheld #rightSendForm {
+        width: auto !important;
+        flex-wrap: nowrap !important;
+        height: auto !important;
+    }
+
+    /* Counter ST's chat borders (not needed in BT's design) */
+    #chat {
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+    }
+
+    /* Counter ST's scrollableInner max-height that assumes topBarBlockSize */
+    .scrollableInner {
+        max-height: calc(100vh - 50px) !important;
+        max-height: calc(100dvh - 50px) !important;
+    }
+
+    /* Options menu positioning */
+    #options {
+        left: calc(var(--sidebar-width) + 10px) !important;
+    }
+}
+
+/* =============================================================================
+   RESPONSIVE: Counter ST's iOS @supports (-webkit-touch-callout: none) for iPads
+   ST's iOS block has NO width gate, so it fires on ALL iOS devices including iPads.
+   We nest a min-width:600px check to only counter on tablet+.
+   ============================================================================= */
+
+@supports (-webkit-touch-callout: none) {
+    @media screen and (min-width: 600px) {
+        /* Chat area: counter ST's iOS full-width override */
+        #sheld {
+            width: auto !important;
+            left: var(--sidebar-width) !important;
+            right: 0 !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            margin: 0 !important;
+            overflow: hidden !important;
+            padding-right: max(env(safe-area-inset-right), 0px);
+            padding-left: 0;
+        }
+
+        /* Chat: flex layout for iOS */
+        #chat {
+            flex: 1 1 0% !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            padding-bottom: 8px !important;
+        }
+
+        /* Reply bar: flex child at bottom for iOS */
+        #form_sheld {
+            position: static !important;
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            flex-shrink: 0 !important;
+            padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
+        }
+
+        /* Sidebar: keep BT width */
+        #top-settings-holder {
+            width: var(--sidebar-width) !important;
+        }
+
+        /* Drawer panels: counter iOS full-width */
+        #top-settings-holder .drawer-content {
+            left: var(--sidebar-width) !important;
+            top: 0 !important;
+            width: var(--panel-width) !important;
+            min-width: var(--panel-width) !important;
+            max-width: calc(100vw - var(--sidebar-width) - 20px) !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            margin: 0 !important;
+        }
+
+        /* Nav panels */
+        #right-nav-panel,
+        #left-nav-panel {
+            left: var(--sidebar-width) !important;
+            top: 0 !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            margin: 0 !important;
+        }
+
+        /* World Info & Extensions: full remaining width */
+        #WorldInfo,
+        #rm_extensions_block,
+        .drawer-content#WorldInfo,
+        .drawer-content#rm_extensions_block,
+        #top-settings-holder .drawer-content#WorldInfo,
+        #top-settings-holder .drawer-content#rm_extensions_block {
+            width: calc(100vw - var(--sidebar-width)) !important;
+            min-width: calc(100vw - var(--sidebar-width)) !important;
+            max-width: none !important;
+        }
+    }
+}
+
+/* =============================================================================
+   RESPONSIVE: Counter ST's iOS @supports for PHONES (<600px)
+   ST's iOS block has NO width gate and overrides sheld, panels, etc.
+   BT's phone tier already handles these, but on iOS the @supports block
+   in mobile-styles.css can override BT's phone rules. We counter here.
+   ============================================================================= */
+
+@supports (-webkit-touch-callout: none) {
+    @media screen and (max-width: 599px) {
+        /* Chat area: counter ST's iOS full-width override */
+        #sheld {
+            width: 100vw !important;
+            width: 100dvw !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            margin: 0 !important;
+            padding-bottom: 0 !important;
+            overflow: hidden !important;
+        }
+
+        /* Reply bar: flex child at bottom for iOS phones */
+        #form_sheld {
+            position: static !important;
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            flex-shrink: 0 !important;
+            padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
+        }
+
+        /* Panels: full screen on iOS phones */
+        #top-settings-holder .drawer-content,
+        #right-nav-panel,
+        #left-nav-panel {
+            left: 0 !important;
+            top: 0 !important;
+            width: 100vw !important;
+            width: 100dvw !important;
+            min-width: 100vw !important;
+            min-width: 100dvw !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            margin: 0 !important;
+        }
+
+        /* Counter ST's iOS drawer-content margin-top: 36px */
+        .drawer-content {
+            margin-top: 0 !important;
+        }
+    }
+}
+
+/* =============================================================================
+   RESPONSIVE: PHONE TIER (<600px) — Slide-out sidebar overlay
+   iPhones, Android phones. No permanent sidebar — hamburger menu toggles it.
+   ============================================================================= */
+
+@media screen and (max-width: 599px) {
+    :root {
+        --sidebar-width: 0px;
+        --panel-width: 100vw;
+    }
+
+    /* html: Remove translateZ(0) that creates a containing block on mobile.
+       ST adds this for Chrome flicker, but on mobile it makes position:fixed
+       elements relative to <html> instead of viewport, causing the hamburger
+       and reply bar to shift when the virtual keyboard opens/closes. */
+    html {
+        -webkit-transform: none !important;
+        transform: none !important;
+        overflow: hidden !important;
+        height: 100% !important;
+    }
+
+    /* Body: single-column, no sidebar.
+       Counter ST's position:fixed + touch-action:none at ≤1000px */
+    body {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        position: static !important;
+        touch-action: manipulation !important;
+        overflow: hidden !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+    }
+
+    /* Sidebar: hidden off-screen, slides in on toggle */
+    #top-settings-holder {
+        left: -260px !important;
+        width: 260px !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        z-index: 10000 !important;
+        transition: left 0.25s ease !important;
+        position: fixed !important;
+        top: 0 !important;
+    }
+
+    /* Slide sidebar in when open */
+    body.mobile-sidebar-open #top-settings-holder {
+        left: 0 !important;
+    }
+
+    /* Backdrop overlay when sidebar is open */
+    body.mobile-sidebar-open::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        pointer-events: auto;
+    }
+
+    /* Chat area: full width */
+    #sheld {
+        left: 0 !important;
+        right: 0 !important;
+        width: 100vw !important;
+        width: 100dvw !important;
+        max-width: none !important;
+        top: 0 !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Chat: flex child that fills remaining space */
+    #chat {
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow-y: auto !important;
+        padding-bottom: 8px !important;
+    }
+
+    /* Reply bar: flex child at bottom (no position:fixed on mobile) */
+    #form_sheld {
+        position: static !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        flex-shrink: 0 !important;
+        padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
+    }
+
+    /* All panels: full-screen overlays */
+    #top-settings-holder .drawer-content,
+    #right-nav-panel,
+    #left-nav-panel {
+        left: 0 !important;
+        top: 0 !important;
+        width: 100vw !important;
+        width: 100dvw !important;
+        min-width: 100vw !important;
+        min-width: 100dvw !important;
+        max-width: none !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        position: fixed !important;
+    }
+
+    /* World Info & Extensions: full screen */
+    #WorldInfo,
+    #rm_extensions_block,
+    .drawer-content#WorldInfo,
+    .drawer-content#rm_extensions_block,
+    #top-settings-holder .drawer-content#WorldInfo,
+    #top-settings-holder .drawer-content#rm_extensions_block {
+        width: 100vw !important;
+        width: 100dvw !important;
+        min-width: 100vw !important;
+        min-width: 100dvw !important;
+        max-width: none !important;
+    }
+
+    /* Options menu: full width */
+    #options {
+        left: 10px !important;
+    }
+
+    /* Hide collapse button on phone (hamburger replaces it) */
+    #sidebar-collapse-btn {
+        display: none !important;
+    }
+
+    /* Model dropdown: fit phone screen */
+    #bt-model-dropdown {
+        min-width: 200px;
+        max-width: calc(100vw - 24px);
+    }
+
+    /* Counter ST's mobile-styles.css ≤450px that forces width: 1.15em
+       on send form containers — this completely breaks the reply bar */
+    #form_sheld #leftSendForm,
+    #form_sheld #rightSendForm {
+        width: auto !important;
+        flex-wrap: nowrap !important;
+        height: auto !important;
+    }
+
+    /* Counter ST's chat/send_form borders (not needed in BT's design) */
+    #chat {
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+    }
+
+    #send_form {
+        border: none !important;
+    }
+
+    /* Counter ST's scrollableInner max-height that assumes topBarBlockSize
+       (BT hides the top bar) */
+    .scrollableInner {
+        max-height: calc(100vh - 50px) !important;
+        max-height: calc(100dvh - 50px) !important;
+    }
+}
+
+/* Hamburger button — always in DOM, shown only on phone */
+#bt-mobile-hamburger {
+    display: none;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 9998;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background-color 0.15s ease;
+}
+
+#bt-mobile-hamburger:hover {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+@media screen and (max-width: 599px) {
+    #bt-mobile-hamburger {
+        display: flex;
+    }
+
+    /* Hide hamburger when sidebar is open (sidebar has its own close mechanism) */
+    body.mobile-sidebar-open #bt-mobile-hamburger {
+        display: none;
+    }
+}
+
+/* =============================================================================
+   FLOATING PANEL DISPLAY (AI Config, Characters, World Info, Extensions)
+   Panels overlay the blank space next to centered chat.
+   Chat stays in place - no shifting or resizing when panels open.
+   ============================================================================= */
+
+/* Open drawer state - add visual enhancements but keep same width */
+#top-settings-holder .drawer-content.openDrawer {
+    z-index: 3000;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Ensure the panel content is scrollable */
+#top-settings-holder .drawer-content.openDrawer .scrollableInner {
+    height: calc(100vh - 50px);
+    overflow-y: auto;
+}
+
+/* When panel is open, chat stays in place - panels overlay the blank space */
+/* body.panel-open is still added by bettertavern-panels.js for tracking */
+
+/* =============================================================================
+   MOBILE PANEL HEADER (close button + title)
+   Injected by bettertavern-panels.js into each panel.
+   Hidden on tablet+ (panels can be closed via sidebar icons).
+   Shown on phone (<600px) where panels are full-screen overlays.
+   ============================================================================= */
+
+.bt-mobile-panel-header {
+    display: none; /* Hidden on desktop/tablet */
+}
+
+@media screen and (max-width: 599px) {
+    .bt-mobile-panel-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: var(--SmartThemeBlurTintColor);
+        border-bottom: 1px solid var(--SmartThemeBorderColor);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        flex-shrink: 0;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .bt-mobile-panel-back {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: none;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        font-size: 16px;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background-color 0.15s ease;
+    }
+
+    .bt-mobile-panel-back:hover,
+    .bt-mobile-panel-back:active {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .bt-mobile-panel-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Adjust scrollableInner to account for the mobile header */
+    .drawer-content .bt-mobile-panel-header + .scrollableInner,
+    .drawer-content .bt-mobile-panel-header ~ .scrollableInner {
+        max-height: calc(100dvh - 60px) !important;
+    }
+}
+
+/* =============================================================================
+   VISUAL POLISH
+   ============================================================================= */
+
+/* Note: With the new sidebar structure, user-settings-button stays in the nav section,
+   and the actual user profile is in a separate #sidebar-user-profile at the bottom */
+
+/* Active/open drawer indicator */
+#top-settings-holder .drawer:has(.openDrawer) .drawer-toggle {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+#top-settings-holder .drawer:has(.openDrawer) .drawer-icon {
+    color: var(--SmartThemeQuoteColor);
+}
+
+/* =============================================================================
+   PHASE 3: SIDEBAR STRUCTURE (Logo, Nav, Recent Chats, User Profile)
+   ============================================================================= */
+
+/* --- SIDEBAR LOGO --- */
+#sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    flex-shrink: 0;
+    position: relative;
+}
+
+.sidebar-logo-image {
+    height: 38px;
+    width: auto;
+    max-width: 169px;
+    object-fit: contain;
+    display: block;
+}
+
+.sidebar-logo-word {
+    height: 24px;
+    width: auto;
+    max-width: 218px;
+    object-fit: contain;
+    display: block;
+    filter: brightness(1.2);
+}
+
+/* --- SIDEBAR COLLAPSE BUTTON --- */
+#sidebar-collapse-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+    flex-shrink: 0;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+
+#sidebar-collapse-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* No rotation needed for collapse icon */
+
+/* =============================================================================
+   SIDEBAR COLLAPSED STATE
+   ============================================================================= */
+
+body.sidebar-collapsed {
+    --sidebar-width: 60px;
+}
+
+/* Hide text elements and logo when collapsed (like Claude's design) */
+body.sidebar-collapsed .sidebar-logo-image,
+body.sidebar-collapsed .sidebar-logo-word,
+body.sidebar-collapsed #bt-startnew-btn span,
+body.sidebar-collapsed #bt-assistant-btn span,
+body.sidebar-collapsed .drawer-label,
+body.sidebar-collapsed .sidebar-section-header,
+body.sidebar-collapsed .sidebar-world-info,
+body.sidebar-collapsed .sidebar-world-avatar,
+body.sidebar-collapsed .sidebar-user-info {
+    display: none !important;
+}
+
+/* Adjust sidebar logo when collapsed - only show collapse button */
+body.sidebar-collapsed #sidebar-logo {
+    justify-content: center;
+    padding: 10px;
+    gap: 0;
+    margin-bottom: 5px;
+}
+
+body.sidebar-collapsed #sidebar-collapse-btn {
+    position: static;
+    width: 40px;
+    height: 40px;
+}
+
+/* Icons stay left-aligned in collapsed state - no justify-content override needed */
+/* The text labels are hidden via display:none, icons stay in place */
+
+/* Hide recent worlds section when collapsed (avatars hidden above) */
+body.sidebar-collapsed .sidebar-world-item {
+    display: none !important;
+}
+
+/* Hide recent worlds header when collapsed */
+body.sidebar-collapsed #sidebar-recent-worlds {
+    display: none !important;
+}
+
+/* User profile stays left-aligned when collapsed - avatar stays in place */
+
+/* --- SIDEBAR NAVIGATION WRAPPER --- */
+#sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: 2px;
+}
+
+#sidebar-nav > .drawer {
+    width: 100% !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+}
+
+/* Menu tab order: AI Config, Characters, World Info, Extensions */
+#sidebar-nav #ai-config-button {
+    order: 1;
+}
+
+#sidebar-nav #rightNavHolder {
+    order: 2;
+}
+
+#sidebar-nav #WI-SP-button {
+    order: 3;
+}
+
+#sidebar-nav #extensions-settings-button {
+    order: 4;
+}
+
+/* --- SIDEBAR RECENT WORLDS --- */
+#sidebar-recent-worlds {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    margin-top: 6px;
+    border-top: 1px solid var(--SmartThemeBorderColor);
+}
+
+.sidebar-section-header {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--SmartThemeEmColor);
+    opacity: 0.6;
+    padding: 10px 12px 6px 12px;
+    text-transform: none;
+    letter-spacing: 0;
+    flex-shrink: 0;
+}
+
+#sidebar-recent-worlds-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 8px;
+}
+
+/* Recent world item styling */
+.sidebar-world-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    margin-bottom: 2px;
+}
+
+.sidebar-world-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-world-item.active {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.sidebar-world-item.pinned {
+    background-color: rgba(255, 255, 255, 0.08);
+    border: none;
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+.sidebar-world-item.pinned:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+#sidebar-recent-worlds-list.loading {
+    pointer-events: none;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.sidebar-world-item.pinned + .sidebar-world-item:not(.pinned) {
+    margin-top: 6px;
+}
+
+.sidebar-world-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background-color: var(--SmartThemeBorderColor);
+}
+
+.sidebar-world-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sidebar-world-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sidebar-world-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--SmartThemeBodyColor);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-world-date {
+    font-size: 11px;
+    color: var(--SmartThemeEmColor);
+    opacity: 0.6;
+}
+
+/* --- SIDEBAR USER PROFILE --- */
+#sidebar-user-profile {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 15px 15px 15px 11px; /* Adjusted to center avatar with icons above */
+    margin-top: auto;
+    border-top: 1px solid var(--SmartThemeBorderColor);
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+#sidebar-user-profile:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    background-color: var(--SmartThemeBorderColor);
+}
+
+.sidebar-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sidebar-user-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-left: 4px; /* Move username and status 4px right */
+}
+
+.sidebar-user-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--SmartThemeBodyColor);
+}
+
+.sidebar-user-status {
+    font-size: 11px;
+    color: var(--SmartThemeEmColor);
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-dot.connected {
+    background-color: #4caf50;
+}
+
+.status-dot.disconnected {
+    background-color: #f44336;
+}
+
+/* --- RESPONSIVE: Phone-only sidebar text hiding --- */
+/* The slide-out sidebar is 260px wide (same as desktop), so labels fit.
+   We only hide the logo text. Drawer labels, section headers, world info,
+   and user info all remain visible so users can read menu items. */
+@media (max-width: 599px) {
+    #sidebar-logo .sidebar-logo-text {
+        display: none;
+    }
+}
+
+/* =============================================================================
+   PHASE 6: SIMPLIFIED INPUT MENU
+   ============================================================================= */
+
+/* Hide original input area icons */
+#options_button {
+    display: none !important;
+}
+
+#extensionsMenuButton {
+    display: none !important;
+}
+
+/* Simplified input menu button */
+#bt-input-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    font-size: 16px;
+}
+
+#bt-input-menu-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Simplified input menu dropdown */
+#bt-input-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 8px;
+    max-height: 60vh;
+    overflow-y: auto;
+    background: var(--SmartThemeBlurTintColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 8px;
+    padding: 6px 0;
+    min-width: 180px;
+    z-index: 9999;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+#bt-input-menu.open {
+    display: block;
+}
+
+.bt-input-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    color: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    font-size: 14px;
+}
+
+.bt-input-menu-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.bt-input-menu-item i {
+    width: 18px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+/* =============================================================================
+   PHASE 7: SIMPLIFIED API PAGE - Chat Completion Only
+   ============================================================================= */
+
+/* Hide non-Chat Completion API options from the main API selector dropdown */
+#main_api option[value="textgenerationwebui"],
+#main_api option[value="novel"],
+#main_api option[value="koboldhorde"],
+#main_api option[value="kobold"] {
+    display: none;
+}
+
+/* Hide the API connector blocks for non-Chat Completion APIs */
+#kobold_horde,
+#kobold_api,
+#novel_api,
+#textgenerationwebui_api {
+    display: none !important;
+}
+
+/* Hide any settings/presets blocks for non-Chat Completion APIs */
+#kobold_api-settings,
+#kobold_api-presets,
+#novel_api-settings,
+#novel_api-presets,
+#textgenerationwebui_api-settings,
+#textgenerationwebui_api-presets {
+    display: none !important;
+}
+
+/* Hide AI Config sections for non-Chat Completion APIs */
+#range_block_novel,
+#range_block,
+#advanced-ai-config-block:has([data-source="kobold"]),
+#ai_module_block_novel {
+    display: none !important;
+}
+
+/* =============================================================================
+   PHASE 8: AI CONFIG TABS - Simple/Advanced Views
+   ============================================================================= */
+
+/* Tab bar container */
+.ai-config-tab-bar {
+    display: flex;
+    gap: 0;
+    padding: 0 15px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    background: var(--SmartThemeBlurTintColor);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Tab buttons */
+.ai-config-tab {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    color: var(--SmartThemeBodyColor);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+
+.ai-config-tab:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.ai-config-tab.active {
+    opacity: 1;
+    color: var(--SmartThemeQuoteColor);
+    border-bottom-color: var(--SmartThemeQuoteColor);
+}
+
+/* ---- SIMPLE VIEW: Hide ALL settings, then show only essentials ---- */
+
+/* Hide ALL direct children of range_block_openai in Simple view */
+body.ai-config-simple-view #range_block_openai > * {
+    display: none !important;
+}
+
+/* Show the 4 essential settings as grid rows */
+body.ai-config-simple-view #range_block_openai > .range-block:has(#openai_max_context),
+body.ai-config-simple-view #range_block_openai > .range-block:has(#openai_max_tokens),
+body.ai-config-simple-view #range_block_openai > .range-block:has(#temp_openai),
+body.ai-config-simple-view #range_block_openai > .range-block:has(#stream_toggle) {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 0;
+}
+
+/* CRITICAL: #openai_settings is a SIBLING of #range_block_openai, not a child!
+   We hide all its children, then show only the Prompt Manager */
+body.ai-config-simple-view #openai_settings > * {
+    display: none !important;
+}
+
+body.ai-config-simple-view #openai_settings > .range-block:has(#completion_prompt_manager) {
+    display: block !important;
+}
+
+/* Hide helper text in Simple view */
+body.ai-config-simple-view #clickSlidersTips,
+body.ai-config-simple-view #left-nav-panel > .topRightInset {
+    display: none !important;
+}
+
+/* Hide the original toggle-description and span text for Streaming */
+body.ai-config-simple-view .range-block:has(#stream_toggle) .toggle-description {
+    display: none !important;
+}
+
+body.ai-config-simple-view .range-block:has(#stream_toggle) .checkbox_label span {
+    display: none;
+}
+
+/* Allow prompt name column to show the friendly hint on a second line */
+body.ai-config-simple-view #completion_prompt_manager_list .completion_prompt_manager_prompt_name {
+    white-space: normal !important;
+    overflow: visible !important;
+    line-height: 1.3;
+}
+
+/* ---- ADVANCED VIEW: Show everything, hide injected elements ---- */
+body.ai-config-advanced-view .bt-friendly-label,
+body.ai-config-advanced-view .bt-setting-description,
+body.ai-config-advanced-view .bt-new-prompt-label,
+body.ai-config-advanced-view .bt-pm-category-header,
+body.ai-config-advanced-view .bt-pm-section-description,
+body.ai-config-advanced-view .bt-pm-friendly-hint {
+    display: none !important;
+}
+
+/* =============================================================================
+   PHASE 8b: AI CONFIG - iOS Settings Grouped Container (Simple View)
+   ============================================================================= */
+
+/* --- Grouped container: all 4 settings in one rounded card --- */
+body.ai-config-simple-view #range_block_openai {
+    display: flex !important;
+    flex-direction: column !important;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    margin: 16px 8px;
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+/* Reorder visible items: Memory, Response, Creativity, Streaming */
+body.ai-config-simple-view #range_block_openai > .range-block:has(#openai_max_context) { order: 1; }
+body.ai-config-simple-view #range_block_openai > .range-block:has(#openai_max_tokens) { order: 2; }
+body.ai-config-simple-view #range_block_openai > .range-block:has(#temp_openai) { order: 3; }
+body.ai-config-simple-view #range_block_openai > .range-block:has(#stream_toggle) { order: 4; }
+body.ai-config-simple-view #range_block_openai > *:not(:has(#openai_max_context)):not(:has(#openai_max_tokens)):not(:has(#temp_openai)):not(:has(#stream_toggle)) {
+    order: 99;
+}
+
+/* --- Individual rows inside the grouped container --- */
+body.ai-config-simple-view #range_block_openai > .range-block {
+    padding: 14px 16px !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    position: relative;
+}
+
+/* Thin divider line between rows (iOS inset separator style) */
+body.ai-config-simple-view #range_block_openai > .range-block::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 16px;
+    right: 16px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    pointer-events: none;
+}
+
+/* First visible row: no top divider */
+body.ai-config-simple-view #range_block_openai > .range-block[data-bt-first-row="true"]::before {
+    display: none;
+}
+
+/* --- Row grid layout: label left, control right, description below --- */
+
+/* Friendly label: left column */
+body.ai-config-simple-view .range-block .bt-friendly-label {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--SmartThemeBodyColor);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+/* Label icon */
+body.ai-config-simple-view .bt-friendly-label .bt-label-icon {
+    font-size: 14px;
+    opacity: 0.6;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* Controls: right column */
+body.ai-config-simple-view .range-block .range-block-range-and-counter {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    max-width: 180px;
+}
+
+body.ai-config-simple-view .range-block .wide100p {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    max-width: 120px;
+}
+
+body.ai-config-simple-view .range-block .checkbox_label {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+}
+
+/* Description: full width below */
+body.ai-config-simple-view .bt-setting-description {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    font-size: 12px;
+    color: var(--SmartThemeEmColor);
+    opacity: 0.45;
+    margin: 4px 0 0 0;
+    padding-left: 30px;
+    line-height: 1.4;
+}
+
+/* Hide original range-block-title (replaced by bt-friendly-label) */
+body.ai-config-simple-view #range_block_openai .range-block-title {
+    display: none !important;
+}
+
+/* =============================================================================
+   PHASE 8b-toggle: Compact Toggle Switch for Streaming
+   Sized to feel refined in a dark theme — not an oversized iOS replica.
+   Uses the theme accent color instead of bright green.
+   ============================================================================= */
+
+/* Hide default checkbox appearance */
+body.ai-config-simple-view #stream_toggle {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    outline: none !important;
+    border: none !important;
+    width: 36px !important;
+    height: 20px !important;
+    min-width: 36px !important;
+    min-height: 20px !important;
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    position: relative !important;
+    cursor: pointer !important;
+    display: block !important;
+    place-content: unset !important;
+    transform: none !important;
+    filter: none !important;
+    flex-shrink: 0 !important;
+    transition: background-color 0.2s ease !important;
+}
+
+/* Toggle knob */
+body.ai-config-simple-view #stream_toggle::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 2px !important;
+    left: 2px !important;
+    width: 16px !important;
+    height: 16px !important;
+    border-radius: 50% !important;
+    background: #ffffff !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+    transition: transform 0.2s ease !important;
+    transform: none !important;
+    transform-origin: unset !important;
+    clip-path: none !important;
+}
+
+/* Checked: theme accent track, knob slides right */
+body.ai-config-simple-view #stream_toggle:checked {
+    background: var(--SmartThemeQuoteColor) !important;
+}
+
+body.ai-config-simple-view #stream_toggle:checked::before {
+    transform: translateX(16px) !important;
+}
+
+/* =============================================================================
+   PHASE 8c: AI CONFIG - Prompt Manager Redesign (Simple View)
+   ============================================================================= */
+
+/* Prompt Manager section description */
+body.ai-config-simple-view .bt-pm-section-description {
+    font-size: 12px;
+    color: var(--SmartThemeEmColor);
+    opacity: 0.5;
+    margin: 0 4px 16px 4px;
+    line-height: 1.5;
+}
+
+/* Category separator headers - iOS section header style */
+body.ai-config-simple-view .bt-pm-category-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 24px 8px 8px 8px;
+    margin-top: 0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--SmartThemeEmColor);
+    opacity: 0.5;
+    border: none;
+    list-style: none;
+}
+
+body.ai-config-simple-view .bt-pm-category-header:first-of-type {
+    padding-top: 8px;
+}
+
+body.ai-config-simple-view .bt-pm-category-header .bt-category-icon {
+    font-size: 12px;
+}
+
+/* Friendly name hint on prompt items */
+body.ai-config-simple-view .bt-pm-friendly-hint {
+    display: block;
+    font-size: 10px;
+    color: var(--SmartThemeEmColor);
+    opacity: 0.5;
+    font-weight: 400;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Prompt items - clean rows with subtle dividers */
+body.ai-config-simple-view #completion_prompt_manager_list li.completion_prompt_manager_prompt {
+    border-radius: 0 !important;
+    border-left: none !important;
+    margin-bottom: 0 !important;
+    transition: background-color 0.15s ease;
+}
+
+body.ai-config-simple-view #completion_prompt_manager_list li.completion_prompt_manager_prompt:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Thin divider between adjacent prompt items */
+body.ai-config-simple-view #completion_prompt_manager_list li.completion_prompt_manager_prompt + li.completion_prompt_manager_prompt {
+    border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+/* =============================================================================
+   PHASE 8d: AI CONFIG - Prompt Manager Footer Simplification (Simple View)
+   ============================================================================= */
+
+/* In Simple view, hide advanced footer buttons */
+body.ai-config-simple-view .completion_prompt_manager_footer [title="Insert prompt"],
+body.ai-config-simple-view .completion_prompt_manager_footer [title="Delete prompt"],
+body.ai-config-simple-view .completion_prompt_manager_footer #prompt-manager-import,
+body.ai-config-simple-view .completion_prompt_manager_footer #prompt-manager-export,
+body.ai-config-simple-view .completion_prompt_manager_footer #prompt-manager-reset-character {
+    display: none !important;
+}
+
+/* Hide the dropdown selector in simple view */
+body.ai-config-simple-view #completion_prompt_manager_footer_append_prompt {
+    display: none !important;
+}
+
+/* Style the New Prompt button */
+body.ai-config-simple-view .completion_prompt_manager_footer [title="New prompt"] {
+    font-size: 13px !important;
+    padding: 8px 16px !important;
+    border-radius: 8px;
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
+    width: auto !important;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+body.ai-config-simple-view .completion_prompt_manager_footer [title="New prompt"]:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Text label inside the New Prompt button */
+body.ai-config-simple-view .bt-new-prompt-label {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Simple view footer - center the button */
+body.ai-config-simple-view .completion_prompt_manager_footer {
+    justify-content: center !important;
+    padding: 12px 0 !important;
+}
+
+/* =============================================================================
+   PHASE 8e: AI CONFIG - Prompt Manager Header Enhancement (Simple View)
+   ============================================================================= */
+
+/* Prompt section title */
+body.ai-config-simple-view .completion_prompt_manager_header {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 4px;
+}
+
+body.ai-config-simple-view .completion_prompt_manager_header_advanced span {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--SmartThemeBodyColor);
+    opacity: 1;
+}
+
+/* Token counter - subtle */
+body.ai-config-simple-view .completion_prompt_manager_header > div:last-child {
+    font-size: 11px;
+    opacity: 0.4;
+    margin-top: 2px;
+}
+
+/* Add spacing above the Prompt Manager section */
+body.ai-config-simple-view #openai_settings > .range-block:has(#completion_prompt_manager) {
+    margin-top: 8px;
+}
+
+/* =============================================================================
+   PHASE 9: SIMPLIFIED MESSAGE BUTTONS
+   Keep only: Copy, Edit, Regenerate, Revert (backtrack)
+   ============================================================================= */
+
+/* Hide the "..." ellipsis button that expands extra options */
+.mes_buttons .extraMesButtonsHint {
+    display: none !important;
+}
+
+/* Hide all extra buttons inside the expandable menu */
+.extraMesButtons .mes_translate,
+.extraMesButtons .sd_message_gen,
+.extraMesButtons .mes_narrate,
+.extraMesButtons .mes_prompt,
+.extraMesButtons .mes_hide,
+.extraMesButtons .mes_unhide,
+.extraMesButtons .mes_media_gallery,
+.extraMesButtons .mes_media_list,
+.extraMesButtons .mes_embed,
+.extraMesButtons .mes_create_bookmark,
+.extraMesButtons .mes_create_branch {
+    display: none !important;
+}
+
+/* Make extraMesButtons always visible (no hover required) so copy is accessible */
+.extraMesButtons {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Hide the bookmark flag icon (checkpoint indicator) */
+.mes_buttons .mes_bookmark {
+    display: none !important;
+}
+
+
+/* BetterTavern custom message buttons - Regenerate and Revert */
+.mes_button.bt_mes_regenerate,
+.mes_button.bt_mes_revert {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+}
+
+.mes_button.bt_mes_regenerate:hover,
+.mes_button.bt_mes_revert:hover {
+    opacity: 1;
+}
+
+/* =============================================================================
+   MESSAGE BUTTONS - Below Message Content, Hover Only
+   Action icons appear below message text on hover, not overlapping content
+   ============================================================================= */
+
+/* Reserve space at bottom of mes_block for buttons */
+.mes .mes_block {
+    position: relative !important;
+    padding-bottom: 32px !important; /* Space for buttons when shown */
+    overflow: visible !important;
+}
+
+/* Position mes_buttons at bottom of mes_block, below content */
+.mes .mes_buttons {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    top: auto !important;
+    justify-content: flex-start !important;
+    /* Hidden by default */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    /* Styling - transparent background, just icons */
+    background: transparent;
+    padding: 4px 0;
+    gap: 10px;
+    z-index: 10;
+}
+
+/* Show buttons on message hover */
+.mes:hover .mes_buttons {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Keep buttons visible when in edit mode */
+.mes.selected .mes_buttons {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Style individual buttons */
+.mes .mes_buttons .mes_button {
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+    font-size: 0.85em;
+    color: var(--SmartThemeBodyColor);
+}
+
+.mes .mes_buttons .mes_button:hover {
+    opacity: 1;
+}
+
+/* =============================================================================
+   TOUCH DEVICES: Always-visible message buttons
+   hover: none targets touchscreens where :hover is unavailable.
+   Buttons are shown at reduced opacity, matching the desktop hover style.
+   ============================================================================= */
+
+@media (hover: none) {
+    .mes .mes_buttons {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .mes .mes_buttons .mes_button {
+        opacity: 0.5;
+    }
+}
+
+/* =============================================================================
+   CONDITIONAL BUTTON VISIBILITY
+   Hide Regenerate for user messages and first message
+   ============================================================================= */
+
+/* Hide Regenerate button on user messages */
+.mes[is_user="true"] .bt_mes_regenerate {
+    display: none !important;
+}
+
+/* Hide Regenerate button on first message (mesid=0) */
+.mes[mesid="0"] .bt_mes_regenerate {
+    display: none !important;
+}
+
+/* =============================================================================
+   CHAT APP LAYOUT - User messages on right, AI on left
+   Like iMessage/WhatsApp style conversation flow
+   ============================================================================= */
+
+/* User messages: Reverse flex direction to put avatar on right */
+.mes[is_user="true"] {
+    flex-direction: row-reverse;
+}
+
+/* User messages: Shrink bubble to fit content, align children to right edge */
+.mes[is_user="true"] .mes_block {
+    padding-left: 0;
+    padding-right: 0;
+    width: fit-content;
+    max-width: 92%;
+    margin-left: auto;
+    margin-right: 15px;
+    /* Flex column to right-align all children (name row + text bubble) */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* User messages: Name row needs full width within the flex column, then right-align its content */
+.mes[is_user="true"] .ch_name {
+    width: 100%;
+    justify-content: flex-end;
+}
+
+/* User messages: Right-align the name text */
+.mes[is_user="true"] .ch_name .flex-container.flex1 {
+    justify-content: flex-end;
+}
+
+/* User messages: Keep name text on the right */
+.mes[is_user="true"] .name_text {
+    text-align: right;
+}
+
+/* User messages: Move action buttons to bottom-right */
+.mes[is_user="true"] .mes_buttons {
+    left: auto !important;
+    right: 0 !important;
+    justify-content: flex-end !important;
+}
+
+
+/* Ensure the mesAvatarWrapper maintains proper spacing in reversed layout */
+.mes[is_user="true"] .mesAvatarWrapper {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* Hide swipe buttons on user messages to reduce spacing */
+.mes[is_user="true"] .swipe_left,
+.mes[is_user="true"] .swipe_right {
+    display: none !important;
+}
+
+/* User messages: Text bubble shrinks to content, text inside stays left-aligned */
+.mes[is_user="true"] .mes_text {
+    text-align: left;
+    width: fit-content;
+    max-width: 100%;
+    padding-right: 0;
+    /* Prevent long unbroken strings (URLs, code) from causing horizontal overflow */
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+/* Hide timestamp on user messages - only show on AI messages */
+.mes[is_user="true"] .timestamp {
+    display: none !important;
+}
+
+/* Hide the "last in context" indicator (orange dotted line) */
+.lastInContext {
+    border-top: none !important;
+}
+
+/* =============================================================================
+   API SETTINGS - Move Reverse Proxy to bottom
+   ============================================================================= */
+
+/* Make the API panel a flex container so we can reorder children */
+#openai_api {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Move Reverse Proxy inline-drawer to the very bottom (after online_status) */
+#openai_api > .inline-drawer[data-source*="openai"] {
+    order: 100;
+}
+
+/* Also move the Reverse Proxy warning message */
+#ReverseProxyWarningMessage {
+    order: 101;
+}
+
+/* =============================================================================
+   CHARACTER PANEL - Improved Create/Import Icons
+   ============================================================================= */
+
+/* Style the primary action buttons (Create, Import) to make them more visible */
+#rm_button_create,
+#character_import_button {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+#rm_button_create:hover,
+#character_import_button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+/* Add a subtle divider after the action buttons group */
+#rm_button_group_chats {
+    margin-right: 8px;
+    padding-right: 8px;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* =============================================================================
+   REPLY BAR MODEL SELECTOR (Claude-style)
+
+   Layout: [Model Selector] ----- [Microphone] [Send/Stop Button]
+
+   This section controls the three BetterTavern elements in #rightSendForm.
+   We need to override style.css rules that apply to all divs/buttons.
+
+   States handled:
+   - Idle (connected): model selector, mic, send button
+   - Generating: model selector, mic, stop button (replaces send)
+   - Not connected: model selector, mic (send hidden via displayNone)
+   ============================================================================= */
+
+/* --- RESET: Override style.css generic rules for our specific elements --- */
+
+/* style.css applies to #rightSendForm>div:not(.mes_stop) with margin:0, opacity:0.7, fixed size */
+/* We need to exclude our elements from those rules */
+
+#form_sheld #rightSendForm #bt-model-selector-container,
+#form_sheld #rightSendForm #bt-voice-input,
+#form_sheld #rightSendForm #bt-model-selector-btn {
+    /* Reset opacity/filter inherited from style.css
+       (#rightSendForm>div:not(.mes_stop) forces opacity:0.7, filter) */
+    margin: 0;
+    opacity: 1;
+    filter: none;
+}
+
+/* Override the fixed width/height from style.css for model selector ONLY.
+   The mic button is a <button> not a <div>, so style.css doesn't affect it —
+   we must NOT override its explicit sizing here. */
+#form_sheld #rightSendForm #bt-model-selector-container,
+#form_sheld #rightSendForm #bt-model-selector-btn {
+    width: auto;
+    height: auto;
+}
+
+/* --- LAYOUT: Flexbox ordering --- */
+
+#form_sheld #rightSendForm {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    overflow: visible;
+}
+
+/* Order: Model selector (1) -> Microphone (2) -> Stop/Send button (3) */
+#form_sheld #rightSendForm #bt-model-selector-container {
+    order: 1;
+    flex-shrink: 0;
+}
+
+#form_sheld #rightSendForm #bt-voice-input {
+    order: 2;
+}
+
+/* CRITICAL: mes_stop must have same order as send_but to replace it in place */
+#form_sheld #rightSendForm #mes_stop {
+    order: 3;
+}
+
+#form_sheld #rightSendForm #send_but {
+    order: 3;
+}
+
+/* Hide other controls we don't use */
+#form_sheld #rightSendForm .stscript_btn,
+#form_sheld #rightSendForm #mes_impersonate,
+#form_sheld #rightSendForm #mes_continue {
+    display: none;
+}
+
+/* --- MODEL SELECTOR CONTAINER --- */
+
+#bt-model-selector-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: auto;
+    height: auto;
+}
+
+/* --- MODEL SELECTOR BUTTON --- */
+
+#bt-model-selector-btn {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    padding: 6px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--SmartThemeBodyColor, #ccc);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    white-space: nowrap;
+}
+
+#bt-model-selector-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+#bt-model-selector-container.open #bt-model-selector-btn {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#bt-model-selector-btn .bt-model-name {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: right;
+}
+
+#bt-model-selector-btn .bt-model-chevron {
+    font-size: 10px;
+    opacity: 0.7;
+    transition: transform 0.2s ease;
+}
+
+#bt-model-selector-container.open .bt-model-chevron {
+    transform: rotate(180deg);
+}
+
+/* --- MICROPHONE BUTTON --- */
+
+#bt-voice-input {
+    width: var(--bt-reply-button-size, 32px);
+    height: var(--bt-reply-button-size, 32px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    color: var(--SmartThemeBodyColor, #ccc);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+#bt-voice-input:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#bt-voice-input.is-listening {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--SmartThemeQuoteColor);
+}
+
+#bt-voice-input.is-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* --- SEND BUTTON --- */
+
+#form_sheld #rightSendForm #send_but {
+    width: var(--bt-reply-send-size, 40px);
+    height: var(--bt-reply-send-size, 40px);
+    border-radius: 12px;
+    background: var(--SmartThemeQuoteColor);
+    color: #1d1407;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 1;
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+#form_sheld #rightSendForm #send_but:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* --- STOP BUTTON (during generation) --- */
+
+#form_sheld #rightSendForm #mes_stop {
+    width: var(--bt-reply-send-size, 40px);
+    height: var(--bt-reply-send-size, 40px);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--SmartThemeBodyColor, #ccc);
+    display: none; /* Shown via JS when generating */
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 1;
+    transition: background-color 0.15s ease;
+}
+
+#form_sheld #rightSendForm #mes_stop:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+/* --- MODEL DROPDOWN --- */
+
+#bt-model-dropdown {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    min-width: 260px;
+    max-height: 60vh;
+    overflow-y: auto;
+    background: var(--SmartThemeBlurTintColor, #1a1a1a);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    padding: 8px;
+    z-index: 100000;
+    display: none;
+}
+
+#bt-model-dropdown.open {
+    display: block;
+}
+
+/* Dropdown items */
+.bt-model-dropdown-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.bt-model-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.bt-model-dropdown-item:active {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.bt-model-dropdown-item.selected {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.bt-model-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.bt-model-item-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--SmartThemeBodyColor, #ccc);
+    margin-bottom: 2px;
+}
+
+.bt-model-item-desc {
+    font-size: 12px;
+    color: var(--SmartThemeBodyColor, #999);
+    opacity: 0.7;
+}
+
+.bt-model-item-check {
+    width: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b9eff;
+    font-size: 14px;
+}
+
+/* Hide the voice input button on desktop (optional - matches Claude's minimal design) */
+/*
+#bt-voice-input {
+    display: none !important;
+}
+*/

@@ -1,0 +1,986 @@
+/**
+ * BetterTavern Start New Page Styling
+ * Provides a unified entry point for starting new chats
+ */
+
+/* =============================================================================
+   START NEW MODAL
+   ============================================================================= */
+
+#bt-startnew-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10001;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+}
+
+#bt-startnew-modal.open {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bt-startnew-content {
+    background: var(--SmartThemeBlurTintColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 16px;
+    max-width: 700px;
+    width: 90%;
+    max-height: 85vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+/* Header */
+.bt-startnew-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+}
+
+.bt-startnew-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--SmartThemeBodyColor);
+}
+
+.bt-startnew-close {
+    background: transparent;
+    border: none;
+    color: var(--SmartThemeBodyColor);
+    font-size: 20px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.15s ease;
+    padding: 5px;
+}
+
+.bt-startnew-close:hover {
+    opacity: 1;
+}
+
+/* Options Grid */
+.bt-startnew-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    padding: 24px;
+}
+
+.bt-startnew-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    border: 2px solid var(--SmartThemeBorderColor);
+    border-radius: 12px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    color: var(--SmartThemeBodyColor);
+}
+
+.bt-startnew-option:hover {
+    border-color: var(--SmartThemeQuoteColor);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.bt-startnew-option.active {
+    border-color: var(--SmartThemeQuoteColor);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.bt-startnew-option i {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.8;
+}
+
+.bt-startnew-option span {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.bt-startnew-option small {
+    font-size: 11px;
+    opacity: 0.6;
+    margin-top: 4px;
+}
+
+/* Content Sections */
+.bt-startnew-section {
+    display: none;
+    padding: 0 24px 24px 24px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.bt-startnew-section.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Import Card Section */
+.bt-startnew-dropzone {
+    border: 2px dashed var(--SmartThemeBorderColor);
+    border-radius: 12px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.bt-startnew-dropzone:hover,
+.bt-startnew-dropzone.dragover {
+    border-color: var(--SmartThemeQuoteColor);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.bt-startnew-dropzone i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.bt-startnew-dropzone p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--SmartThemeBodyColor);
+}
+
+.bt-startnew-dropzone small {
+    display: block;
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+.bt-startnew-dropzone input[type="file"] {
+    display: none;
+}
+
+/* Library Section */
+.bt-startnew-library {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    max-height: 400px;
+}
+
+.bt-startnew-char {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.bt-startnew-char:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.bt-startnew-char-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    background: var(--SmartThemeBorderColor);
+}
+
+.bt-startnew-char-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.bt-startnew-char-name {
+    font-size: 12px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    color: var(--SmartThemeBodyColor);
+}
+
+.bt-startnew-library-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 48px 24px;
+    opacity: 0.6;
+}
+
+/* Cloning-in-progress: disable clicks on all other characters */
+.bt-startnew-library-cloning {
+    pointer-events: none;
+}
+
+/* Cloning-in-progress: visual feedback on the clicked character */
+.bt-startnew-char-cloning {
+    opacity: 0.6;
+    position: relative;
+}
+
+.bt-startnew-char-cloning .bt-startnew-char-avatar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.35);
+    animation: bt-clone-pulse 1s ease-in-out infinite;
+}
+
+@keyframes bt-clone-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+}
+
+/* Ensure avatar is positioned for the pseudo-element overlay */
+.bt-startnew-char-cloning .bt-startnew-char-avatar {
+    position: relative;
+}
+
+/* =============================================================================
+   CREATE NEW SECTION
+   ============================================================================= */
+
+/* When create section is active, expand the modal */
+#bt-startnew-create.active {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+}
+
+/* Mode Toggle */
+.bt-create-mode-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.bt-create-mode-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: 2px solid var(--SmartThemeBorderColor);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.bt-create-mode-btn:hover {
+    border-color: var(--SmartThemeQuoteColor);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.bt-create-mode-btn.active {
+    border-color: var(--SmartThemeQuoteColor);
+    background: var(--SmartThemeQuoteColor);
+    color: #fff;
+}
+
+.bt-create-mode-btn i {
+    font-size: 14px;
+}
+
+/* Progress Indicator */
+.bt-create-progress {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.bt-create-progress-bar {
+    height: 3px;
+    flex: 1;
+    background: var(--SmartThemeQuoteColor);
+    border-radius: 2px;
+}
+
+/* Scrollable Area */
+.bt-create-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+}
+
+/* Identity Row (Avatar + Name) */
+.bt-create-identity {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.bt-create-avatar {
+    width: 80px;
+    height: 80px;
+    min-width: 80px;
+    border: 2px dashed var(--SmartThemeQuoteColor);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.bt-create-avatar i {
+    font-size: 24px;
+    color: var(--SmartThemeQuoteColor);
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.bt-create-avatar:hover {
+    border-color: var(--SmartThemeQuoteColor);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.bt-create-avatar:hover i {
+    opacity: 1;
+}
+
+.bt-create-avatar.has-image i {
+    display: none;
+}
+
+.bt-create-avatar.has-image {
+    border-style: solid;
+}
+
+.bt-create-name-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.bt-create-name-hint {
+    font-size: 11px;
+    opacity: 0.5;
+    margin-top: 4px;
+}
+
+/* Shared Input Styles */
+.bt-create-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--SmartThemeBodyColor);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.bt-create-input:focus {
+    border-color: var(--SmartThemeQuoteColor);
+}
+
+.bt-create-input::placeholder {
+    color: var(--SmartThemeBodyColor);
+    opacity: 0.35;
+}
+
+.bt-create-textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.15);
+    color: var(--SmartThemeBodyColor);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s ease;
+    resize: vertical;
+    line-height: 1.5;
+    box-sizing: border-box;
+}
+
+.bt-create-textarea:focus {
+    border-color: var(--SmartThemeQuoteColor);
+}
+
+.bt-create-textarea::placeholder {
+    color: var(--SmartThemeBodyColor);
+    opacity: 0.35;
+}
+
+.bt-create-select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--SmartThemeBodyColor);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+    box-sizing: border-box;
+    appearance: auto;
+}
+
+.bt-create-select:focus {
+    border-color: var(--SmartThemeQuoteColor);
+}
+
+/* Field Groups */
+.bt-create-field-group {
+    margin-bottom: 20px;
+}
+
+.bt-create-field-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.bt-create-field-icon {
+    color: var(--SmartThemeQuoteColor);
+    font-size: 14px;
+}
+
+.bt-create-field-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--SmartThemeBodyColor);
+}
+
+.bt-create-field-hint {
+    font-size: 11px;
+    opacity: 0.5;
+    color: var(--SmartThemeBodyColor);
+}
+
+/* Greetings (First Message Tabs) */
+.bt-create-greetings {
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.bt-create-greetings-tabs {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    padding: 0 8px;
+    gap: 4px;
+    overflow-x: auto;
+}
+
+.bt-create-greeting-tab {
+    padding: 8px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor);
+    opacity: 0.6;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bt-create-greeting-tab:hover {
+    opacity: 0.9;
+}
+
+.bt-create-greeting-tab.active {
+    opacity: 1;
+    font-weight: 600;
+    border-bottom-color: var(--SmartThemeQuoteColor);
+}
+
+.bt-create-greeting-tab .bt-create-greeting-remove {
+    font-size: 14px;
+    opacity: 0.5;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.bt-create-greeting-tab .bt-create-greeting-remove:hover {
+    opacity: 1;
+    color: #ff4444;
+}
+
+.bt-create-greeting-add {
+    padding: 8px 12px;
+    font-size: 16px;
+    background: none;
+    border: none;
+    color: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+}
+
+.bt-create-greeting-add:hover {
+    opacity: 1;
+}
+
+.bt-create-greeting-textarea {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+.bt-create-greeting-textarea:focus {
+    border: none;
+}
+
+/* =============================================================================
+   WORLD MODE - World Info Editor
+   ============================================================================= */
+
+.bt-create-wi-container {
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* WI Tabs */
+.bt-create-wi-tabs {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    padding: 0 8px;
+    gap: 4px;
+    overflow-x: auto;
+}
+
+.bt-create-wi-tab {
+    padding: 8px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor);
+    opacity: 0.6;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bt-create-wi-tab:hover {
+    opacity: 0.9;
+}
+
+.bt-create-wi-tab.active {
+    opacity: 1;
+    font-weight: 600;
+    border-bottom-color: var(--SmartThemeQuoteColor);
+}
+
+.bt-create-wi-tab-close {
+    font-size: 14px;
+    background: none;
+    border: none;
+    color: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    opacity: 0.4;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.bt-create-wi-tab-close:hover {
+    opacity: 1;
+    color: #ff4444;
+}
+
+.bt-create-wi-tab-add {
+    padding: 8px 12px;
+    font-size: 16px;
+    background: none;
+    border: none;
+    color: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+}
+
+.bt-create-wi-tab-add:hover {
+    opacity: 1;
+}
+
+/* WI Editor */
+.bt-create-wi-editor {
+    padding: 16px;
+}
+
+/* Toggle Row (Enable / Always Active) */
+.bt-create-wi-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.bt-create-wi-toggle-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bt-create-wi-toggle-label strong {
+    font-size: 13px;
+    color: var(--SmartThemeBodyColor);
+}
+
+.bt-create-wi-toggle-label span {
+    font-size: 11px;
+    opacity: 0.5;
+    color: var(--SmartThemeBodyColor);
+}
+
+/* Custom Toggle Switch */
+.bt-create-toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    min-width: 44px;
+}
+
+.bt-create-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.bt-create-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: 0.2s ease;
+    border-radius: 24px;
+}
+
+.bt-create-toggle-slider::before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.2s ease;
+    border-radius: 50%;
+}
+
+.bt-create-toggle input:checked + .bt-create-toggle-slider {
+    background-color: var(--SmartThemeQuoteColor);
+}
+
+.bt-create-toggle input:checked + .bt-create-toggle-slider::before {
+    transform: translateX(20px);
+}
+
+/* WI Section Headers */
+.bt-create-wi-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    margin-top: 8px;
+}
+
+.bt-create-wi-section-header span {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--SmartThemeBodyColor);
+}
+
+/* WI Fields */
+.bt-create-wi-field {
+    margin-bottom: 12px;
+}
+
+.bt-create-wi-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--SmartThemeBodyColor);
+}
+
+.bt-create-required {
+    color: var(--SmartThemeQuoteColor);
+}
+
+.bt-create-wi-content-hint {
+    display: block;
+    font-size: 11px;
+    opacity: 0.4;
+    margin-top: 4px;
+}
+
+/* Position Grid */
+.bt-create-wi-position-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* =============================================================================
+   FOOTER (Create button & Back)
+   ============================================================================= */
+
+.bt-create-footer {
+    display: flex;
+    align-items: center;
+    padding: 12px 0 0 0;
+    border-top: 1px solid var(--SmartThemeBorderColor);
+    margin-top: 8px;
+}
+
+.bt-create-footer-spacer {
+    flex: 1;
+}
+
+.bt-create-footer-btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bt-create-back-btn {
+    background: transparent;
+    color: var(--SmartThemeBodyColor);
+    opacity: 0.7;
+}
+
+.bt-create-back-btn:hover {
+    opacity: 1;
+}
+
+.bt-create-submit-btn {
+    background: var(--SmartThemeQuoteColor);
+    color: #fff;
+}
+
+.bt-create-submit-btn:hover {
+    opacity: 0.9;
+}
+
+.bt-create-submit-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Hidden fields class */
+.bt-create-fields {
+    /* Container for mode-specific fields */
+}
+
+/* =============================================================================
+   SIDEBAR BUTTONS
+   ============================================================================= */
+
+/* Sidebar Start New Button - left-aligned so icon stays in same position */
+#bt-startnew-btn {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px 14px 10px 8px;
+    margin: 0 8px;
+    width: calc(100% - 16px);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    text-align: left;
+}
+
+#bt-assistant-btn {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px 14px 10px 8px;
+    margin: 0 8px 6px;
+    width: calc(100% - 16px);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    text-align: left;
+}
+
+#bt-assistant-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#bt-assistant-btn i {
+    font-size: 18px;
+    width: 24px;
+    min-width: 24px;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0;
+}
+
+#bt-assistant-btn span {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+#bt-startnew-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#bt-startnew-btn i {
+    font-size: 18px;
+    width: 24px;
+    min-width: 24px;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0;
+}
+
+#bt-startnew-btn span {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* =============================================================================
+   RESPONSIVE
+   ============================================================================= */
+
+@media (max-width: 599px) {
+    .bt-startnew-content {
+        width: 100%;
+        max-width: none;
+        max-height: 100dvh;
+        border-radius: 0;
+        overflow-y: auto;
+    }
+
+    .bt-startnew-header {
+        padding: 16px;
+    }
+
+    .bt-startnew-options {
+        grid-template-columns: 1fr;
+        padding: 16px;
+        gap: 10px;
+    }
+
+    /* Compact horizontal cards instead of tall vertical ones */
+    .bt-startnew-option {
+        flex-direction: row;
+        padding: 12px 16px;
+        gap: 12px;
+        text-align: left;
+        justify-content: flex-start;
+    }
+
+    .bt-startnew-option i {
+        font-size: 20px;
+        margin-bottom: 0;
+        min-width: 24px;
+    }
+
+    /* Single scroll surface — let parent handle scrolling */
+    .bt-startnew-section {
+        padding: 0 16px 16px 16px;
+        flex: none;
+        overflow: visible;
+    }
+
+    #bt-startnew-create.active {
+        overflow: visible;
+    }
+
+    .bt-create-scrollable {
+        overflow-y: visible;
+        flex: none;
+    }
+
+    .bt-startnew-library {
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+        gap: 8px;
+    }
+
+    .bt-create-wi-position-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .bt-create-identity {
+        flex-direction: column;
+        text-align: center;
+    }
+}
