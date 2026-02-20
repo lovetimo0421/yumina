@@ -13,10 +13,10 @@ import {
   PromptBuilder,
   ResponseParser,
   StructuredResponseParser,
-  LorebookMatcher,
 } from "@yumina/engine";
 import type { WorldDefinition, GameState, AudioEffect } from "@yumina/engine";
 import type { AppEnv } from "../lib/types.js";
+import { retrieveLorebookEntries } from "../lib/lorebook-retriever.js";
 
 const messageRoutes = new Hono<AppEnv>();
 
@@ -26,7 +26,6 @@ const rulesEngine = new RulesEngine();
 const promptBuilder = new PromptBuilder();
 const responseParser = new ResponseParser();
 const structuredParser = new StructuredResponseParser();
-const lorebookMatcher = new LorebookMatcher();
 
 // Helper: get user's active API key for a provider
 async function getUserApiKey(userId: string, provider = "openrouter") {
@@ -120,7 +119,7 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     return c.json({ error: "Session not found" }, 404);
   }
 
-  const { worldDef, gameState } = context;
+  const { session: sessionData, worldDef, gameState } = context;
   const model = body.model ?? "openai/gpt-4o-mini";
 
   const resolved = await resolveProviderForModel(currentUser.id, model);
@@ -163,16 +162,19 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     .where(eq(messages.sessionId, sessionId))
     .orderBy(messages.createdAt);
 
-  // Match lorebook entries with token budgeting
+  // Hybrid lorebook retrieval (BM25 + vector if embeddings exist)
   const scanDepth = worldDef.settings?.lorebookScanDepth ?? 10;
   const tokenBudget = worldDef.settings?.lorebookTokenBudget ?? 2048;
   const recentTexts = historyRows.slice(-scanDepth).map((m) => m.content);
-  const lorebookResult = lorebookMatcher.matchWithBudget(
-    worldDef.lorebookEntries ?? [],
-    recentTexts,
-    snapshot,
-    tokenBudget
-  );
+  const openaiKey = await getUserApiKey(currentUser.id, "openai");
+  const lorebookResult = await retrieveLorebookEntries({
+    entries: worldDef.lorebookEntries ?? [],
+    recentMessages: recentTexts,
+    state: snapshot,
+    tokenBudget,
+    worldId: sessionData.worldId,
+    openaiApiKey: openaiKey,
+  });
   const matchedEntries = [...lorebookResult.alwaysSend, ...lorebookResult.triggered];
 
   const systemPrompt = useStructured
@@ -446,7 +448,7 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
     return c.json({ error: "Session context not found" }, 404);
   }
 
-  const { worldDef, gameState } = context;
+  const { session: regenSession, worldDef, gameState } = context;
   const model = body.model ?? "openai/gpt-4o-mini";
 
   const resolved = await resolveProviderForModel(currentUser.id, model);
@@ -477,16 +479,19 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
   const msgIndex = historyRows.findIndex((m) => m.id === messageId);
   const priorMessages = historyRows.slice(0, msgIndex);
 
-  // Match lorebook entries with token budgeting
+  // Hybrid lorebook retrieval (BM25 + vector if embeddings exist)
   const scanDepth = worldDef.settings?.lorebookScanDepth ?? 10;
   const tokenBudget = worldDef.settings?.lorebookTokenBudget ?? 2048;
   const recentTexts = priorMessages.slice(-scanDepth).map((m) => m.content);
-  const lorebookResult = lorebookMatcher.matchWithBudget(
-    worldDef.lorebookEntries ?? [],
-    recentTexts,
-    snapshot,
-    tokenBudget
-  );
+  const openaiKey = await getUserApiKey(currentUser.id, "openai");
+  const lorebookResult = await retrieveLorebookEntries({
+    entries: worldDef.lorebookEntries ?? [],
+    recentMessages: recentTexts,
+    state: snapshot,
+    tokenBudget,
+    worldId: regenSession.worldId,
+    openaiApiKey: openaiKey,
+  });
   const matchedEntries = [...lorebookResult.alwaysSend, ...lorebookResult.triggered];
 
   const systemPrompt = useStructured

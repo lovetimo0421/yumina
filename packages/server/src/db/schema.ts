@@ -135,6 +135,19 @@ export const assets = pgTable("assets", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const lorebookEmbeddings = pgTable("lorebook_embeddings", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  worldId: text("world_id")
+    .notNull()
+    .references(() => worlds.id, { onDelete: "cascade" }),
+  entryId: text("entry_id").notNull(),
+  embedding: jsonb("embedding").notNull().$type<number[]>(),
+  contentHash: text("content_hash").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const apiKeys = pgTable("api_keys", {
   id: text("id")
     .primaryKey()
