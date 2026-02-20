@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Send, Square } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useChatStore } from "@/stores/chat";
+import { ModelSelector } from "./model-selector";
 
 export function MessageInput() {
   const [content, setContent] = useState("");
@@ -13,7 +13,6 @@ export function MessageInput() {
     if (!trimmed || isStreaming) return;
     sendMessage(trimmed);
     setContent("");
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -35,40 +34,62 @@ export function MessageInput() {
   }, [content]);
 
   return (
-    <div className="border-t border-border bg-background p-4">
-      <div className="mx-auto flex max-w-3xl items-end gap-2">
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={isStreaming ? "Generating..." : "Type a message..."}
-          disabled={isStreaming}
-          rows={1}
-          className="flex-1 resize-none rounded-lg border border-border bg-secondary px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-        />
+    <div className="shrink-0 px-4 pb-4">
+      <div className="mx-auto max-w-4xl">
+        {/* Glass card */}
+        <div
+          className="rounded-2xl border shadow-lg shadow-black/25"
+          style={{
+            background: "var(--glass-bg)",
+            borderColor: "var(--glass-border)",
+          }}
+        >
+          {/* Grid: textarea (row 1), buttons (row 2) */}
+          <div className="grid grid-cols-[1fr_auto] grid-rows-[auto_auto] gap-3 p-3 pb-2.5">
+            {/* Textarea — spans full width */}
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                isStreaming
+                  ? "Generating..."
+                  : "Type whatever you want to do in this world!"
+              }
+              disabled={isStreaming}
+              rows={1}
+              className="col-span-2 min-h-[48px] resize-none rounded-xl bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none disabled:opacity-40"
+            />
 
-        {isStreaming ? (
-          <Button
-            onClick={stopGeneration}
-            variant="destructive"
-            size="icon"
-            className="h-11 w-11 shrink-0"
-            title="Stop generation"
-          >
-            <Square className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button
-            onClick={handleSend}
-            disabled={!content.trim()}
-            size="icon"
-            className="h-11 w-11 shrink-0"
-            title="Send message (Enter)"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        )}
+            {/* Left side — placeholder for future actions */}
+            <div className="flex items-center" />
+
+            {/* Right side — model selector + send/stop */}
+            <div className="flex items-center gap-2">
+              <ModelSelector />
+
+              {isStreaming ? (
+                <button
+                  onClick={stopGeneration}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-foreground transition-colors duration-150 hover:bg-white/18"
+                  title="Stop generation"
+                >
+                  <Square className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSend}
+                  disabled={!content.trim()}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all duration-150 hover:brightness-110 hover:shadow-md disabled:opacity-30 disabled:cursor-default"
+                  title="Send message"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -7,9 +7,9 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="grid h-screen overflow-hidden" style={{ gridTemplateColumns: "var(--sidebar-width, 260px) 1fr" }}>
       <Sidebar />
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="overflow-auto">{children}</main>
     </div>
   );
 }

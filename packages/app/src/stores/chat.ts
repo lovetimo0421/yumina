@@ -56,8 +56,12 @@ interface ChatState {
   // Recent state changes for notifications
   recentStateChanges: StateChange[];
 
+  // Model selection
+  selectedModel: string;
+
   // Actions
   setSession: (session: SessionData | null) => void;
+  setSelectedModel: (model: string) => void;
   setMessages: (messages: Message[]) => void;
   setGameState: (state: Record<string, number | string | boolean>) => void;
   addMessage: (message: Message) => void;
@@ -84,8 +88,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamStartTime: null,
   abortController: null,
   recentStateChanges: [],
+  selectedModel: "anthropic/claude-sonnet-4",
 
   setSession: (session) => set({ session }),
+  setSelectedModel: (model) => set({ selectedModel: model }),
   setMessages: (messages) => set({ messages }),
   setGameState: (gameState) => set({ gameState }),
 
@@ -128,8 +134,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   sendMessage: (content: string, model?: string) => {
-    const { session, isStreaming } = get();
+    const { session, isStreaming, selectedModel } = get();
     if (!session || isStreaming) return;
+    const useModel = model ?? selectedModel;
 
     set({
       isStreaming: true,
@@ -141,7 +148,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       `${apiBase}/api/sessions/${session.id}/messages`,
       {
         method: "POST",
-        body: { content, model },
+        body: { content, model: useModel },
         callbacks: {
           onText: (text) => {
             set((s) => ({ streamingContent: s.streamingContent + text }));

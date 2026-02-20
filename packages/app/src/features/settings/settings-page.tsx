@@ -43,12 +43,12 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-8">
-      <h1 className="text-3xl font-bold">Settings</h1>
+      <h1 className="text-2xl font-bold">Settings</h1>
 
-      <Card>
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle>Profile</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-muted-foreground/60">
             Update your profile information
           </CardDescription>
         </CardHeader>
@@ -66,9 +66,9 @@ export function SettingsPage() {
                 type="email"
                 value={session?.user?.email ?? ""}
                 disabled
-                className="opacity-60"
+                className="opacity-50"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground/50">
                 Email cannot be changed
               </p>
             </div>
@@ -94,7 +94,7 @@ export function SettingsPage() {
               <p
                 className={`text-sm ${
                   message.includes("success")
-                    ? "text-green-500"
+                    ? "text-green-400"
                     : "text-destructive"
                 }`}
               >

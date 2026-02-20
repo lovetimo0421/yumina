@@ -1,4 +1,3 @@
-import { useState, useRef } from "react";
 import { renderMarkdown } from "@/lib/markdown";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/stores/chat";
@@ -16,25 +15,13 @@ export function MessageBubble({
   streamingContent,
   children,
 }: MessageBubbleProps) {
-  const [showActions, setShowActions] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
   const displayContent = isStreaming ? streamingContent ?? "" : message.content;
 
-  const handleMouseEnter = () => {
-    clearTimeout(timeoutRef.current);
-    setShowActions(true);
-  };
-
-  const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => setShowActions(false), 300);
-  };
-
   if (isSystem) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-2 text-center text-sm text-muted-foreground italic">
+      <div className="mx-auto max-w-xl px-4 py-2 text-center text-xs text-muted-foreground/60 italic">
         {displayContent}
       </div>
     );
@@ -43,58 +30,69 @@ export function MessageBubble({
   return (
     <div
       className={cn(
-        "group relative flex gap-3 px-4 py-3",
+        "group relative flex gap-3 px-4 py-1.5",
         isUser ? "flex-row-reverse" : "flex-row"
       )}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
       {/* Avatar */}
       <div
         className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+          "mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
           isUser
-            ? "bg-primary text-primary-foreground"
-            : "bg-secondary text-foreground"
+            ? "bg-primary/20 text-primary"
+            : "bg-secondary text-foreground/70"
         )}
       >
         {isUser ? "You" : "AI"}
       </div>
 
-      {/* Content */}
+      {/* Content block */}
       <div
         className={cn(
-          "flex max-w-[75%] flex-col gap-1",
-          isUser ? "items-end" : "items-start"
+          "relative flex flex-col gap-0.5 pb-7",
+          isUser ? "items-end max-w-[75%]" : "items-start max-w-[85%]"
         )}
       >
+        {/* Bubble */}
         <div
           className={cn(
-            "rounded-lg px-4 py-2.5 text-sm leading-relaxed",
+            "rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
             isUser
-              ? "bg-primary text-primary-foreground"
+              ? "bg-primary/15 text-foreground"
               : "bg-secondary text-foreground"
           )}
         >
           <div
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(displayContent) }}
+            dangerouslySetInnerHTML={{
+              __html: renderMarkdown(displayContent),
+            }}
           />
           {isStreaming && (
-            <span className="ml-1 inline-block h-4 w-1.5 animate-pulse bg-current" />
+            <span className="streaming-cursor ml-0.5 inline-block text-primary">
+              ▎
+            </span>
           )}
         </div>
 
         {/* Metadata */}
-        {!isStreaming && message.generationTimeMs && (
-          <span className="text-xs text-muted-foreground">
+        {!isStreaming && !isUser && message.generationTimeMs && (
+          <span className="px-1 text-[11px] text-muted-foreground/50">
             {(message.generationTimeMs / 1000).toFixed(1)}s
-            {message.tokenCount && ` · ${message.tokenCount} tokens`}
+            {message.tokenCount ? ` · ${message.tokenCount} tok` : ""}
           </span>
         )}
 
-        {/* Action buttons slot */}
-        {showActions && !isStreaming && children && (
-          <div className="mt-1">{children}</div>
+        {/* Hover-reveal action buttons (positioned absolute at bottom of pb-7 space) */}
+        {!isStreaming && children && (
+          <div
+            className={cn(
+              "absolute bottom-0 flex items-center gap-1 opacity-0 transition-all duration-150 group-hover:opacity-100",
+              isUser ? "right-0" : "left-0",
+              "touch-device:opacity-100"
+            )}
+          >
+            {children}
+          </div>
         )}
       </div>
     </div>

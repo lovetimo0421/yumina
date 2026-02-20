@@ -1,4 +1,5 @@
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: "../../.env" });
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import { worlds, user } from "./schema.js";

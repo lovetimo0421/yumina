@@ -19,7 +19,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
   if (!session) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
-        <p>Loading session...</p>
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+          <p className="text-sm">Loading session...</p>
+        </div>
       </div>
     );
   }

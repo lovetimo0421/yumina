@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { Play, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import type { WorldItem } from "@/stores/worlds";
 
 interface WorldCardProps {
@@ -26,7 +25,10 @@ export function WorldCard({ world }: WorldCardProps) {
 
       if (res.ok) {
         const { data } = await res.json();
-        router.navigate({ to: "/app/chat/$sessionId", params: { sessionId: data.id } });
+        router.navigate({
+          to: "/app/chat/$sessionId",
+          params: { sessionId: data.id },
+        });
       }
     } catch {
       // Silently fail
@@ -36,9 +38,9 @@ export function WorldCard({ world }: WorldCardProps) {
   };
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-primary/50">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors duration-200 hover:border-primary/40">
       {/* Thumbnail */}
-      <div className="flex h-40 items-center justify-center bg-secondary/50">
+      <div className="flex h-40 items-center justify-center bg-secondary/30">
         {world.thumbnailUrl ? (
           <img
             src={world.thumbnailUrl}
@@ -46,29 +48,29 @@ export function WorldCard({ world }: WorldCardProps) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <span className="text-4xl">🏰</span>
+          <span className="text-4xl opacity-40">🏰</span>
         )}
       </div>
 
       {/* Info */}
       <div className="flex flex-1 flex-col p-4">
         <h3 className="font-semibold">{world.name}</h3>
-        <p className="mt-1 flex-1 text-sm text-muted-foreground line-clamp-2">
+        <p className="mt-1 flex-1 text-sm text-muted-foreground/60 line-clamp-2">
           {world.description || "No description"}
         </p>
 
-        <Button
+        <button
           onClick={handlePlay}
           disabled={loading}
-          className="mt-4 w-full"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-medium text-primary-foreground transition-all duration-150 hover:brightness-110 hover:shadow-md disabled:opacity-50"
         >
           {loading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Play className="mr-2 h-4 w-4" />
+            <Play className="h-4 w-4" />
           )}
           {loading ? "Starting..." : "Play"}
-        </Button>
+        </button>
       </div>
     </div>
   );
