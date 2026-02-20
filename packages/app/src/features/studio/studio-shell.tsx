@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { useRouter } from "@tanstack/react-router";
 import {
   DockviewReact,
@@ -21,6 +21,8 @@ import {
   Code,
   LayoutGrid,
   Plus,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import { useEditorStore } from "@/stores/editor";
 import { useStudioStore } from "@/stores/studio";
@@ -71,7 +73,7 @@ function getLayoutKey(worldId: string) {
 
 export function StudioShell() {
   const router = useRouter();
-  const { worldDraft, serverWorldId, isDirty, saving, saveDraft } =
+  const { worldDraft, serverWorldId, isDirty, saving, saveDraft, canUndo, canRedo, undo, redo } =
     useEditorStore();
   const { mode, setMode, setPlaytestSessionId } = useStudioStore();
   const dockviewRef = useRef<DockviewApi | null>(null);
@@ -158,6 +160,33 @@ export function StudioShell() {
     await saveDraft();
   }, [saveLayout, saveDraft]);
 
+  // Ctrl+Z / Ctrl+Y keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z") {
+        e.preventDefault();
+        useEditorStore.getState().undo();
+      }
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === "y" || (e.shiftKey && e.key === "z") || (e.shiftKey && e.key === "Z"))
+      ) {
+        e.preventDefault();
+        useEditorStore.getState().redo();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        const state = useEditorStore.getState();
+        if (state.isDirty && !state.saving) {
+          saveLayout();
+          state.saveDraft();
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [saveLayout]);
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       {/* Toolbar */}
@@ -217,6 +246,26 @@ export function StudioShell() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Undo / Redo */}
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            className="hover-surface rounded-lg p-1.5 text-muted-foreground disabled:opacity-30"
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={redo}
+            disabled={!canRedo}
+            className="hover-surface rounded-lg p-1.5 text-muted-foreground disabled:opacity-30"
+            title="Redo (Ctrl+Y)"
+          >
+            <Redo2 className="h-3.5 w-3.5" />
+          </button>
         </div>
 
         <div className="flex-1" />

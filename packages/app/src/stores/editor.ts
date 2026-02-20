@@ -14,6 +14,7 @@ const apiBase = import.meta.env.VITE_API_URL || "";
 
 const DRAFT_KEY = "yumina-editor-draft";
 const AUTOSAVE_DELAY = 2000;
+const MAX_HISTORY = 50;
 
 function createEmptyWorld(): WorldDefinition {
   return {
@@ -51,10 +52,18 @@ export type EditorSection =
 
 interface EditorState {
   worldDraft: WorldDefinition;
-  serverWorldId: string | null; // DB world id (null = new world)
+  serverWorldId: string | null;
   isDirty: boolean;
   activeSection: EditorSection;
   saving: boolean;
+
+  // History
+  _past: WorldDefinition[];
+  _future: WorldDefinition[];
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
 
   // Actions
   createNew: () => void;
@@ -128,12 +137,74 @@ function scheduleDraftSave(draft: WorldDefinition, serverId: string | null) {
   }, AUTOSAVE_DELAY);
 }
 
+/**
+ * Push current worldDraft onto the _past stack, apply newDraft, clear _future.
+ * Returns the partial state update for set().
+ */
+function commitDraft(
+  s: EditorState,
+  newDraft: WorldDefinition
+): Partial<EditorState> {
+  const past = [...s._past, s.worldDraft].slice(-MAX_HISTORY);
+  scheduleDraftSave(newDraft, s.serverWorldId);
+  return {
+    worldDraft: newDraft,
+    isDirty: true,
+    _past: past,
+    _future: [],
+    canUndo: true,
+    canRedo: false,
+  };
+}
+
 export const useEditorStore = create<EditorState>((set, get) => ({
   worldDraft: createEmptyWorld(),
   serverWorldId: null,
   isDirty: false,
   activeSection: "overview",
   saving: false,
+
+  // History
+  _past: [],
+  _future: [],
+  canUndo: false,
+  canRedo: false,
+
+  undo: () => {
+    set((s) => {
+      if (s._past.length === 0) return s;
+      const previous = s._past[s._past.length - 1]!;
+      const newPast = s._past.slice(0, -1);
+      const newFuture = [s.worldDraft, ...s._future];
+      scheduleDraftSave(previous, s.serverWorldId);
+      return {
+        worldDraft: previous,
+        _past: newPast,
+        _future: newFuture,
+        canUndo: newPast.length > 0,
+        canRedo: true,
+        isDirty: true,
+      };
+    });
+  },
+
+  redo: () => {
+    set((s) => {
+      if (s._future.length === 0) return s;
+      const next = s._future[0]!;
+      const newFuture = s._future.slice(1);
+      const newPast = [...s._past, s.worldDraft];
+      scheduleDraftSave(next, s.serverWorldId);
+      return {
+        worldDraft: next,
+        _past: newPast,
+        _future: newFuture,
+        canUndo: true,
+        canRedo: newFuture.length > 0,
+        isDirty: true,
+      };
+    });
+  },
 
   createNew: () => {
     const draft = createEmptyWorld();
@@ -142,6 +213,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       serverWorldId: null,
       isDirty: false,
       activeSection: "overview",
+      _past: [],
+      _future: [],
+      canUndo: false,
+      canRedo: false,
     });
     localStorage.removeItem(DRAFT_KEY);
   },
@@ -154,7 +229,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!res.ok) return;
       const { data } = await res.json();
       const schema = (data.schema ?? {}) as WorldDefinition;
-      // Ensure all fields exist
       const draft: WorldDefinition = {
         id: schema.id || data.id,
         version: schema.version || "1.0.0",
@@ -181,6 +255,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         serverWorldId: data.id,
         isDirty: false,
         activeSection: "overview",
+        _past: [],
+        _future: [],
+        canUndo: false,
+        canRedo: false,
       });
     } catch {
       // fail silently
@@ -192,8 +270,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setField: (key, value) => {
     set((s) => {
       const draft = { ...s.worldDraft, [key]: value };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -203,8 +280,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         settings: { ...s.worldDraft.settings, [key]: value },
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -222,8 +298,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         characters: [...s.worldDraft.characters, newChar],
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -235,8 +310,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           c.id === id ? { ...c, ...updates } : c
         ),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -246,8 +320,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         characters: s.worldDraft.characters.filter((c) => c.id !== id),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -264,8 +337,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         variables: [...s.worldDraft.variables, newVar],
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -277,8 +349,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           v.id === id ? { ...v, ...updates } : v
         ),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -288,8 +359,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         variables: s.worldDraft.variables.filter((v) => v.id !== id),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -307,8 +377,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         components: [...s.worldDraft.components, newComp],
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -317,11 +386,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const draft = {
         ...s.worldDraft,
         components: s.worldDraft.components.map((c) =>
-          c.id === id ? { ...c, ...updates } as GameComponent : c
+          c.id === id ? ({ ...c, ...updates } as GameComponent) : c
         ),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -331,8 +399,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         components: s.worldDraft.components.filter((c) => c.id !== id),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -346,8 +413,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         })
         .filter(Boolean) as GameComponent[];
       const draft = { ...s.worldDraft, components: reordered };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -365,8 +431,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         audioTracks: [...(s.worldDraft.audioTracks ?? []), newTrack],
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -378,8 +443,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           t.id === id ? { ...t, ...updates } : t
         ),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -387,10 +451,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((s) => {
       const draft = {
         ...s.worldDraft,
-        audioTracks: (s.worldDraft.audioTracks ?? []).filter((t) => t.id !== id),
+        audioTracks: (s.worldDraft.audioTracks ?? []).filter(
+          (t) => t.id !== id
+        ),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -412,8 +477,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         lorebookEntries: [...s.worldDraft.lorebookEntries, newEntry],
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -425,8 +489,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           e.id === id ? { ...e, ...updates } : e
         ),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -434,10 +497,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((s) => {
       const draft = {
         ...s.worldDraft,
-        lorebookEntries: s.worldDraft.lorebookEntries.filter((e) => e.id !== id),
+        lorebookEntries: s.worldDraft.lorebookEntries.filter(
+          (e) => e.id !== id
+        ),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -456,8 +520,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         customComponents: [...s.worldDraft.customComponents, newComp],
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -466,11 +529,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const draft = {
         ...s.worldDraft,
         customComponents: s.worldDraft.customComponents.map((c) =>
-          c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c
+          c.id === id
+            ? { ...c, ...updates, updatedAt: new Date().toISOString() }
+            : c
         ),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -478,10 +542,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((s) => {
       const draft = {
         ...s.worldDraft,
-        customComponents: s.worldDraft.customComponents.filter((c) => c.id !== id),
+        customComponents: s.worldDraft.customComponents.filter(
+          (c) => c.id !== id
+        ),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -500,8 +565,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         rules: [...s.worldDraft.rules, newRule],
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -513,8 +577,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           r.id === id ? { ...r, ...updates } : r
         ),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -524,8 +587,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         rules: s.worldDraft.rules.filter((r) => r.id !== id),
       };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -539,8 +601,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         })
         .filter(Boolean) as Rule[];
       const draft = { ...s.worldDraft, rules: reordered };
-      scheduleDraftSave(draft, s.serverWorldId);
-      return { worldDraft: draft, isDirty: true };
+      return commitDraft(s, draft);
     });
   },
 
@@ -556,7 +617,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       };
 
       if (serverWorldId) {
-        // Update existing
         const res = await fetch(`${apiBase}/api/worlds/${serverWorldId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -568,7 +628,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           localStorage.removeItem(DRAFT_KEY);
         }
       } else {
-        // Create new
         const res = await fetch(`${apiBase}/api/worlds`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -598,6 +657,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           worldDraft: draft,
           serverWorldId: serverId ?? null,
           isDirty: true,
+          _past: [],
+          _future: [],
+          canUndo: false,
+          canRedo: false,
         });
       }
     } catch {

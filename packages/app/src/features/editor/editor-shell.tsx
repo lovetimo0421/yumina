@@ -94,20 +94,27 @@ export function EditorShell() {
         />
 
         <div className="flex items-center gap-2">
-          {serverWorldId && (
-            <button
-              onClick={() =>
+          <button
+            onClick={async () => {
+              let id = serverWorldId;
+              if (!id) {
+                // Auto-save first for unsaved worlds
+                await saveDraft();
+                id = useEditorStore.getState().serverWorldId;
+              }
+              if (id) {
                 router.navigate({
                   to: "/app/studio/$worldId",
-                  params: { worldId: serverWorldId },
-                })
+                  params: { worldId: id },
+                });
               }
-              className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
-            >
-              <Wand2 className="h-3.5 w-3.5" />
-              Enter Studio
-            </button>
-          )}
+            }}
+            disabled={saving || (!serverWorldId && !worldDraft.name)}
+            className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-40"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            Enter Studio
+          </button>
           {isDirty && (
             <span className="text-xs text-muted-foreground/50">
               Unsaved changes
