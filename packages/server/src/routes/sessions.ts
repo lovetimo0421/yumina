@@ -7,7 +7,7 @@ import { decryptApiKey } from "../lib/crypto.js";
 import { extractMemories, loadWorldMemories } from "../lib/memory-extractor.js";
 import type { AppEnv } from "../lib/types.js";
 import type { WorldDefinition } from "@yumina/engine";
-import { GameStateManager } from "@yumina/engine";
+import { GameStateManager, PromptBuilder, migrateWorldDefinition } from "@yumina/engine";
 
 const sessionRoutes = new Hono<AppEnv>();
 
@@ -33,7 +33,8 @@ sessionRoutes.post("/", async (c) => {
   }
 
   const world = worldRows[0]!;
-  const worldDef = world.schema as unknown as WorldDefinition;
+  const rawWorldDef = world.schema as unknown as WorldDefinition;
+  const worldDef = migrateWorldDefinition(rawWorldDef);
 
   // Initialize engine state
   const stateManager = new GameStateManager(worldDef);
@@ -50,13 +51,10 @@ sessionRoutes.post("/", async (c) => {
 
   const session = result[0]!;
 
-  // Insert greeting message if the world has one
-  if (worldDef.settings?.greeting) {
-    const greeting = new (await import("@yumina/engine")).PromptBuilder().buildGreeting(
-      worldDef,
-      initialState
-    );
-
+  // Insert greeting message if the world has a greeting entry
+  const promptBuilder = new PromptBuilder();
+  const greeting = promptBuilder.buildGreeting(worldDef, initialState);
+  if (greeting) {
     await db.insert(messages).values({
       sessionId: session.id,
       role: "assistant",

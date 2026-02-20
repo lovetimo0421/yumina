@@ -3,7 +3,7 @@ import { db } from "../db/index.js";
 import { lorebookEmbeddings } from "../db/schema.js";
 import { cosineSimilarity, generateEmbedding } from "./llm/embeddings.js";
 import { bm25Score, normalizeScores } from "./llm/bm25.js";
-import type { LorebookEntry, GameState } from "@yumina/engine";
+import type { WorldEntry, GameState } from "@yumina/engine";
 import { LorebookMatcher } from "@yumina/engine";
 import type { LorebookMatchResult } from "@yumina/engine";
 
@@ -14,7 +14,7 @@ const VECTOR_THRESHOLD = 0.3; // minimum cosine similarity to consider
 const matcher = new LorebookMatcher();
 
 interface RetrievalOptions {
-  entries: LorebookEntry[];
+  entries: WorldEntry[];
   recentMessages: string[];
   state: GameState;
   tokenBudget: number;
@@ -33,8 +33,8 @@ export async function retrieveLorebookEntries(
   const { entries, recentMessages, state, tokenBudget, worldId, openaiApiKey } = options;
 
   // Separate always-send entries first
-  const alwaysSend = entries.filter((e) => e.enabled && e.alwaysSend);
-  const candidates = entries.filter((e) => e.enabled && !e.alwaysSend);
+  const alwaysSend = entries.filter((e) => e.enabled && e.alwaysSend && e.position !== "greeting");
+  const candidates = entries.filter((e) => e.enabled && !e.alwaysSend && e.position !== "greeting");
 
   if (candidates.length === 0) {
     return { alwaysSend, triggered: [], triggeredTokens: 0 };
@@ -126,7 +126,7 @@ export async function retrieveLorebookEntries(
     });
 
   // Apply condition checks + token budgeting
-  const triggered: LorebookEntry[] = [];
+  const triggered: WorldEntry[] = [];
   let usedTokens = 0;
 
   for (const { entry } of scoredEntries) {

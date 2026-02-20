@@ -7,6 +7,7 @@ import { decryptApiKey } from "../lib/crypto.js";
 import { createWorldSchema, updateWorldSchema } from "@yumina/shared";
 import { generateEmbeddings, hashContent } from "../lib/llm/embeddings.js";
 import type { WorldDefinition } from "@yumina/engine";
+import { migrateWorldDefinition } from "@yumina/engine";
 import type { AppEnv } from "../lib/types.js";
 
 const worldRoutes = new Hono<AppEnv>();
@@ -178,8 +179,10 @@ worldRoutes.post("/:id/embeddings", async (c) => {
     return c.json({ error: "World not found or not authorized" }, 404);
   }
 
-  const worldDef = worldRows[0]!.schema as unknown as WorldDefinition;
-  const entries = worldDef.lorebookEntries ?? [];
+  const rawWorldDef = worldRows[0]!.schema as unknown as WorldDefinition;
+  const worldDef = migrateWorldDefinition(rawWorldDef);
+  // Embed all non-greeting entries (greeting doesn't need semantic search)
+  const entries = worldDef.entries.filter((e) => e.position !== "greeting");
 
   if (entries.length === 0) {
     return c.json({ data: { embedded: 0, skipped: 0 } });

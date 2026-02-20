@@ -8,6 +8,7 @@ import { decryptApiKey } from "../lib/crypto.js";
 import { createProvider, inferProvider } from "../lib/llm/provider-factory.js";
 import type { ProviderName } from "../lib/llm/provider-factory.js";
 import type { WorldDefinition } from "@yumina/engine";
+import { migrateWorldDefinition } from "@yumina/engine";
 import type { AppEnv } from "../lib/types.js";
 
 const studioRoutes = new Hono<AppEnv>();
@@ -47,7 +48,8 @@ studioRoutes.post("/:worldId/chat", async (c) => {
   }
 
   const world = worldRows[0]!;
-  const worldDef = world.schema as unknown as WorldDefinition;
+  const rawWorldDef = world.schema as unknown as WorldDefinition;
+  const worldDef = migrateWorldDefinition(rawWorldDef);
   const model = body.model ?? "openai/gpt-4o-mini";
 
   // Resolve provider
@@ -155,9 +157,9 @@ Available action types:
 - addVariable: { id, name, type: "number"|"string"|"boolean", defaultValue, description?, min?, max? }
 - updateVariable: { id, ...fieldsToUpdate }
 - removeVariable: { id }
-- addCharacter: { id, name, description, systemPrompt }
-- updateCharacter: { id, ...fieldsToUpdate }
-- removeCharacter: { id }
+- addEntry: { id, name, content, role: "system"|"character"|"personality"|"scenario"|"lore"|"plot"|"style"|"example"|"greeting"|"custom", position: "top"|"before_char"|"character"|"after_char"|"bottom"|"depth"|"greeting", depth?, insertionOrder?, alwaysSend?, keywords?, conditions?, conditionLogic?, priority?, enabled? }
+- updateEntry: { id, ...fieldsToUpdate }
+- removeEntry: { id }
 - addRule: { id, name, description?, conditions, conditionLogic, effects, priority }
 - updateRule: { id, ...fieldsToUpdate }
 - removeRule: { id }
@@ -167,13 +169,19 @@ Available action types:
 - addAudioTrack: { id, name, type: "bgm"|"sfx"|"ambient", url, loop?, volume? }
 - updateAudioTrack: { id, ...fieldsToUpdate }
 - removeAudioTrack: { id }
-- addLorebookEntry: { id, name, type: "character"|"lore"|"plot"|"style"|"custom", content, keywords, priority?, position?, enabled?, alwaysSend? }
-- updateLorebookEntry: { id, ...fieldsToUpdate }
-- removeLorebookEntry: { id }
 - addCustomComponent: { id, name, tsxCode, description? }
 - updateCustomComponent: { id, ...fieldsToUpdate }
 - removeCustomComponent: { id }
 - updateSettings: { ...settingsFieldsToUpdate }
+
+Entry position slots (in prompt order):
+- "top": World rules, core setting — high AI attention (primacy)
+- "before_char": World info that frames the character
+- "character": Character identity, description, personality — high attention
+- "after_char": Supplementary lore, plot hooks, style guides
+- "bottom": Format instructions, directives
+- "depth": Dynamic context injected N messages from end (requires depth field)
+- "greeting": First assistant message only (not in system prompt)
 
 Rules:
 - "message" is REQUIRED — explain what you did in plain language
@@ -196,11 +204,11 @@ Rules:
     parts.push("\nVariables: (none)");
   }
 
-  if (worldDef.characters.length > 0) {
-    const charList = worldDef.characters
-      .map((ch) => `  - ${ch.id}: ${ch.name}`)
+  if (worldDef.entries.length > 0) {
+    const entryList = worldDef.entries
+      .map((e) => `  - ${e.id}: ${e.name} (${e.role}, position: ${e.position}${e.alwaysSend ? ", always" : ""})`)
       .join("\n");
-    parts.push(`\nCharacters:\n${charList}`);
+    parts.push(`\nEntries:\n${entryList}`);
   }
 
   if (worldDef.rules.length > 0) {
@@ -215,13 +223,6 @@ Rules:
       .map((comp) => `  - ${comp.id}: ${comp.name} (${comp.type})`)
       .join("\n");
     parts.push(`\nComponents:\n${compList}`);
-  }
-
-  if (worldDef.lorebookEntries && worldDef.lorebookEntries.length > 0) {
-    const loreList = worldDef.lorebookEntries
-      .map((e) => `  - ${e.id}: ${e.name} (${e.type})`)
-      .join("\n");
-    parts.push(`\nLorebook Entries:\n${loreList}`);
   }
 
   if (worldDef.customComponents && worldDef.customComponents.length > 0) {

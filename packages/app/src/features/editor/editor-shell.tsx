@@ -5,7 +5,7 @@ import {
   Save,
   Loader2,
   BookOpen,
-  Users,
+  FileText,
   Variable,
   LayoutGrid,
   Music,
@@ -17,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useEditorStore, type EditorSection } from "@/stores/editor";
 import { OverviewSection } from "./sections/overview";
-import { CharactersSection } from "./sections/characters";
+import { EntriesSection } from "./sections/entries";
 import { VariablesSection } from "./sections/variables";
 import { ComponentsSection } from "./sections/components";
 import { AudioSection } from "./sections/audio";
@@ -28,7 +28,7 @@ import { PreviewSection } from "./sections/preview";
 const SECTIONS: { id: EditorSection; label: string; icon: typeof BookOpen }[] =
   [
     { id: "overview", label: "Overview", icon: BookOpen },
-    { id: "characters", label: "Characters", icon: Users },
+    { id: "entries", label: "Entries", icon: FileText },
     { id: "variables", label: "Variables", icon: Variable },
     { id: "components", label: "Components", icon: LayoutGrid },
     { id: "audio", label: "Audio", icon: Music },
@@ -39,7 +39,7 @@ const SECTIONS: { id: EditorSection; label: string; icon: typeof BookOpen }[] =
 
 const SECTION_COMPONENTS: Record<EditorSection, React.FC> = {
   overview: OverviewSection,
-  characters: CharactersSection,
+  entries: EntriesSection,
   variables: VariablesSection,
   components: ComponentsSection,
   audio: AudioSection,

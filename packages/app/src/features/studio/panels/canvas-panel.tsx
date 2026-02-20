@@ -17,7 +17,6 @@ export function CanvasPanel(_props: IDockviewPanelProps) {
     variables: Object.fromEntries(
       worldDraft.variables.map((v) => [v.id, v.defaultValue])
     ),
-    activeCharacterId: worldDraft.characters[0]?.id ?? null,
     turnCount: 0,
     metadata: {},
   };

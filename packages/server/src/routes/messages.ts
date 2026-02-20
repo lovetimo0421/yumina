@@ -13,6 +13,7 @@ import {
   PromptBuilder,
   ResponseParser,
   StructuredResponseParser,
+  migrateWorldDefinition,
 } from "@yumina/engine";
 import type { WorldDefinition, GameState, AudioEffect } from "@yumina/engine";
 import type { AppEnv } from "../lib/types.js";
@@ -49,7 +50,7 @@ async function resolveProviderForModel(userId: string, modelId: string) {
   return { provider: createProvider(providerName, apiKey), providerName };
 }
 
-// Helper: load session with world definition
+// Helper: load session with world definition (applies migration)
 async function loadSessionContext(sessionId: string, userId: string) {
   const sessionRows = await db
     .select()
@@ -68,7 +69,8 @@ async function loadSessionContext(sessionId: string, userId: string) {
 
   if (worldRows.length === 0) return null;
 
-  const worldDef = worldRows[0]!.schema as unknown as WorldDefinition;
+  const rawWorldDef = worldRows[0]!.schema as unknown as WorldDefinition;
+  const worldDef = migrateWorldDefinition(rawWorldDef);
   const gameState = session.state as unknown as GameState;
 
   return { session, worldDef, gameState };
@@ -154,15 +156,6 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
   const stateManager = new GameStateManager(worldDef, gameState);
   stateManager.incrementTurn();
 
-  const activeChar =
-    worldDef.characters.find(
-      (ch) => ch.id === gameState.activeCharacterId
-    ) ?? worldDef.characters[0];
-
-  if (!activeChar) {
-    return c.json({ error: "No character defined in world" }, 400);
-  }
-
   const useStructured = worldDef.settings?.structuredOutput === true;
   const snapshot = stateManager.getSnapshot();
 
@@ -185,13 +178,13 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     currentUser.id
   );
 
-  // Hybrid lorebook retrieval (BM25 + vector if embeddings exist)
+  // Hybrid entry retrieval (BM25 + vector if embeddings exist)
   const scanDepth = worldDef.settings?.lorebookScanDepth ?? 10;
   const tokenBudget = worldDef.settings?.lorebookTokenBudget ?? 2048;
   const recentTexts = historyRows.slice(-scanDepth).map((m) => m.content);
   const openaiKey = await getUserApiKey(currentUser.id, "openai");
   const lorebookResult = await retrieveLorebookEntries({
-    entries: worldDef.lorebookEntries ?? [],
+    entries: worldDef.entries,
     recentMessages: recentTexts,
     state: snapshot,
     tokenBudget,
@@ -201,8 +194,8 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
   const matchedEntries = [...lorebookResult.alwaysSend, ...lorebookResult.triggered];
 
   const systemPrompt = useStructured
-    ? promptBuilder.buildStructuredSystemPrompt(worldDef, activeChar, snapshot, matchedEntries)
-    : promptBuilder.buildSystemPrompt(worldDef, activeChar, snapshot, matchedEntries);
+    ? promptBuilder.buildStructuredSystemPrompt(worldDef, snapshot, matchedEntries)
+    : promptBuilder.buildSystemPrompt(worldDef, snapshot, matchedEntries);
 
   // Build context-aware message list
   const contextMessages: Array<{ role: "user" | "assistant" | "system"; content: string }> = [];
@@ -229,13 +222,23 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     });
   }
 
-  // 4. Actual message history
-  contextMessages.push(
-    ...historyRows.map((m) => ({
-      role: m.role as "user" | "assistant" | "system",
-      content: m.content,
-    }))
-  );
+  // 4. Actual message history (with depth entries injected)
+  const depthEntries = promptBuilder.buildDepthEntries(worldDef, snapshot, matchedEntries);
+  const historyMessages = historyRows.map((m) => ({
+    role: m.role as "user" | "assistant" | "system",
+    content: m.content,
+  }));
+
+  // Inject depth entries at their specified positions from the end
+  for (const de of depthEntries) {
+    const insertIdx = Math.max(0, historyMessages.length - de.depth);
+    historyMessages.splice(insertIdx, 0, {
+      role: "system" as const,
+      content: de.content,
+    });
+  }
+
+  contextMessages.push(...historyMessages);
 
   const chatMessages = promptBuilder.buildMessageHistory(
     contextMessages,
@@ -510,15 +513,6 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
   const useStructured = worldDef.settings?.structuredOutput === true;
   const snapshot = stateManager.getSnapshot();
 
-  const activeChar =
-    worldDef.characters.find(
-      (ch) => ch.id === gameState.activeCharacterId
-    ) ?? worldDef.characters[0];
-
-  if (!activeChar) {
-    return c.json({ error: "No character defined" }, 400);
-  }
-
   // Get messages up to (but not including) the one being regenerated
   const historyRows = await db
     .select()
@@ -529,13 +523,13 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
   const msgIndex = historyRows.findIndex((m) => m.id === messageId);
   const priorMessages = historyRows.slice(0, msgIndex);
 
-  // Hybrid lorebook retrieval (BM25 + vector if embeddings exist)
+  // Hybrid entry retrieval (BM25 + vector if embeddings exist)
   const scanDepth = worldDef.settings?.lorebookScanDepth ?? 10;
   const tokenBudget = worldDef.settings?.lorebookTokenBudget ?? 2048;
   const recentTexts = priorMessages.slice(-scanDepth).map((m) => m.content);
   const openaiKey = await getUserApiKey(currentUser.id, "openai");
   const lorebookResult = await retrieveLorebookEntries({
-    entries: worldDef.lorebookEntries ?? [],
+    entries: worldDef.entries,
     recentMessages: recentTexts,
     state: snapshot,
     tokenBudget,
@@ -545,8 +539,8 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
   const matchedEntries = [...lorebookResult.alwaysSend, ...lorebookResult.triggered];
 
   const systemPrompt = useStructured
-    ? promptBuilder.buildStructuredSystemPrompt(worldDef, activeChar, snapshot, matchedEntries)
-    : promptBuilder.buildSystemPrompt(worldDef, activeChar, snapshot, matchedEntries);
+    ? promptBuilder.buildStructuredSystemPrompt(worldDef, snapshot, matchedEntries)
+    : promptBuilder.buildSystemPrompt(worldDef, snapshot, matchedEntries);
 
   const chatMessages = promptBuilder.buildMessageHistory(
     [

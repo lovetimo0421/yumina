@@ -5,7 +5,6 @@ import { useChatStore } from "@/stores/chat";
 
 export function PreviewSection() {
   const { worldDraft } = useEditorStore();
-  const { settings } = worldDraft;
   const [testSessionId, setTestSessionId] = useState<string | null>(null);
   const [testMessage, setTestMessage] = useState("");
   const [testResponse, setTestResponse] = useState("");
@@ -15,14 +14,19 @@ export function PreviewSection() {
   const apiBase = import.meta.env.VITE_API_URL || "";
   const { selectedModel } = useChatStore();
 
-  // Render greeting
-  const renderedGreeting = settings.greeting.replace(
-    /\{\{(\w+)\}\}/g,
-    (_, varId) => {
-      const v = worldDraft.variables.find((v) => v.id === varId);
-      return v ? String(v.defaultValue) : `{{${varId}}}`;
-    }
+  // Find greeting entry
+  const greetingEntry = worldDraft.entries.find(
+    (e) => e.position === "greeting" && e.enabled
   );
+  const renderedGreeting = greetingEntry
+    ? greetingEntry.content.replace(
+        /\{\{(\w+)\}\}/g,
+        (_, varId) => {
+          const v = worldDraft.variables.find((v) => v.id === varId);
+          return v ? String(v.defaultValue) : `{{${varId}}}`;
+        }
+      )
+    : "";
 
   const handleTestPlay = async () => {
     const { saveDraft } = useEditorStore.getState();
@@ -146,7 +150,7 @@ export function PreviewSection() {
         <h3 className="mb-2 text-sm font-medium text-foreground">
           Greeting Message
         </h3>
-        {settings.greeting ? (
+        {greetingEntry ? (
           <div className="rounded-lg border border-border bg-card p-4 text-sm text-foreground whitespace-pre-wrap">
             {renderedGreeting}
           </div>
@@ -176,19 +180,22 @@ export function PreviewSection() {
         </div>
       )}
 
-      {/* Characters Summary */}
-      {worldDraft.characters.length > 0 && (
+      {/* Entries Summary */}
+      {worldDraft.entries.length > 0 && (
         <div>
           <h3 className="mb-2 text-sm font-medium text-foreground">
-            Characters ({worldDraft.characters.length})
+            Entries ({worldDraft.entries.length})
           </h3>
           <div className="flex flex-wrap gap-2">
-            {worldDraft.characters.map((c) => (
+            {worldDraft.entries.map((e) => (
               <span
-                key={c.id}
+                key={e.id}
                 className="rounded-lg border border-border bg-accent px-3 py-1.5 text-sm text-foreground"
               >
-                {c.name}
+                {e.name}
+                <span className="ml-1 text-muted-foreground/50 text-xs">
+                  {e.role}
+                </span>
               </span>
             ))}
           </div>

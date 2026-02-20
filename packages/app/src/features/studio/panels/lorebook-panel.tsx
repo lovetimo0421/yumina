@@ -10,27 +10,47 @@ import {
   Swords,
   Palette,
   Sparkles,
+  Shield,
+  Scroll,
+  PenTool,
+  Hand,
 } from "lucide-react";
 import { useEditorStore } from "@/stores/editor";
-import type { LorebookEntry } from "@yumina/engine";
+import type { WorldEntry } from "@yumina/engine";
 
 const TABS = [
-  { id: "character" as const, label: "Characters", icon: Users },
+  { id: "all" as const, label: "All", icon: BookOpen },
+  { id: "system" as const, label: "System", icon: Shield },
+  { id: "character" as const, label: "Character", icon: Users },
+  { id: "personality" as const, label: "Personality", icon: Users },
+  { id: "scenario" as const, label: "Scenario", icon: Scroll },
   { id: "lore" as const, label: "Lore", icon: BookOpen },
   { id: "plot" as const, label: "Plot", icon: Swords },
   { id: "style" as const, label: "Style", icon: Palette },
+  { id: "example" as const, label: "Example", icon: PenTool },
+  { id: "greeting" as const, label: "Greeting", icon: Hand },
   { id: "custom" as const, label: "Custom", icon: Sparkles },
 ] as const;
 
 type TabType = (typeof TABS)[number]["id"];
 
+const POSITIONS: { value: WorldEntry["position"]; label: string }[] = [
+  { value: "top", label: "Top" },
+  { value: "before_char", label: "Before Char" },
+  { value: "character", label: "Character" },
+  { value: "after_char", label: "After Char" },
+  { value: "bottom", label: "Bottom" },
+  { value: "depth", label: "Depth" },
+  { value: "greeting", label: "Greeting" },
+];
+
 export function LorebookPanel(_props: IDockviewPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabType>("character");
+  const [activeTab, setActiveTab] = useState<TabType>("all");
 
   return (
     <div className="flex h-full flex-col bg-background">
       {/* Tab bar */}
-      <div className="flex border-b border-border">
+      <div className="flex flex-wrap border-b border-border">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -49,106 +69,19 @@ export function LorebookPanel(_props: IDockviewPanelProps) {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === "character" ? (
-          <CharactersTab />
-        ) : (
-          <EntriesTab type={activeTab} />
-        )}
+        <EntriesTab roleFilter={activeTab === "all" ? null : activeTab} />
       </div>
     </div>
   );
 }
 
-function CharactersTab() {
-  const { worldDraft, addCharacter, updateCharacter, removeCharacter } =
-    useEditorStore();
+function EntriesTab({ roleFilter }: { roleFilter: WorldEntry["role"] | null }) {
+  const { worldDraft, addEntry, updateEntry, removeEntry } = useEditorStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  return (
-    <div className="p-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground">
-          {worldDraft.characters.length} characters
-        </span>
-        <button
-          onClick={addCharacter}
-          className="hover-surface flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground"
-        >
-          <Plus className="h-3 w-3" />
-          Add
-        </button>
-      </div>
-
-      {worldDraft.characters.map((ch) => (
-        <div key={ch.id} className="rounded-lg border border-border">
-          <button
-            onClick={() =>
-              setExpandedId(expandedId === ch.id ? null : ch.id)
-            }
-            className="flex w-full items-center gap-2 px-3 py-2"
-          >
-            {expandedId === ch.id ? (
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-3 w-3 text-muted-foreground" />
-            )}
-            <span className="flex-1 text-left text-xs text-foreground">
-              {ch.name}
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                removeCharacter(ch.id);
-              }}
-              className="hover-surface rounded p-0.5 text-muted-foreground"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          </button>
-
-          {expandedId === ch.id && (
-            <div className="space-y-2 border-t border-border px-3 py-2">
-              <input
-                type="text"
-                value={ch.name}
-                onChange={(e) =>
-                  updateCharacter(ch.id, { name: e.target.value })
-                }
-                placeholder="Name"
-                className="w-full rounded bg-muted px-2 py-1 text-xs text-foreground focus:outline-none"
-              />
-              <textarea
-                value={ch.description}
-                onChange={(e) =>
-                  updateCharacter(ch.id, { description: e.target.value })
-                }
-                placeholder="Description..."
-                rows={2}
-                className="w-full resize-none rounded bg-muted px-2 py-1 text-xs text-foreground focus:outline-none"
-              />
-              <textarea
-                value={ch.systemPrompt}
-                onChange={(e) =>
-                  updateCharacter(ch.id, { systemPrompt: e.target.value })
-                }
-                placeholder="System prompt..."
-                rows={3}
-                className="w-full resize-none rounded bg-muted px-2 py-1 text-xs text-foreground focus:outline-none"
-              />
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
-  const { worldDraft, addLorebookEntry, updateLorebookEntry, removeLorebookEntry } =
-    useEditorStore();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  const entries = worldDraft.lorebookEntries.filter((e) => e.type === type);
+  const entries = roleFilter
+    ? worldDraft.entries.filter((e) => e.role === roleFilter)
+    : worldDraft.entries;
 
   return (
     <div className="p-3 space-y-2">
@@ -157,7 +90,18 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
           {entries.length} entries
         </span>
         <button
-          onClick={() => addLorebookEntry(type)}
+          onClick={() => {
+            const role = roleFilter ?? "custom";
+            const position =
+              role === "greeting"
+                ? "greeting"
+                : role === "system"
+                  ? "top"
+                  : role === "character" || role === "personality"
+                    ? "character"
+                    : "after_char";
+            addEntry(role, position as WorldEntry["position"]);
+          }}
           className="hover-surface flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground"
         >
           <Plus className="h-3 w-3" />
@@ -181,6 +125,9 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
             <span className="flex-1 text-left text-xs text-foreground">
               {entry.name}
             </span>
+            <span className="rounded bg-accent px-1 py-0.5 text-[10px] text-muted-foreground">
+              {entry.position}
+            </span>
             {entry.alwaysSend && (
               <span className="rounded bg-primary/10 px-1 py-0.5 text-[10px] text-primary">
                 ALWAYS
@@ -198,7 +145,7 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                removeLorebookEntry(entry.id);
+                removeEntry(entry.id);
               }}
               className="hover-surface rounded p-0.5 text-muted-foreground"
             >
@@ -212,7 +159,7 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
                 type="text"
                 value={entry.name}
                 onChange={(e) =>
-                  updateLorebookEntry(entry.id, { name: e.target.value })
+                  updateEntry(entry.id, { name: e.target.value })
                 }
                 placeholder="Entry name"
                 className="w-full rounded bg-muted px-2 py-1 text-xs text-foreground focus:outline-none"
@@ -221,12 +168,81 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
               <textarea
                 value={entry.content}
                 onChange={(e) =>
-                  updateLorebookEntry(entry.id, { content: e.target.value })
+                  updateEntry(entry.id, { content: e.target.value })
                 }
-                placeholder="Entry content (injected into prompt when matched)..."
+                placeholder="Entry content..."
                 rows={4}
                 className="w-full resize-none rounded bg-muted px-2 py-1 text-xs text-foreground focus:outline-none"
               />
+
+              {/* Role + Position */}
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[10px] text-muted-foreground">
+                    Role
+                  </label>
+                  <select
+                    value={entry.role}
+                    onChange={(e) =>
+                      updateEntry(entry.id, {
+                        role: e.target.value as WorldEntry["role"],
+                      })
+                    }
+                    className="w-full rounded bg-muted px-2 py-1 text-xs text-foreground focus:outline-none [&>option]:bg-popover"
+                  >
+                    <option value="system">System</option>
+                    <option value="character">Character</option>
+                    <option value="personality">Personality</option>
+                    <option value="scenario">Scenario</option>
+                    <option value="lore">Lore</option>
+                    <option value="plot">Plot</option>
+                    <option value="style">Style</option>
+                    <option value="example">Example</option>
+                    <option value="greeting">Greeting</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="text-[10px] text-muted-foreground">
+                    Position
+                  </label>
+                  <select
+                    value={entry.position}
+                    onChange={(e) =>
+                      updateEntry(entry.id, {
+                        position: e.target.value as WorldEntry["position"],
+                      })
+                    }
+                    className="w-full rounded bg-muted px-2 py-1 text-xs text-foreground focus:outline-none [&>option]:bg-popover"
+                  >
+                    {POSITIONS.map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Depth field (only for depth position) */}
+              {entry.position === "depth" && (
+                <div>
+                  <label className="text-[10px] text-muted-foreground">
+                    Depth (msgs from end)
+                  </label>
+                  <input
+                    type="number"
+                    value={entry.depth ?? 4}
+                    onChange={(e) =>
+                      updateEntry(entry.id, {
+                        depth: parseInt(e.target.value) || 4,
+                      })
+                    }
+                    min={1}
+                    className="w-full rounded bg-muted px-2 py-1 text-xs text-foreground focus:outline-none"
+                  />
+                </div>
+              )}
 
               {/* Keywords */}
               <div>
@@ -237,7 +253,7 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
                   type="text"
                   value={entry.keywords.join(", ")}
                   onChange={(e) =>
-                    updateLorebookEntry(entry.id, {
+                    updateEntry(entry.id, {
                       keywords: e.target.value
                         .split(",")
                         .map((s) => s.trim())
@@ -249,7 +265,7 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
                 />
               </div>
 
-              {/* Priority + Position */}
+              {/* Priority + Insertion Order */}
               <div className="flex gap-2">
                 <div className="flex-1">
                   <label className="text-[10px] text-muted-foreground">
@@ -259,7 +275,7 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
                     type="number"
                     value={entry.priority}
                     onChange={(e) =>
-                      updateLorebookEntry(entry.id, {
+                      updateEntry(entry.id, {
                         priority: parseInt(e.target.value) || 0,
                       })
                     }
@@ -268,20 +284,18 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
                 </div>
                 <div className="flex-1">
                   <label className="text-[10px] text-muted-foreground">
-                    Position
+                    Order
                   </label>
-                  <select
-                    value={entry.position}
+                  <input
+                    type="number"
+                    value={entry.insertionOrder}
                     onChange={(e) =>
-                      updateLorebookEntry(entry.id, {
-                        position: e.target.value as "before" | "after",
+                      updateEntry(entry.id, {
+                        insertionOrder: parseInt(e.target.value) || 0,
                       })
                     }
-                    className="w-full rounded bg-muted px-2 py-1 text-xs text-foreground focus:outline-none [&>option]:bg-popover"
-                  >
-                    <option value="after">After</option>
-                    <option value="before">Before</option>
-                  </select>
+                    className="w-full rounded bg-muted px-2 py-1 text-xs text-foreground focus:outline-none"
+                  />
                 </div>
               </div>
 
@@ -292,7 +306,7 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
                     type="checkbox"
                     checked={entry.enabled}
                     onChange={(e) =>
-                      updateLorebookEntry(entry.id, {
+                      updateEntry(entry.id, {
                         enabled: e.target.checked,
                       })
                     }
@@ -305,7 +319,7 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
                     type="checkbox"
                     checked={entry.alwaysSend ?? false}
                     onChange={(e) =>
-                      updateLorebookEntry(entry.id, {
+                      updateEntry(entry.id, {
                         alwaysSend: e.target.checked,
                       })
                     }

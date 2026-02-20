@@ -35,7 +35,6 @@ export function GamePanel() {
     ? resolveComponents(components, {
         worldId: worldDef?.id ?? "",
         variables: gameState,
-        activeCharacterId: null,
         turnCount: 0,
         metadata: {},
       } satisfies GameState, variables)

@@ -1,8 +1,7 @@
 import type {
   WorldDefinition,
-  Character,
   GameState,
-  LorebookEntry,
+  WorldEntry,
 } from "../types/index.js";
 
 export interface ChatMessage {
@@ -10,150 +9,76 @@ export interface ChatMessage {
   content: string;
 }
 
+/** Position slots in prompt assembly order */
+const POSITION_ORDER: WorldEntry["position"][] = [
+  "top",
+  "before_char",
+  "character",
+  "after_char",
+  "bottom",
+];
+
 /**
  * Composes LLM prompts from world definition + current state.
- * Handles template variable interpolation and message history formatting.
+ * Uses the unified WorldEntry[] model — entries are grouped by position slot,
+ * sorted by insertionOrder within each slot, and concatenated.
  */
 export class PromptBuilder {
+  /**
+   * Build the system prompt from world entries.
+   * @param world The world definition with entries[]
+   * @param state Current game state
+   * @param matchedEntries Triggered entries from the matcher (keyword/vector matched)
+   */
   buildSystemPrompt(
     world: WorldDefinition,
-    character: Character,
     state: GameState,
-    matchedEntries?: LorebookEntry[]
+    matchedEntries?: WorldEntry[]
   ): string {
-    const parts: string[] = [];
-
-    if (world.settings.systemPrompt) {
-      parts.push(this.interpolate(world.settings.systemPrompt, state));
-    }
-
-    // Inject "before" lorebook entries before character identity
-    if (matchedEntries) {
-      const before = matchedEntries.filter((e) => e.position === "before");
-      for (const entry of before) {
-        parts.push(entry.content);
-      }
-    }
-
-    parts.push(`You are ${character.name}. ${character.description}`);
-
-    if (character.systemPrompt) {
-      parts.push(this.interpolate(character.systemPrompt, state));
-    }
-
-    // Inject "after" lorebook entries after character system prompt
-    if (matchedEntries) {
-      const after = matchedEntries.filter((e) => e.position === "after");
-      for (const entry of after) {
-        parts.push(entry.content);
-      }
-    }
-
-    const varSummary = this.buildVariableSummary(world, state);
-    if (varSummary) {
-      parts.push(`Current game state:\n${varSummary}`);
-    }
-
-    parts.push(
-      "When you want to change game variables, use this format in your response: [variableId: operation value]"
-    );
-    parts.push(
-      'Examples: [health: -10], [gold: +50], [location: set "forest"], [hasKey: toggle]'
-    );
-
-    // Audio instructions
-    if (world.audioTracks && world.audioTracks.length > 0) {
-      const trackList = world.audioTracks
-        .map((t) => `  - ${t.id} (${t.type}): ${t.name}`)
-        .join("\n");
-      parts.push(
-        `Available audio tracks:\n${trackList}\n\n` +
-        "To trigger audio, use: [audio: trackId action]\n" +
-        "Examples: [audio: battle_bgm play], [audio: tavern_ambient stop]"
-      );
-    }
-
-    return parts.join("\n\n");
+    const entries = this.collectEntries(world, matchedEntries);
+    return this.assemblePrompt(world, state, entries, false);
   }
 
   /**
    * Build system prompt for structured (JSON) output mode.
-   * Same context as buildSystemPrompt but instructs the model to respond in JSON format.
    */
   buildStructuredSystemPrompt(
     world: WorldDefinition,
-    character: Character,
     state: GameState,
-    matchedEntries?: LorebookEntry[]
+    matchedEntries?: WorldEntry[]
   ): string {
-    const parts: string[] = [];
+    const entries = this.collectEntries(world, matchedEntries);
+    return this.assemblePrompt(world, state, entries, true);
+  }
 
-    if (world.settings.systemPrompt) {
-      parts.push(this.interpolate(world.settings.systemPrompt, state));
-    }
-
-    // Inject "before" lorebook entries before character identity
-    if (matchedEntries) {
-      const before = matchedEntries.filter((e) => e.position === "before");
-      for (const entry of before) {
-        parts.push(entry.content);
-      }
-    }
-
-    parts.push(`You are ${character.name}. ${character.description}`);
-
-    if (character.systemPrompt) {
-      parts.push(this.interpolate(character.systemPrompt, state));
-    }
-
-    // Inject "after" lorebook entries after character system prompt
-    if (matchedEntries) {
-      const after = matchedEntries.filter((e) => e.position === "after");
-      for (const entry of after) {
-        parts.push(entry.content);
-      }
-    }
-
-    const varSummary = this.buildVariableSummary(world, state);
-    if (varSummary) {
-      parts.push(`Current game state:\n${varSummary}`);
-    }
-
-    // JSON format instructions
-    parts.push(
-      'You MUST respond with a JSON object in this exact format:\n' +
-      '{\n' +
-      '  "narrative": "Your in-character response text here",\n' +
-      '  "stateChanges": [{"variableId": "id", "operation": "set|add|subtract|multiply|toggle|append", "value": ...}],\n' +
-      '  "choices": ["Choice 1", "Choice 2"]\n' +
-      '}\n\n' +
-      'Rules:\n' +
-      '- "narrative" is REQUIRED — your in-character roleplay response\n' +
-      '- "stateChanges" is optional — only include when game variables should change\n' +
-      '- "choices" is optional — include when you want to present the player with 2-4 choices\n' +
-      '- Respond ONLY with the JSON object, no other text'
+  /**
+   * Find and interpolate the greeting entry.
+   */
+  buildGreeting(world: WorldDefinition, state: GameState): string {
+    const greetingEntry = world.entries.find(
+      (e) => e.position === "greeting" && e.enabled
     );
+    if (!greetingEntry) return "";
+    return this.interpolate(greetingEntry.content, state);
+  }
 
-    if (world.variables.length > 0) {
-      const varList = world.variables
-        .map((v) => `  - ${v.id} (${v.type}): ${v.description || v.name}`)
-        .join("\n");
-      parts.push(`Available variables you can modify:\n${varList}`);
-    }
-
-    // Audio track instructions for structured mode
-    if (world.audioTracks && world.audioTracks.length > 0) {
-      const trackList = world.audioTracks
-        .map((t) => `  - ${t.id} (${t.type}): ${t.name}`)
-        .join("\n");
-      parts.push(
-        `Available audio tracks:\n${trackList}\n\n` +
-        'Include "audioTriggers" in your JSON to play/stop audio:\n' +
-        '  "audioTriggers": [{"trackId": "battle_bgm", "action": "play"}]'
-      );
-    }
-
-    return parts.join("\n\n");
+  /**
+   * Get depth entries for in-chat injection.
+   * Returns entries with their depth value for the message router to place.
+   */
+  buildDepthEntries(
+    world: WorldDefinition,
+    state: GameState,
+    matchedEntries?: WorldEntry[]
+  ): { content: string; depth: number }[] {
+    const allEntries = this.collectEntries(world, matchedEntries);
+    return allEntries
+      .filter((e) => e.position === "depth" && e.depth !== undefined)
+      .sort((a, b) => a.insertionOrder - b.insertionOrder)
+      .map((e) => ({
+        content: this.interpolate(e.content, state),
+        depth: e.depth!,
+      }));
   }
 
   buildMessageHistory(
@@ -179,8 +104,117 @@ export class PromptBuilder {
     return result;
   }
 
-  buildGreeting(world: WorldDefinition, state: GameState): string {
-    return this.interpolate(world.settings.greeting, state);
+  /**
+   * Collect all relevant entries: alwaysSend + matched, excluding greeting and depth.
+   */
+  private collectEntries(
+    world: WorldDefinition,
+    matchedEntries?: WorldEntry[]
+  ): WorldEntry[] {
+    const alwaysSend = world.entries.filter(
+      (e) =>
+        e.enabled &&
+        e.alwaysSend &&
+        e.position !== "greeting"
+    );
+
+    // Merge matched entries (deduplicate by id)
+    const seenIds = new Set(alwaysSend.map((e) => e.id));
+    const matched = (matchedEntries ?? []).filter(
+      (e) =>
+        e.enabled &&
+        e.position !== "greeting" &&
+        !seenIds.has(e.id)
+    );
+
+    return [...alwaysSend, ...matched];
+  }
+
+  /**
+   * Assemble the final prompt string from collected entries.
+   */
+  private assemblePrompt(
+    world: WorldDefinition,
+    state: GameState,
+    entries: WorldEntry[],
+    structured: boolean
+  ): string {
+    const parts: string[] = [];
+
+    // Group entries by position, then sort by insertionOrder within each group
+    for (const position of POSITION_ORDER) {
+      const slotEntries = entries
+        .filter((e) => e.position === position)
+        .sort((a, b) => a.insertionOrder - b.insertionOrder);
+
+      for (const entry of slotEntries) {
+        parts.push(this.interpolate(entry.content, state));
+      }
+    }
+
+    // After all user content: variable summary + directives + audio
+    const varSummary = this.buildVariableSummary(world, state);
+    if (varSummary) {
+      parts.push(`Current game state:\n${varSummary}`);
+    }
+
+    if (structured) {
+      // JSON format instructions
+      parts.push(
+        'You MUST respond with a JSON object in this exact format:\n' +
+        '{\n' +
+        '  "narrative": "Your in-character response text here",\n' +
+        '  "stateChanges": [{"variableId": "id", "operation": "set|add|subtract|multiply|toggle|append", "value": ...}],\n' +
+        '  "choices": ["Choice 1", "Choice 2"]\n' +
+        '}\n\n' +
+        'Rules:\n' +
+        '- "narrative" is REQUIRED — your in-character roleplay response\n' +
+        '- "stateChanges" is optional — only include when game variables should change\n' +
+        '- "choices" is optional — include when you want to present the player with 2-4 choices\n' +
+        '- Respond ONLY with the JSON object, no other text'
+      );
+
+      if (world.variables.length > 0) {
+        const varList = world.variables
+          .map((v) => `  - ${v.id} (${v.type}): ${v.description || v.name}`)
+          .join("\n");
+        parts.push(`Available variables you can modify:\n${varList}`);
+      }
+
+      // Audio track instructions for structured mode
+      if (world.audioTracks && world.audioTracks.length > 0) {
+        const trackList = world.audioTracks
+          .map((t) => `  - ${t.id} (${t.type}): ${t.name}`)
+          .join("\n");
+        parts.push(
+          `Available audio tracks:\n${trackList}\n\n` +
+          'Include "audioTriggers" in your JSON to play/stop audio:\n' +
+          '  "audioTriggers": [{"trackId": "battle_bgm", "action": "play"}]'
+        );
+      }
+    } else {
+      // Regex mode directives
+      parts.push(
+        "When you want to change game variables, use this format in your response: [variableId: operation value]"
+      );
+      parts.push(
+        'Examples: [health: -10], [gold: +50], [location: set "forest"], [hasKey: toggle]'
+      );
+
+      // Audio instructions
+      if (world.audioTracks && world.audioTracks.length > 0) {
+        const trackList = world.audioTracks
+          .map((t) => `  - ${t.id} (${t.type}): ${t.name}`)
+          .join("\n");
+        parts.push(
+          `Available audio tracks:\n${trackList}\n\n` +
+          "To trigger audio, use: [audio: trackId action]\n" +
+          "Examples: [audio: battle_bgm play], [audio: tavern_ambient stop]"
+        );
+      }
+    }
+
+    return parts.join("\n\n");
   }
 
   private interpolate(template: string, state: GameState): string {

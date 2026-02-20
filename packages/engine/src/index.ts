@@ -11,6 +11,7 @@ export type {
   AudioTrack,
   AudioEffect,
   LorebookEntry,
+  WorldEntry,
   CustomComponent,
 } from "./types/index.js";
 
@@ -49,6 +50,7 @@ export {
   audioTrackSchema,
   audioEffectSchema,
   lorebookEntrySchema,
+  worldEntrySchema,
   customComponentSchema,
 } from "./world/schema.js";
 
@@ -88,3 +90,6 @@ export type {
   StructuredParseResult,
   StructuredResponse,
 } from "./parser/structured-response-parser.js";
+
+// Migration
+export { migrateWorldDefinition } from "./migration/migrate-v1-to-v2.js";

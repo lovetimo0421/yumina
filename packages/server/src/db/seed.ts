@@ -14,11 +14,122 @@ const db = drizzle(pool);
 
 const DEMO_WORLD_DEFINITION: WorldDefinition = {
   id: "demo-tavern",
-  version: "1.0.0",
+  version: "2.0.0",
   name: "The Tavern",
   description:
     "A cozy fantasy tavern where adventurers gather. Chat with the tavern keeper, manage your resources, and see how your reputation grows.",
   author: "Yumina",
+  entries: [
+    {
+      id: "system-prompt",
+      name: "System Prompt",
+      content:
+        "This is a fantasy RPG set in a medieval tavern. The player is an adventurer visiting The Golden Tankard tavern.",
+      role: "system",
+      position: "top",
+      insertionOrder: 0,
+      alwaysSend: true,
+      keywords: [],
+      conditions: [],
+      conditionLogic: "all",
+      priority: 100,
+      enabled: true,
+    },
+    {
+      id: "tavern-keeper",
+      name: "Mira the Tavern Keeper",
+      content: `You are Mira, the tavern keeper of The Golden Tankard in Elderbrook village. You are warm, witty, and perceptive. A warm, middle-aged woman with kind eyes and a sharp wit. She runs The Golden Tankard, the most popular tavern in the village of Elderbrook. She knows everyone's secrets and has a tale for every occasion. You serve drinks, share gossip, and occasionally offer quests to adventurers.
+
+The player currently has {{health}} health, {{gold}} gold, and {{reputation}} reputation.
+
+Guidelines:
+- Stay in character as Mira at all times
+- Reference the player's stats naturally in conversation (e.g., "You look a bit pale" if health is low)
+- Offer to sell food/drinks that cost gold
+- Reward good deeds with reputation
+- Use state change directives when appropriate: [gold: -5] for purchases, [reputation: +10] for good deeds, etc.
+- Keep responses to 2-3 paragraphs
+- Be descriptive and immersive`,
+      role: "character",
+      position: "character",
+      insertionOrder: 0,
+      alwaysSend: true,
+      keywords: [],
+      conditions: [],
+      conditionLogic: "all",
+      priority: 90,
+      enabled: true,
+    },
+    {
+      id: "elderbrook-basics",
+      name: "Elderbrook Village",
+      content:
+        "Elderbrook is a small village nestled at the edge of the Whispering Woods. It has about 200 residents, mostly farmers and craftspeople. The village has a blacksmith, a general store, a small temple to the harvest goddess, and The Golden Tankard tavern. The village elder is a retired adventurer named Theron.",
+      role: "lore",
+      position: "after_char",
+      insertionOrder: 0,
+      alwaysSend: true,
+      keywords: [],
+      conditions: [],
+      conditionLogic: "all",
+      priority: 0,
+      enabled: true,
+    },
+    {
+      id: "tavern-lore",
+      name: "The Golden Tankard",
+      content:
+        "The Golden Tankard was founded 50 years ago by Mira's grandmother, Old Bess. The tavern sits at the crossroads of the King's Road and the Forest Path, making it a natural gathering point for travelers. Its famous specialty is Bess's Honeymead, brewed from a secret recipe. The cellar is rumored to connect to old mine tunnels beneath Elderbrook.",
+      role: "lore",
+      position: "after_char",
+      insertionOrder: 1,
+      alwaysSend: false,
+      keywords: ["tavern", "tankard", "golden", "inn", "bess"],
+      conditions: [],
+      conditionLogic: "all",
+      priority: 5,
+      enabled: true,
+    },
+    {
+      id: "missing-merchant",
+      name: "The Missing Merchant",
+      content:
+        "A wealthy merchant named Aldric has gone missing on the Forest Path three days ago. His wife has posted a reward of 100 gold for information. Mira knows that Aldric was carrying a mysterious locked chest, and she's seen suspicious hooded figures asking about him. She will share this information if the player's reputation is high enough.",
+      role: "plot",
+      position: "after_char",
+      insertionOrder: 2,
+      alwaysSend: false,
+      keywords: ["merchant", "aldric", "missing", "reward", "forest"],
+      conditions: [
+        { variableId: "reputation", operator: "gte" as const, value: 20 },
+      ],
+      conditionLogic: "all",
+      priority: 10,
+      enabled: true,
+    },
+    {
+      id: "greeting",
+      name: "Greeting",
+      content: `*The heavy oak door creaks as you push it open, letting in a gust of cold evening air. The warm glow of the hearth washes over you as you step into The Golden Tankard.*
+
+A stout woman with auburn hair tied back in a braid looks up from behind the bar, her face breaking into a welcoming smile.
+
+"Well now, another traveler seeking warmth on this chilly night! Come in, come in — find yourself a seat by the fire. I'm Mira, and this is my tavern."
+
+*She reaches for a tankard, polishing it with a cloth.*
+
+"What'll it be, friend? A warm meal? A cold ale? Or perhaps... you're looking for something more than just refreshment?"`,
+      role: "greeting",
+      position: "greeting",
+      insertionOrder: 0,
+      alwaysSend: true,
+      keywords: [],
+      conditions: [],
+      conditionLogic: "all",
+      priority: 0,
+      enabled: true,
+    },
+  ],
   variables: [
     {
       id: "health",
@@ -61,76 +172,15 @@ const DEMO_WORLD_DEFINITION: WorldDefinition = {
       id: "high-reputation",
       name: "High Reputation Unlock",
       description: "Unlock special dialogue at high reputation",
-      conditions: [{ variableId: "reputation", operator: "gte", value: 50 }],
+      conditions: [
+        { variableId: "reputation", operator: "gte", value: 50 },
+      ],
       conditionLogic: "all",
       effects: [],
       priority: 5,
     },
   ],
-  characters: [
-    {
-      id: "tavern-keeper",
-      name: "Mira the Tavern Keeper",
-      description:
-        "A warm, middle-aged woman with kind eyes and a sharp wit. She runs The Golden Tankard, the most popular tavern in the village of Elderbrook. She knows everyone's secrets and has a tale for every occasion.",
-      systemPrompt: `You are Mira, the tavern keeper of The Golden Tankard in Elderbrook village. You are warm, witty, and perceptive. You serve drinks, share gossip, and occasionally offer quests to adventurers.
-
-The player currently has {{health}} health, {{gold}} gold, and {{reputation}} reputation.
-
-Guidelines:
-- Stay in character as Mira at all times
-- Reference the player's stats naturally in conversation (e.g., "You look a bit pale" if health is low)
-- Offer to sell food/drinks that cost gold
-- Reward good deeds with reputation
-- Use state change directives when appropriate: [gold: -5] for purchases, [reputation: +10] for good deeds, etc.
-- Keep responses to 2-3 paragraphs
-- Be descriptive and immersive`,
-      avatar: undefined,
-      variables: [],
-    },
-  ],
   audioTracks: [],
-  lorebookEntries: [
-    {
-      id: "tavern-lore",
-      name: "The Golden Tankard",
-      type: "lore" as const,
-      content: "The Golden Tankard was founded 50 years ago by Mira's grandmother, Old Bess. The tavern sits at the crossroads of the King's Road and the Forest Path, making it a natural gathering point for travelers. Its famous specialty is Bess's Honeymead, brewed from a secret recipe. The cellar is rumored to connect to old mine tunnels beneath Elderbrook.",
-      keywords: ["tavern", "tankard", "golden", "inn", "bess"],
-      conditions: [],
-      conditionLogic: "all" as const,
-      priority: 5,
-      position: "after" as const,
-      enabled: true,
-      alwaysSend: false,
-    },
-    {
-      id: "elderbrook-basics",
-      name: "Elderbrook Village",
-      type: "lore" as const,
-      content: "Elderbrook is a small village nestled at the edge of the Whispering Woods. It has about 200 residents, mostly farmers and craftspeople. The village has a blacksmith, a general store, a small temple to the harvest goddess, and The Golden Tankard tavern. The village elder is a retired adventurer named Theron.",
-      keywords: [],
-      conditions: [],
-      conditionLogic: "all" as const,
-      priority: 0,
-      position: "after" as const,
-      enabled: true,
-      alwaysSend: true,
-    },
-    {
-      id: "missing-merchant",
-      name: "The Missing Merchant",
-      type: "plot" as const,
-      content: "A wealthy merchant named Aldric has gone missing on the Forest Path three days ago. His wife has posted a reward of 100 gold for information. Mira knows that Aldric was carrying a mysterious locked chest, and she's seen suspicious hooded figures asking about him. She will share this information if the player's reputation is high enough.",
-      keywords: ["merchant", "aldric", "missing", "reward", "forest"],
-      conditions: [{ variableId: "reputation", operator: "gte" as const, value: 20 }],
-      conditionLogic: "all" as const,
-      priority: 10,
-      position: "after" as const,
-      enabled: true,
-      alwaysSend: false,
-    },
-  ],
   customComponents: [],
   components: [
     {
@@ -175,17 +225,7 @@ Guidelines:
   settings: {
     maxTokens: 2048,
     temperature: 0.8,
-    systemPrompt:
-      "This is a fantasy RPG set in a medieval tavern. The player is an adventurer visiting The Golden Tankard tavern.",
-    greeting: `*The heavy oak door creaks as you push it open, letting in a gust of cold evening air. The warm glow of the hearth washes over you as you step into The Golden Tankard.*
-
-A stout woman with auburn hair tied back in a braid looks up from behind the bar, her face breaking into a welcoming smile.
-
-"Well now, another traveler seeking warmth on this chilly night! Come in, come in — find yourself a seat by the fire. I'm Mira, and this is my tavern."
-
-*She reaches for a tankard, polishing it with a cloth.*
-
-"What'll it be, friend? A warm meal? A cold ale? Or perhaps... you're looking for something more than just refreshment?"`,
+    structuredOutput: false,
   },
 };
 

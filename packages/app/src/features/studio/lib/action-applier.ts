@@ -1,5 +1,6 @@
 import { useEditorStore } from "@/stores/editor";
 import type { StudioAction } from "@/stores/studio";
+import type { WorldEntry } from "@yumina/engine";
 
 /**
  * Applies structured studio actions from the AI to the editor store.
@@ -43,32 +44,115 @@ export function applyStudioActions(actions: StudioAction[]): string {
           summaries.push(`Removed variable "${d.id}"`);
           break;
         }
-        case "addCharacter": {
+        case "addEntry": {
           const d = action.data as Record<string, unknown>;
-          store.addCharacter();
-          const chars = useEditorStore.getState().worldDraft.characters;
-          const newest = chars[chars.length - 1];
+          const role = (d.role as WorldEntry["role"]) ?? "custom";
+          const position = (d.position as WorldEntry["position"]) ?? "after_char";
+          store.addEntry(role, position);
+          const entries = useEditorStore.getState().worldDraft.entries;
+          const newest = entries[entries.length - 1];
           if (newest) {
-            store.updateCharacter(newest.id, {
+            store.updateEntry(newest.id, {
               id: (d.id as string) ?? newest.id,
-              name: (d.name as string) ?? "New Character",
-              description: (d.description as string) ?? "",
-              systemPrompt: (d.systemPrompt as string) ?? "",
+              name: (d.name as string) ?? "New Entry",
+              content: (d.content as string) ?? "",
+              role,
+              position,
+              depth: d.depth as number | undefined,
+              insertionOrder: (d.insertionOrder as number) ?? newest.insertionOrder,
+              alwaysSend: d.alwaysSend === true,
+              keywords: (d.keywords as string[]) ?? [],
+              priority: (d.priority as number) ?? 0,
+              enabled: d.enabled !== false,
             });
           }
-          summaries.push(`Added character "${d.name}"`);
+          summaries.push(`Added entry "${d.name}"`);
+          break;
+        }
+        case "updateEntry": {
+          const d = action.data as Record<string, unknown>;
+          if (d.id) store.updateEntry(d.id as string, d);
+          summaries.push(`Updated entry "${d.id}"`);
+          break;
+        }
+        case "removeEntry": {
+          const d = action.data as Record<string, unknown>;
+          if (d.id) store.removeEntry(d.id as string);
+          summaries.push(`Removed entry "${d.id}"`);
+          break;
+        }
+        // Legacy action names — map to entry actions for backwards compat
+        case "addCharacter": {
+          const d = action.data as Record<string, unknown>;
+          store.addEntry("character", "character");
+          const entries = useEditorStore.getState().worldDraft.entries;
+          const newest = entries[entries.length - 1];
+          if (newest) {
+            const content = `You are ${d.name ?? ""}. ${d.description ?? ""}${d.systemPrompt ? `\n\n${d.systemPrompt}` : ""}`;
+            store.updateEntry(newest.id, {
+              id: (d.id as string) ?? newest.id,
+              name: (d.name as string) ?? "New Character",
+              content,
+              role: "character",
+              position: "character",
+              alwaysSend: true,
+            });
+          }
+          summaries.push(`Added character "${d.name}" (as entry)`);
           break;
         }
         case "updateCharacter": {
           const d = action.data as Record<string, unknown>;
-          if (d.id) store.updateCharacter(d.id as string, d);
-          summaries.push(`Updated character "${d.id}"`);
+          if (d.id) store.updateEntry(d.id as string, d);
+          summaries.push(`Updated character entry "${d.id}"`);
           break;
         }
         case "removeCharacter": {
           const d = action.data as Record<string, unknown>;
-          if (d.id) store.removeCharacter(d.id as string);
-          summaries.push(`Removed character "${d.id}"`);
+          if (d.id) store.removeEntry(d.id as string);
+          summaries.push(`Removed character entry "${d.id}"`);
+          break;
+        }
+        case "addLorebookEntry": {
+          const d = action.data as Record<string, unknown>;
+          const roleMap: Record<string, WorldEntry["role"]> = {
+            character: "character",
+            lore: "lore",
+            plot: "plot",
+            style: "style",
+            custom: "custom",
+          };
+          const role = roleMap[(d.type as string) ?? "lore"] ?? "lore";
+          const position = d.position === "before" ? "before_char" : "after_char";
+          store.addEntry(role, position as WorldEntry["position"]);
+          const entries = useEditorStore.getState().worldDraft.entries;
+          const newest = entries[entries.length - 1];
+          if (newest) {
+            store.updateEntry(newest.id, {
+              id: (d.id as string) ?? newest.id,
+              name: (d.name as string) ?? "New Entry",
+              content: (d.content as string) ?? "",
+              role,
+              position: position as WorldEntry["position"],
+              keywords: (d.keywords as string[]) ?? [],
+              priority: (d.priority as number) ?? 0,
+              enabled: d.enabled !== false,
+              alwaysSend: d.alwaysSend === true,
+            });
+          }
+          summaries.push(`Added entry "${d.name}" (legacy lorebook)`);
+          break;
+        }
+        case "updateLorebookEntry": {
+          const d = action.data as Record<string, unknown>;
+          if (d.id) store.updateEntry(d.id as string, d);
+          summaries.push(`Updated entry "${d.id}" (legacy lorebook)`);
+          break;
+        }
+        case "removeLorebookEntry": {
+          const d = action.data as Record<string, unknown>;
+          if (d.id) store.removeEntry(d.id as string);
+          summaries.push(`Removed entry "${d.id}" (legacy lorebook)`);
           break;
         }
         case "addRule": {
@@ -158,39 +242,6 @@ export function applyStudioActions(actions: StudioAction[]): string {
           const d = action.data as Record<string, unknown>;
           if (d.id) store.removeAudioTrack(d.id as string);
           summaries.push(`Removed audio track "${d.id}"`);
-          break;
-        }
-        case "addLorebookEntry": {
-          const d = action.data as Record<string, unknown>;
-          store.addLorebookEntry(d.type as "lore" | undefined);
-          const entries = useEditorStore.getState().worldDraft.lorebookEntries;
-          const newest = entries[entries.length - 1];
-          if (newest) {
-            store.updateLorebookEntry(newest.id, {
-              id: (d.id as string) ?? newest.id,
-              name: (d.name as string) ?? "New Entry",
-              type: (d.type as "lore") ?? "lore",
-              content: (d.content as string) ?? "",
-              keywords: (d.keywords as string[]) ?? [],
-              priority: (d.priority as number) ?? 0,
-              position: (d.position as "before" | "after") ?? "after",
-              enabled: d.enabled !== false,
-              alwaysSend: d.alwaysSend === true,
-            });
-          }
-          summaries.push(`Added lorebook entry "${d.name}"`);
-          break;
-        }
-        case "updateLorebookEntry": {
-          const d = action.data as Record<string, unknown>;
-          if (d.id) store.updateLorebookEntry(d.id as string, d);
-          summaries.push(`Updated lorebook entry "${d.id}"`);
-          break;
-        }
-        case "removeLorebookEntry": {
-          const d = action.data as Record<string, unknown>;
-          if (d.id) store.removeLorebookEntry(d.id as string);
-          summaries.push(`Removed lorebook entry "${d.id}"`);
           break;
         }
         case "addCustomComponent": {

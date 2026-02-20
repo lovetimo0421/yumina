@@ -55,7 +55,7 @@ export interface Effect {
   value: number | string | boolean;
 }
 
-/** A character in the world */
+/** @deprecated Use WorldEntry instead */
 export interface Character {
   id: string;
   name: string;
@@ -86,7 +86,7 @@ export type {
 
 export { COMPONENT_TYPE_META } from "./components.js";
 
-/** A lorebook entry for contextual prompt injection */
+/** @deprecated Use WorldEntry instead */
 export interface LorebookEntry {
   id: string;
   name: string;
@@ -100,6 +100,25 @@ export interface LorebookEntry {
   enabled: boolean;
   /** Always inject this entry regardless of keyword/condition triggers */
   alwaysSend: boolean;
+}
+
+/** A unified content entry — replaces Character + LorebookEntry */
+export interface WorldEntry {
+  id: string;
+  name: string;
+  content: string;
+  role: "system" | "character" | "personality" | "scenario" | "lore" | "plot" | "style" | "example" | "greeting" | "custom";
+  position: "top" | "before_char" | "character" | "after_char" | "bottom" | "depth" | "greeting";
+  /** For position="depth" only — number of messages from the end to inject */
+  depth?: number;
+  /** Within same position, lower = earlier */
+  insertionOrder: number;
+  alwaysSend: boolean;
+  keywords: string[];
+  conditions: Condition[];
+  conditionLogic: "all" | "any";
+  priority: number;
+  enabled: boolean;
 }
 
 /** A custom TSX component created by the AI or user */
@@ -120,25 +139,31 @@ export interface WorldDefinition {
   name: string;
   description: string;
   author: string;
+  avatar?: string;
+  entries: WorldEntry[];
   variables: Variable[];
   rules: Rule[];
-  characters: Character[];
+  /** @deprecated Use entries instead */
+  characters?: Character[];
   components: import("./components.js").GameComponent[];
   audioTracks: AudioTrack[];
-  lorebookEntries: LorebookEntry[];
+  /** @deprecated Use entries instead */
+  lorebookEntries?: LorebookEntry[];
   customComponents: CustomComponent[];
   settings: WorldSettings;
 }
 
-/** World-level settings */
+/** World-level settings — generation parameters only */
 export interface WorldSettings {
   maxTokens: number;
   temperature: number;
-  systemPrompt: string;
-  greeting: string;
+  /** @deprecated Use an entry with role="system" + position="top" */
+  systemPrompt?: string;
+  /** @deprecated Use an entry with role="greeting" + position="greeting" */
+  greeting?: string;
   /** Enable JSON structured output mode (default false, uses regex parsing) */
   structuredOutput?: boolean;
-  /** Max total tokens for triggered lorebook entries (default 2048) */
+  /** Max total tokens for triggered entries (default 2048) */
   lorebookTokenBudget?: number;
   /** Number of recent messages to scan for keyword matches (default 10) */
   lorebookScanDepth?: number;
@@ -148,7 +173,8 @@ export interface WorldSettings {
 export interface GameState {
   worldId: string;
   variables: Record<string, number | string | boolean>;
-  activeCharacterId: string | null;
+  /** @deprecated No longer used — character identity is now an entry */
+  activeCharacterId?: string | null;
   turnCount: number;
   metadata: Record<string, unknown>;
 }

@@ -27,8 +27,6 @@ export class GameStateManager {
         variables: Object.fromEntries(
           world.variables.map((v) => [v.id, v.defaultValue])
         ),
-        activeCharacterId:
-          world.characters.length > 0 ? (world.characters[0]?.id ?? null) : null,
         turnCount: 0,
         metadata: {},
       };
@@ -157,10 +155,6 @@ export class GameStateManager {
 
   incrementTurn(): void {
     this.state = { ...this.state, turnCount: this.state.turnCount + 1 };
-  }
-
-  setActiveCharacter(characterId: string | null): void {
-    this.state = { ...this.state, activeCharacterId: characterId };
   }
 
   getMetadata(key: string): unknown {

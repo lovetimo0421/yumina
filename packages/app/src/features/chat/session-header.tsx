@@ -12,7 +12,9 @@ export function SessionHeader() {
   const worldDef = session.world?.schema as unknown as
     | WorldDefinition
     | undefined;
-  const characterName = worldDef?.characters?.[0]?.name ?? "AI";
+  // Find character name from entries (first entry with role="character")
+  const characterEntry = worldDef?.entries?.find((e) => e.role === "character");
+  const characterName = characterEntry?.name ?? worldDef?.characters?.[0]?.name ?? "AI";
   const worldName = session.world?.name ?? "Unknown World";
 
   return (

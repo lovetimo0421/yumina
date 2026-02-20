@@ -1,4 +1,4 @@
-import type { LorebookEntry, Condition, GameState } from "../types/index.js";
+import type { WorldEntry, Condition, GameState } from "../types/index.js";
 
 /** Rough token estimate: 1 token ≈ 4 characters */
 function estimateTokens(text: string): number {
@@ -7,38 +7,40 @@ function estimateTokens(text: string): number {
 
 export interface LorebookMatchResult {
   /** Entries that always inject (alwaysSend=true), not subject to token budget */
-  alwaysSend: LorebookEntry[];
+  alwaysSend: WorldEntry[];
   /** Entries matched by keyword/condition, trimmed to fit token budget */
-  triggered: LorebookEntry[];
+  triggered: WorldEntry[];
   /** Total estimated tokens used by triggered entries */
   triggeredTokens: number;
 }
 
 /**
- * Matches lorebook entries against recent messages and game state.
+ * Matches world entries against recent messages and game state.
  * Splits results into always-send (unbounded) and triggered (token-budgeted).
  */
 export class LorebookMatcher {
   /**
    * Full match with token budgeting.
-   * @param entries All lorebook entries for this world
+   * @param entries All entries for this world (filters out greeting/disabled internally)
    * @param recentMessages Recent message texts to scan for keywords
    * @param state Current game state for condition evaluation
    * @param tokenBudget Max tokens for triggered entries (default 2048)
    */
   matchWithBudget(
-    entries: LorebookEntry[],
+    entries: WorldEntry[],
     recentMessages: string[],
     state: GameState,
     tokenBudget = 2048
   ): LorebookMatchResult {
     const combinedText = recentMessages.join(" ").toLowerCase();
 
-    const alwaysSend: LorebookEntry[] = [];
-    const triggered: LorebookEntry[] = [];
+    const alwaysSend: WorldEntry[] = [];
+    const triggered: WorldEntry[] = [];
 
     for (const entry of entries) {
       if (!entry.enabled) continue;
+      // Skip greeting entries — they're not injected via matching
+      if (entry.position === "greeting") continue;
 
       // Always-send entries bypass keyword/condition checks
       if (entry.alwaysSend) {
@@ -68,7 +70,7 @@ export class LorebookMatcher {
     triggered.sort((a, b) => b.priority - a.priority);
 
     // Apply token budget — fill from highest priority down
-    const budgeted: LorebookEntry[] = [];
+    const budgeted: WorldEntry[] = [];
     let usedTokens = 0;
 
     for (const entry of triggered) {
@@ -89,18 +91,17 @@ export class LorebookMatcher {
 
   /**
    * Legacy match method — returns flat array (always-send + triggered combined).
-   * Used for backwards compatibility with existing callers.
    */
   match(
-    entries: LorebookEntry[],
+    entries: WorldEntry[],
     recentMessages: string[],
     state: GameState
-  ): LorebookEntry[] {
+  ): WorldEntry[] {
     const result = this.matchWithBudget(entries, recentMessages, state);
     return [...result.alwaysSend, ...result.triggered];
   }
 
-  private checkConditions(
+  checkConditions(
     state: GameState,
     conditions: Condition[],
     logic: "all" | "any"

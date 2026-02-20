@@ -2,13 +2,13 @@ import { create } from "zustand";
 import type {
   WorldDefinition,
   Variable,
-  Character,
   Rule,
   GameComponent,
   AudioTrack,
-  LorebookEntry,
+  WorldEntry,
   CustomComponent,
 } from "@yumina/engine";
+import { migrateWorldDefinition } from "@yumina/engine";
 
 const apiBase = import.meta.env.VITE_API_URL || "";
 
@@ -19,22 +19,19 @@ const MAX_HISTORY = 50;
 function createEmptyWorld(): WorldDefinition {
   return {
     id: crypto.randomUUID(),
-    version: "1.0.0",
+    version: "2.0.0",
     name: "",
     description: "",
     author: "",
+    entries: [],
     variables: [],
     rules: [],
-    characters: [],
     components: [],
     audioTracks: [],
-    lorebookEntries: [],
     customComponents: [],
     settings: {
       maxTokens: 2048,
       temperature: 0.8,
-      systemPrompt: "",
-      greeting: "",
       structuredOutput: false,
     },
   };
@@ -42,7 +39,7 @@ function createEmptyWorld(): WorldDefinition {
 
 export type EditorSection =
   | "overview"
-  | "characters"
+  | "entries"
   | "variables"
   | "components"
   | "audio"
@@ -78,10 +75,10 @@ interface EditorState {
     value: string | number | boolean
   ) => void;
 
-  // Character actions
-  addCharacter: () => void;
-  updateCharacter: (id: string, updates: Partial<Character>) => void;
-  removeCharacter: (id: string) => void;
+  // Entry actions (replaces character + lorebook)
+  addEntry: (role?: WorldEntry["role"], position?: WorldEntry["position"]) => void;
+  updateEntry: (id: string, updates: Partial<WorldEntry>) => void;
+  removeEntry: (id: string) => void;
 
   // Variable actions
   addVariable: () => void;
@@ -98,11 +95,6 @@ interface EditorState {
   addAudioTrack: () => void;
   updateAudioTrack: (id: string, updates: Partial<AudioTrack>) => void;
   removeAudioTrack: (id: string) => void;
-
-  // Lorebook entry actions
-  addLorebookEntry: (type?: LorebookEntry["type"]) => void;
-  updateLorebookEntry: (id: string, updates: Partial<LorebookEntry>) => void;
-  removeLorebookEntry: (id: string) => void;
 
   // Custom component actions
   addCustomComponent: () => void;
@@ -229,29 +221,36 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!res.ok) return;
       const { data } = await res.json();
       const schema = (data.schema ?? {}) as WorldDefinition;
-      const draft: WorldDefinition = {
+
+      // Build raw draft then migrate
+      const rawDraft: WorldDefinition = {
         id: schema.id || data.id,
         version: schema.version || "1.0.0",
         name: schema.name || data.name || "",
         description: schema.description || data.description || "",
         author: schema.author || "",
+        avatar: schema.avatar,
+        entries: schema.entries || [],
         variables: schema.variables || [],
         rules: schema.rules || [],
-        characters: schema.characters || [],
+        characters: schema.characters,
         components: schema.components || [],
         audioTracks: schema.audioTracks || [],
-        lorebookEntries: schema.lorebookEntries || [],
+        lorebookEntries: schema.lorebookEntries,
         customComponents: schema.customComponents || [],
         settings: {
           maxTokens: schema.settings?.maxTokens ?? 2048,
           temperature: schema.settings?.temperature ?? 0.8,
-          systemPrompt: schema.settings?.systemPrompt ?? "",
-          greeting: schema.settings?.greeting ?? "",
+          systemPrompt: schema.settings?.systemPrompt,
+          greeting: schema.settings?.greeting,
           structuredOutput: schema.settings?.structuredOutput ?? false,
           lorebookTokenBudget: schema.settings?.lorebookTokenBudget ?? 2048,
           lorebookScanDepth: schema.settings?.lorebookScanDepth ?? 10,
         },
       };
+
+      const draft = migrateWorldDefinition(rawDraft);
+
       set({
         worldDraft: draft,
         serverWorldId: data.id,
@@ -286,41 +285,51 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
-  addCharacter: () => {
+  addEntry: (role = "custom", position = "after_char") => {
     set((s) => {
-      const newChar: Character = {
+      const maxOrder = s.worldDraft.entries.reduce(
+        (max, e) => Math.max(max, e.insertionOrder),
+        -1
+      );
+      const newEntry: WorldEntry = {
         id: crypto.randomUUID(),
-        name: "New Character",
-        description: "",
-        systemPrompt: "",
-        avatar: "",
-        variables: [],
+        name: "New Entry",
+        content: "",
+        role,
+        position,
+        insertionOrder: maxOrder + 1,
+        alwaysSend: false,
+        keywords: [],
+        conditions: [],
+        conditionLogic: "all",
+        priority: 0,
+        enabled: true,
       };
       const draft = {
         ...s.worldDraft,
-        characters: [...s.worldDraft.characters, newChar],
+        entries: [...s.worldDraft.entries, newEntry],
       };
       return commitDraft(s, draft);
     });
   },
 
-  updateCharacter: (id, updates) => {
+  updateEntry: (id, updates) => {
     set((s) => {
       const draft = {
         ...s.worldDraft,
-        characters: s.worldDraft.characters.map((c) =>
-          c.id === id ? { ...c, ...updates } : c
+        entries: s.worldDraft.entries.map((e) =>
+          e.id === id ? { ...e, ...updates } : e
         ),
       };
       return commitDraft(s, draft);
     });
   },
 
-  removeCharacter: (id) => {
+  removeEntry: (id) => {
     set((s) => {
       const draft = {
         ...s.worldDraft,
-        characters: s.worldDraft.characters.filter((c) => c.id !== id),
+        entries: s.worldDraft.entries.filter((e) => e.id !== id),
       };
       return commitDraft(s, draft);
     });
@@ -455,53 +464,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         audioTracks: (s.worldDraft.audioTracks ?? []).filter(
           (t) => t.id !== id
-        ),
-      };
-      return commitDraft(s, draft);
-    });
-  },
-
-  addLorebookEntry: (type = "lore" as LorebookEntry["type"]) => {
-    set((s) => {
-      const newEntry: LorebookEntry = {
-        id: crypto.randomUUID(),
-        name: "New Entry",
-        type,
-        content: "",
-        keywords: [],
-        conditions: [],
-        conditionLogic: "all",
-        priority: 0,
-        position: "after",
-        enabled: true,
-        alwaysSend: false,
-      };
-      const draft = {
-        ...s.worldDraft,
-        lorebookEntries: [...s.worldDraft.lorebookEntries, newEntry],
-      };
-      return commitDraft(s, draft);
-    });
-  },
-
-  updateLorebookEntry: (id, updates) => {
-    set((s) => {
-      const draft = {
-        ...s.worldDraft,
-        lorebookEntries: s.worldDraft.lorebookEntries.map((e) =>
-          e.id === id ? { ...e, ...updates } : e
-        ),
-      };
-      return commitDraft(s, draft);
-    });
-  },
-
-  removeLorebookEntry: (id) => {
-    set((s) => {
-      const draft = {
-        ...s.worldDraft,
-        lorebookEntries: s.worldDraft.lorebookEntries.filter(
-          (e) => e.id !== id
         ),
       };
       return commitDraft(s, draft);
@@ -656,8 +618,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!raw) return;
       const { draft, serverId } = JSON.parse(raw);
       if (draft) {
+        // Migrate draft if it's in v1 format
+        const migrated = migrateWorldDefinition(draft);
         set({
-          worldDraft: draft,
+          worldDraft: migrated,
           serverWorldId: serverId ?? null,
           isDirty: true,
           _past: [],
