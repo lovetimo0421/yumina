@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ApiKeysSettings } from "./api-keys";
 
 export function SettingsPage() {
   const { data: session } = useSession();
@@ -41,8 +42,8 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
-      <h1 className="mb-6 text-3xl font-bold">Settings</h1>
+    <div className="mx-auto max-w-2xl space-y-6 p-8">
+      <h1 className="text-3xl font-bold">Settings</h1>
 
       <Card>
         <CardHeader>
@@ -107,6 +108,8 @@ export function SettingsPage() {
           </form>
         </CardContent>
       </Card>
+
+      <ApiKeysSettings />
     </div>
   );
 }

@@ -102,6 +102,21 @@ export const messages = pgTable("messages", {
   role: text("role", { enum: ["user", "assistant", "system"] }).notNull(),
   content: text("content").notNull(),
   stateChanges: jsonb("state_changes").$type<Record<string, unknown>>(),
+  swipes: jsonb("swipes")
+    .$type<
+      Array<{
+        content: string;
+        stateChanges?: Record<string, unknown>;
+        createdAt: string;
+        model?: string;
+        tokenCount?: number;
+      }>
+    >()
+    .default([]),
+  activeSwipeIndex: integer("active_swipe_index").default(0),
+  model: text("model"),
+  tokenCount: integer("token_count"),
+  generationTimeMs: integer("generation_time_ms"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -117,5 +132,20 @@ export const assets = pgTable("assets", {
   url: text("url").notNull(),
   sizeBytes: integer("size_bytes"),
   mimeType: text("mime_type"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const apiKeys = pgTable("api_keys", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull().default("openrouter"),
+  encryptedKey: text("encrypted_key").notNull(),
+  keyIv: text("key_iv").notNull(),
+  keyTag: text("key_tag").notNull(),
+  label: text("label").notNull().default("Default"),
   createdAt: timestamp("created_at").defaultNow(),
 });

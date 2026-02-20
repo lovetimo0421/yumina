@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
   Home,
@@ -5,6 +6,9 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
+  Globe,
+  MessageSquare,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui";
@@ -22,17 +26,62 @@ import { Separator } from "@/components/ui/separator";
 
 const navItems = [
   { to: "/app" as const, label: "Home", icon: Home },
+  { to: "/app/worlds" as const, label: "Worlds", icon: Globe },
   { to: "/app/settings" as const, label: "Settings", icon: Settings },
 ];
+
+interface SessionEntry {
+  id: string;
+  worldId: string;
+  worldName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const apiBase = import.meta.env.VITE_API_URL || "";
 
 export function Sidebar() {
   const { sidebarOpen, toggleSidebar } = useUiStore();
   const { data: session } = useSession();
   const router = useRouter();
+  const [sessions, setSessions] = useState<SessionEntry[]>([]);
+
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const res = await fetch(`${apiBase}/api/sessions`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const { data } = await res.json();
+          setSessions(data.slice(0, 10));
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+    fetchSessions();
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
     router.navigate({ to: "/login" });
+  };
+
+  const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const res = await fetch(`${apiBase}/api/sessions/${sessionId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      }
+    } catch {
+      // Silently fail
+    }
   };
 
   const initials = session?.user?.name
@@ -71,7 +120,7 @@ export function Sidebar() {
       <Separator />
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-2">
+      <nav className="space-y-1 p-2">
         {navItems.map((item) => (
           <Link
             key={item.to}
@@ -87,6 +136,40 @@ export function Sidebar() {
         ))}
       </nav>
 
+      {/* Recent sessions */}
+      {sidebarOpen && sessions.length > 0 && (
+        <>
+          <Separator />
+          <div className="flex-1 overflow-y-auto p-2">
+            <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Recent Sessions
+            </p>
+            <div className="space-y-0.5">
+              {sessions.map((s) => (
+                <Link
+                  key={s.id}
+                  to="/app/chat/$sessionId"
+                  params={{ sessionId: s.id }}
+                  className="group flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground [&.active]:bg-accent [&.active]:text-foreground"
+                >
+                  <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                  <span className="flex-1 truncate">
+                    {s.worldName ?? "Session"}
+                  </span>
+                  <button
+                    className="hidden shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive group-hover:block"
+                    onClick={(e) => handleDeleteSession(e, s.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="flex-1" />
       <Separator />
 
       {/* User profile */}

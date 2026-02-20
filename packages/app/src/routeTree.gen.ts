@@ -14,7 +14,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as AppWorldsRouteImport } from './routes/app/worlds'
 import { Route as AppSettingsRouteImport } from './routes/app/settings'
+import { Route as AppChatSessionIdRouteImport } from './routes/app/chat.$sessionId'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -41,9 +43,19 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppWorldsRoute = AppWorldsRouteImport.update({
+  id: '/worlds',
+  path: '/worlds',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppChatSessionIdRoute = AppChatSessionIdRouteImport.update({
+  id: '/chat/$sessionId',
+  path: '/chat/$sessionId',
   getParentRoute: () => AppRoute,
 } as any)
 
@@ -53,14 +65,18 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/app/settings': typeof AppSettingsRoute
+  '/app/worlds': typeof AppWorldsRoute
   '/app/': typeof AppIndexRoute
+  '/app/chat/$sessionId': typeof AppChatSessionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/app/settings': typeof AppSettingsRoute
+  '/app/worlds': typeof AppWorldsRoute
   '/app': typeof AppIndexRoute
+  '/app/chat/$sessionId': typeof AppChatSessionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -69,13 +85,30 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/app/settings': typeof AppSettingsRoute
+  '/app/worlds': typeof AppWorldsRoute
   '/app/': typeof AppIndexRoute
+  '/app/chat/$sessionId': typeof AppChatSessionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/login' | '/register' | '/app/settings' | '/app/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/register'
+    | '/app/settings'
+    | '/app/worlds'
+    | '/app/'
+    | '/app/chat/$sessionId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register' | '/app/settings' | '/app'
+  to:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/app/settings'
+    | '/app/worlds'
+    | '/app'
+    | '/app/chat/$sessionId'
   id:
     | '__root__'
     | '/'
@@ -83,7 +116,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/app/settings'
+    | '/app/worlds'
     | '/app/'
+    | '/app/chat/$sessionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -130,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/worlds': {
+      id: '/app/worlds'
+      path: '/worlds'
+      fullPath: '/app/worlds'
+      preLoaderRoute: typeof AppWorldsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/settings': {
       id: '/app/settings'
       path: '/settings'
@@ -137,17 +179,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/chat/$sessionId': {
+      id: '/app/chat/$sessionId'
+      path: '/chat/$sessionId'
+      fullPath: '/app/chat/$sessionId'
+      preLoaderRoute: typeof AppChatSessionIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
+  AppWorldsRoute: typeof AppWorldsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppChatSessionIdRoute: typeof AppChatSessionIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
+  AppWorldsRoute: AppWorldsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppChatSessionIdRoute: AppChatSessionIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

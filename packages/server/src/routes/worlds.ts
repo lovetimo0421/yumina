@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { worlds } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
@@ -10,15 +10,29 @@ const worldRoutes = new Hono<AppEnv>();
 
 worldRoutes.use("/*", authMiddleware);
 
-// GET /api/worlds
+// GET /api/worlds — list user's worlds + published worlds
 worldRoutes.get("/", async (c) => {
   const currentUser = c.get("user");
   const result = await db
     .select()
     .from(worlds)
-    .where(eq(worlds.creatorId, currentUser.id));
+    .where(
+      or(eq(worlds.creatorId, currentUser.id), eq(worlds.isPublished, true))
+    );
 
   return c.json({ data: result });
+});
+
+// GET /api/worlds/:id — get a single world
+worldRoutes.get("/:id", async (c) => {
+  const worldId = c.req.param("id");
+  const result = await db.select().from(worlds).where(eq(worlds.id, worldId));
+
+  if (result.length === 0) {
+    return c.json({ error: "World not found" }, 404);
+  }
+
+  return c.json({ data: result[0] });
 });
 
 // POST /api/worlds

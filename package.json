@@ -11,7 +11,8 @@
     "db:generate": "pnpm --filter @yumina/server db:generate",
     "db:migrate": "pnpm --filter @yumina/server db:migrate",
     "db:push": "pnpm --filter @yumina/server db:push",
-    "db:studio": "pnpm --filter @yumina/server db:studio"
+    "db:studio": "pnpm --filter @yumina/server db:studio",
+    "db:seed": "pnpm --filter @yumina/server db:seed"
   },
   "devDependencies": {
     "turbo": "^2"

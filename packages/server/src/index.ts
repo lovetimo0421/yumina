@@ -6,6 +6,9 @@ import { health } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { users } from "./routes/users.js";
 import { worldRoutes } from "./routes/worlds.js";
+import { apiKeyRoutes } from "./routes/api-keys.js";
+import { sessionRoutes } from "./routes/sessions.js";
+import { messageRoutes } from "./routes/messages.js";
 
 const app = new Hono();
 
@@ -17,6 +20,9 @@ app.route("/health", health);
 app.route("/api/auth", authRoutes);
 app.route("/api/users", users);
 app.route("/api/worlds", worldRoutes);
+app.route("/api/keys", apiKeyRoutes);
+app.route("/api/sessions", sessionRoutes);
+app.route("/api", messageRoutes);
 
 // Root
 app.get("/", (c) => {

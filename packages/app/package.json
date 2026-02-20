@@ -19,6 +19,7 @@
     "@radix-ui/react-toast": "^1",
     "@radix-ui/react-tooltip": "^1",
     "@tanstack/react-router": "^1",
+    "@yumina/engine": "workspace:*",
     "@yumina/server": "workspace:*",
     "@yumina/shared": "workspace:*",
     "better-auth": "^1",
