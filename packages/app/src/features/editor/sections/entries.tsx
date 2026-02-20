@@ -1,9 +1,16 @@
 import { useState } from "react";
-import { Plus, Trash2, FileText, PackagePlus } from "lucide-react";
+import { Plus, Trash2, FileText, PackagePlus, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editor";
 import { ENTRY_PRESET_PACKS } from "@/lib/entry-presets";
 import type { WorldEntry } from "@yumina/engine";
+
+const SECONDARY_LOGIC_OPTIONS: { value: NonNullable<WorldEntry["secondaryKeywordLogic"]>; label: string; hint: string }[] = [
+  { value: "AND_ANY", label: "AND ANY", hint: "Primary matches AND any secondary matches" },
+  { value: "AND_ALL", label: "AND ALL", hint: "Primary matches AND all secondaries match" },
+  { value: "NOT_ANY", label: "NOT ANY", hint: "Primary matches AND no secondaries match" },
+  { value: "NOT_ALL", label: "NOT ALL", hint: "Primary matches AND not all secondaries match" },
+];
 
 const ROLES: { value: WorldEntry["role"]; label: string }[] = [
   { value: "system", label: "System" },
@@ -386,6 +393,139 @@ export function EntriesSection() {
                   Always Send
                 </label>
               </div>
+
+              {/* Advanced Matching */}
+              <details className="group">
+                <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-medium text-muted-foreground/60 hover:text-foreground transition-colors">
+                  <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+                  Advanced Matching
+                </summary>
+                <div className="mt-3 space-y-3 pl-5">
+                  {/* Whole Word + Fuzzy Match */}
+                  <div className="flex gap-6">
+                    <label className="flex items-center gap-2.5 text-sm font-medium text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selected.matchWholeWords ?? false}
+                        onChange={(e) =>
+                          updateEntry(selected.id, {
+                            matchWholeWords: e.target.checked,
+                          })
+                        }
+                        className="rounded accent-primary"
+                      />
+                      Whole Word
+                    </label>
+                    <label className="flex items-center gap-2.5 text-sm font-medium text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selected.useFuzzyMatch ?? false}
+                        onChange={(e) =>
+                          updateEntry(selected.id, {
+                            useFuzzyMatch: e.target.checked,
+                          })
+                        }
+                        className="rounded accent-primary"
+                      />
+                      Fuzzy Match
+                    </label>
+                  </div>
+
+                  {/* Secondary Keywords */}
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-foreground">
+                      Secondary Keywords (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={(selected.secondaryKeywords ?? []).join(", ")}
+                      onChange={(e) =>
+                        updateEntry(selected.id, {
+                          secondaryKeywords: e.target.value
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean),
+                        })
+                      }
+                      placeholder="healing, restoration"
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+
+                  {/* Secondary Logic (only when secondary keywords exist) */}
+                  {(selected.secondaryKeywords ?? []).length > 0 && (
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-foreground">
+                        Secondary Logic
+                      </label>
+                      <select
+                        value={selected.secondaryKeywordLogic ?? "AND_ANY"}
+                        onChange={(e) =>
+                          updateEntry(selected.id, {
+                            secondaryKeywordLogic: e.target.value as WorldEntry["secondaryKeywordLogic"],
+                          })
+                        }
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring [&>option]:bg-popover"
+                      >
+                        {SECONDARY_LOGIC_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label} — {opt.hint}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Group */}
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-foreground">
+                      Group
+                    </label>
+                    <input
+                      type="text"
+                      value={selected.group ?? ""}
+                      onChange={(e) =>
+                        updateEntry(selected.id, { group: e.target.value })
+                      }
+                      placeholder="e.g. seasons, biomes"
+                      className="w-60 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground/40">
+                      Entries sharing a group compete — highest score wins
+                    </p>
+                  </div>
+
+                  {/* Recursion toggles */}
+                  <div className="flex gap-6">
+                    <label className="flex items-center gap-2.5 text-sm font-medium text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selected.preventRecursion ?? false}
+                        onChange={(e) =>
+                          updateEntry(selected.id, {
+                            preventRecursion: e.target.checked,
+                          })
+                        }
+                        className="rounded accent-primary"
+                      />
+                      Prevent Recursion
+                    </label>
+                    <label className="flex items-center gap-2.5 text-sm font-medium text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selected.excludeRecursion ?? false}
+                        onChange={(e) =>
+                          updateEntry(selected.id, {
+                            excludeRecursion: e.target.checked,
+                          })
+                        }
+                        className="rounded accent-primary"
+                      />
+                      Exclude from Recursion
+                    </label>
+                  </div>
+                </div>
+              </details>
 
               {/* Template variables helper */}
               {templateVars.length > 0 && (

@@ -14,25 +14,67 @@ export function SettingsSection() {
       </div>
 
       <div className="space-y-6">
-        {/* Max Tokens */}
+        {/* Player Name */}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-foreground">
-            Max Tokens
+            Player Name
           </label>
           <input
-            type="number"
-            value={settings.maxTokens}
+            type="text"
+            value={settings.playerName ?? "User"}
             onChange={(e) =>
-              setSettings("maxTokens", parseInt(e.target.value) || 4096)
+              setSettings("playerName", e.target.value || "User")
             }
-            min={256}
-            max={16384}
-            step={256}
-            className="w-40 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="User"
+            className="w-60 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
           <p className="mt-1 text-xs text-muted-foreground/40">
-            Maximum response length (256 - 16384)
+            Resolves the {"{{user}}"} macro in entry content
           </p>
+        </div>
+
+        {/* Max Tokens (response length) */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Max Response Tokens
+            </label>
+            <input
+              type="number"
+              value={settings.maxTokens}
+              onChange={(e) =>
+                setSettings("maxTokens", parseInt(e.target.value) || 12000)
+              }
+              min={256}
+              max={32768}
+              step={256}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="mt-1 text-xs text-muted-foreground/40">
+              Maximum response length (256 - 32768)
+            </p>
+          </div>
+
+          {/* Max Context */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Max Context Window
+            </label>
+            <input
+              type="number"
+              value={settings.maxContext ?? 200000}
+              onChange={(e) =>
+                setSettings("maxContext", parseInt(e.target.value) || 200000)
+              }
+              min={4096}
+              max={2000000}
+              step={1000}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="mt-1 text-xs text-muted-foreground/40">
+              Context window size for history trimming
+            </p>
+          </div>
         </div>
 
         {/* Temperature */}
@@ -194,25 +236,60 @@ export function SettingsSection() {
           <div className="space-y-4">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-foreground">
-                Token Budget
+                Budget:{" "}
+                <span className="text-primary">
+                  {settings.lorebookBudgetPercent ?? 100}%
+                </span>
+                {(settings.lorebookBudgetCap ?? 0) > 0 && (
+                  <span className="text-muted-foreground/60 ml-2">
+                    (cap: {settings.lorebookBudgetCap} tokens)
+                  </span>
+                )}
+              </label>
+              <input
+                type="range"
+                value={settings.lorebookBudgetPercent ?? 100}
+                onChange={(e) =>
+                  setSettings(
+                    "lorebookBudgetPercent",
+                    parseInt(e.target.value) || 100
+                  )
+                }
+                min={1}
+                max={100}
+                step={1}
+                className="w-full accent-primary"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground/40">
+                <span>1%</span>
+                <span>100% of context</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground/40">
+                Percentage of context window allocated to triggered entries.
+                Always-send entries are not counted against this budget.
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-foreground">
+                Budget Cap (tokens)
               </label>
               <input
                 type="number"
-                value={settings.lorebookTokenBudget ?? 2048}
+                value={settings.lorebookBudgetCap ?? 0}
                 onChange={(e) =>
                   setSettings(
-                    "lorebookTokenBudget",
-                    parseInt(e.target.value) || 2048
+                    "lorebookBudgetCap",
+                    parseInt(e.target.value) || 0
                   )
                 }
-                min={256}
-                max={8192}
+                min={0}
+                max={1000000}
                 step={256}
                 className="w-40 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <p className="mt-1 text-xs text-muted-foreground/40">
-                Max tokens for triggered entries (256 - 8192).
-                Always-send entries are not counted against this budget.
+                Hard token cap for entry budget. 0 = no cap.
               </p>
             </div>
 
@@ -222,11 +299,11 @@ export function SettingsSection() {
               </label>
               <input
                 type="number"
-                value={settings.lorebookScanDepth ?? 10}
+                value={settings.lorebookScanDepth ?? 2}
                 onChange={(e) =>
                   setSettings(
                     "lorebookScanDepth",
-                    parseInt(e.target.value) || 10
+                    parseInt(e.target.value) || 2
                   )
                 }
                 min={1}
@@ -235,6 +312,28 @@ export function SettingsSection() {
               />
               <p className="mt-1 text-xs text-muted-foreground/40">
                 Number of recent messages to scan for keyword matches (1 - 50)
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-foreground">
+                Recursion Depth
+              </label>
+              <input
+                type="number"
+                value={settings.lorebookRecursionDepth ?? 0}
+                onChange={(e) =>
+                  setSettings(
+                    "lorebookRecursionDepth",
+                    Math.min(Math.max(parseInt(e.target.value) || 0, 0), 10)
+                  )
+                }
+                min={0}
+                max={10}
+                className="w-40 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <p className="mt-1 text-xs text-muted-foreground/40">
+                Max depth for cascading entry triggers. 0 = disabled.
               </p>
             </div>
           </div>

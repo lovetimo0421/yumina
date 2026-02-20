@@ -100,6 +100,13 @@ export const worldEntrySchema = z.object({
   conditionLogic: z.enum(["all", "any"]).default("all"),
   priority: z.number().int().default(0),
   enabled: z.boolean().default(true),
+  matchWholeWords: z.boolean().optional().default(false),
+  useFuzzyMatch: z.boolean().optional().default(false),
+  secondaryKeywords: z.array(z.string()).optional().default([]),
+  secondaryKeywordLogic: z.enum(["AND_ANY", "AND_ALL", "NOT_ANY", "NOT_ALL"]).optional().default("AND_ANY"),
+  group: z.string().optional().default(""),
+  preventRecursion: z.boolean().optional().default(false),
+  excludeRecursion: z.boolean().optional().default(false),
 });
 
 export const customComponentSchema = z.object({
@@ -113,18 +120,23 @@ export const customComponentSchema = z.object({
 });
 
 export const worldSettingsSchema = z.object({
-  maxTokens: z.number().int().positive().default(4096),
+  maxTokens: z.number().int().positive().default(12000),
+  maxContext: z.number().int().positive().optional().default(200000),
   temperature: z.number().min(0).max(2).default(1.0),
   topP: z.number().min(0).max(1).optional(),
   frequencyPenalty: z.number().min(-2).max(2).optional(),
   presencePenalty: z.number().min(-2).max(2).optional(),
   topK: z.number().int().min(0).optional(),
   minP: z.number().min(0).max(1).optional(),
+  playerName: z.string().optional().default("User"),
   systemPrompt: z.string().optional(),
   greeting: z.string().optional(),
   structuredOutput: z.boolean().optional().default(false),
-  lorebookTokenBudget: z.number().int().positive().optional().default(2048),
-  lorebookScanDepth: z.number().int().positive().optional().default(10),
+  lorebookTokenBudget: z.number().int().positive().optional(),
+  lorebookBudgetPercent: z.number().min(0).max(100).optional().default(100),
+  lorebookBudgetCap: z.number().int().min(0).optional().default(0),
+  lorebookScanDepth: z.number().int().positive().optional().default(2),
+  lorebookRecursionDepth: z.number().int().min(0).max(10).optional().default(0),
 });
 
 export const worldDefinitionSchema = z.object({

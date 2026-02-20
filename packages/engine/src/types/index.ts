@@ -119,6 +119,20 @@ export interface WorldEntry {
   conditionLogic: "all" | "any";
   priority: number;
   enabled: boolean;
+  /** Match keywords as whole words only (default false — substring matching) */
+  matchWholeWords?: boolean;
+  /** Enable fuzzy matching with Levenshtein distance (default false) */
+  useFuzzyMatch?: boolean;
+  /** Secondary keywords for AND/NOT logic (default []) */
+  secondaryKeywords?: string[];
+  /** Logic for secondary keywords (default "AND_ANY") */
+  secondaryKeywordLogic?: "AND_ANY" | "AND_ALL" | "NOT_ANY" | "NOT_ALL";
+  /** Group name — entries sharing a group compete, highest score wins (default "" — no group) */
+  group?: string;
+  /** If true, this entry's content won't trigger other entries during recursion (default false) */
+  preventRecursion?: boolean;
+  /** If true, this entry won't be triggered during recursion scans (default false) */
+  excludeRecursion?: boolean;
 }
 
 /** A custom TSX component created by the AI or user */
@@ -156,22 +170,32 @@ export interface WorldDefinition {
 /** World-level settings — generation parameters only */
 export interface WorldSettings {
   maxTokens: number;
+  /** Max context window size for history trimming (default 200000) */
+  maxContext?: number;
   temperature: number;
   topP?: number;
   frequencyPenalty?: number;
   presencePenalty?: number;
   topK?: number;
   minP?: number;
+  /** Player display name for {{user}} macro (default "User") */
+  playerName?: string;
   /** @deprecated Use an entry with role="system" + position="top" */
   systemPrompt?: string;
   /** @deprecated Use an entry with role="greeting" + position="greeting" */
   greeting?: string;
   /** Enable JSON structured output mode (default false, uses regex parsing) */
   structuredOutput?: boolean;
-  /** Max total tokens for triggered entries (default 2048) */
+  /** @deprecated Use lorebookBudgetPercent instead */
   lorebookTokenBudget?: number;
-  /** Number of recent messages to scan for keyword matches (default 10) */
+  /** Percentage of maxContext for triggered entry budget (default 100) */
+  lorebookBudgetPercent?: number;
+  /** Hard cap on lorebook budget in tokens (default 0 = no cap) */
+  lorebookBudgetCap?: number;
+  /** Number of recent messages to scan for keyword matches (default 2) */
   lorebookScanDepth?: number;
+  /** Max recursion depth for cascading entry triggers. 0 = disabled (default 0). Range 0-10. */
+  lorebookRecursionDepth?: number;
 }
 
 /** Runtime game state during a play session */

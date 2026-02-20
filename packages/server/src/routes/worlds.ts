@@ -1,13 +1,9 @@
 import { Hono } from "hono";
 import { eq, or, and } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { worlds, lorebookEmbeddings, apiKeys } from "../db/schema.js";
+import { worlds } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
-import { decryptApiKey } from "../lib/crypto.js";
 import { createWorldSchema, updateWorldSchema } from "@yumina/shared";
-import { generateEmbeddings, hashContent } from "../lib/llm/embeddings.js";
-import type { WorldDefinition } from "@yumina/engine";
-import { migrateWorldDefinition } from "@yumina/engine";
 import type { AppEnv } from "../lib/types.js";
 
 const worldRoutes = new Hono<AppEnv>();
@@ -162,139 +158,6 @@ worldRoutes.post("/:id/duplicate", async (c) => {
     .returning();
 
   return c.json({ data: result[0] }, 201);
-});
-
-// POST /api/worlds/:id/embeddings — generate/update lorebook embeddings
-worldRoutes.post("/:id/embeddings", async (c) => {
-  const currentUser = c.get("user");
-  const worldId = c.req.param("id");
-
-  // Load world
-  const worldRows = await db
-    .select()
-    .from(worlds)
-    .where(and(eq(worlds.id, worldId), eq(worlds.creatorId, currentUser.id)));
-
-  if (worldRows.length === 0) {
-    return c.json({ error: "World not found or not authorized" }, 404);
-  }
-
-  const rawWorldDef = worldRows[0]!.schema as unknown as WorldDefinition;
-  const worldDef = migrateWorldDefinition(rawWorldDef);
-  // Embed all non-greeting entries (greeting doesn't need semantic search)
-  const entries = worldDef.entries.filter((e) => e.position !== "greeting");
-
-  if (entries.length === 0) {
-    return c.json({ data: { embedded: 0, skipped: 0 } });
-  }
-
-  // Find user's OpenAI API key (needed for embeddings)
-  const keyRows = await db
-    .select()
-    .from(apiKeys)
-    .where(and(eq(apiKeys.userId, currentUser.id), eq(apiKeys.provider, "openai")));
-
-  if (keyRows.length === 0) {
-    return c.json(
-      { error: "OpenAI API key required for semantic search. Add one in Settings." },
-      400
-    );
-  }
-
-  const openaiKey = decryptApiKey(
-    keyRows[0]!.encryptedKey,
-    keyRows[0]!.keyIv,
-    keyRows[0]!.keyTag
-  );
-
-  // Load existing embeddings
-  const existing = await db
-    .select()
-    .from(lorebookEmbeddings)
-    .where(eq(lorebookEmbeddings.worldId, worldId));
-
-  const existingMap = new Map(existing.map((e) => [e.entryId, e]));
-
-  // Find entries that need embedding (new or content changed)
-  const needsEmbedding: Array<{ entry: typeof entries[0]; hash: string }> = [];
-
-  for (const entry of entries) {
-    if (!entry.enabled) continue;
-    const hash = hashContent(entry.content);
-    const existing = existingMap.get(entry.id);
-    if (!existing || existing.contentHash !== hash) {
-      needsEmbedding.push({ entry, hash });
-    }
-  }
-
-  if (needsEmbedding.length === 0) {
-    return c.json({ data: { embedded: 0, skipped: entries.length } });
-  }
-
-  try {
-    // Generate embeddings in batch
-    const texts = needsEmbedding.map(
-      (n) => `${n.entry.name}: ${n.entry.content}`
-    );
-    const embeddings = await generateEmbeddings(texts, openaiKey);
-
-    // Upsert embeddings
-    for (let i = 0; i < needsEmbedding.length; i++) {
-      const { entry, hash } = needsEmbedding[i]!;
-      const embedding = embeddings[i]!;
-      const existingRow = existingMap.get(entry.id);
-
-      if (existingRow) {
-        await db
-          .update(lorebookEmbeddings)
-          .set({ embedding, contentHash: hash, createdAt: new Date() })
-          .where(eq(lorebookEmbeddings.id, existingRow.id));
-      } else {
-        await db.insert(lorebookEmbeddings).values({
-          worldId,
-          entryId: entry.id,
-          embedding,
-          contentHash: hash,
-        });
-      }
-    }
-
-    // Delete embeddings for entries that no longer exist
-    const entryIds = new Set(entries.map((e) => e.id));
-    for (const row of existing) {
-      if (!entryIds.has(row.entryId)) {
-        await db
-          .delete(lorebookEmbeddings)
-          .where(eq(lorebookEmbeddings.id, row.id));
-      }
-    }
-
-    return c.json({
-      data: {
-        embedded: needsEmbedding.length,
-        skipped: entries.length - needsEmbedding.length,
-      },
-    });
-  } catch (err) {
-    return c.json(
-      {
-        error: `Embedding generation failed: ${err instanceof Error ? err.message : "unknown error"}`,
-      },
-      500
-    );
-  }
-});
-
-// GET /api/worlds/:id/embeddings — check embedding status
-worldRoutes.get("/:id/embeddings", async (c) => {
-  const worldId = c.req.param("id");
-
-  const rows = await db
-    .select()
-    .from(lorebookEmbeddings)
-    .where(eq(lorebookEmbeddings.worldId, worldId));
-
-  return c.json({ data: { count: rows.length, entryIds: rows.map((r) => r.entryId) } });
 });
 
 export { worldRoutes };

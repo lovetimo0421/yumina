@@ -81,6 +81,8 @@ export type {
 // Lorebook
 export { LorebookMatcher } from "./lorebook/lorebook-matcher.js";
 export type { LorebookMatchResult } from "./lorebook/lorebook-matcher.js";
+export { levenshteinDistance, fuzzyMatch } from "./lorebook/levenshtein.js";
+export { keywordMatches } from "./lorebook/keyword-matcher.js";
 
 // Parser
 export { ResponseParser } from "./parser/response-parser.js";

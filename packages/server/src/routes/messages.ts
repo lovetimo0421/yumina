@@ -178,18 +178,20 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     currentUser.id
   );
 
-  // Hybrid entry retrieval (BM25 + vector if embeddings exist)
-  const scanDepth = worldDef.settings?.lorebookScanDepth ?? 10;
-  const tokenBudget = worldDef.settings?.lorebookTokenBudget ?? 2048;
+  // Deterministic entry retrieval (engine-level matching)
+  const scanDepth = worldDef.settings?.lorebookScanDepth ?? 2;
+  const maxContext = worldDef.settings?.maxContext ?? 200000;
+  const budgetPercent = worldDef.settings?.lorebookBudgetPercent ?? 100;
+  const budgetCap = worldDef.settings?.lorebookBudgetCap ?? 0;
+  let tokenBudget = Math.round((budgetPercent * maxContext) / 100);
+  if (budgetCap > 0) tokenBudget = Math.min(tokenBudget, budgetCap);
   const recentTexts = historyRows.slice(-scanDepth).map((m) => m.content);
-  const openaiKey = await getUserApiKey(currentUser.id, "openai");
-  const lorebookResult = await retrieveLorebookEntries({
+  const lorebookResult = retrieveLorebookEntries({
     entries: worldDef.entries,
     recentMessages: recentTexts,
     state: snapshot,
     tokenBudget,
-    worldId: sessionData.worldId,
-    openaiApiKey: openaiKey,
+    settings: { lorebookRecursionDepth: worldDef.settings?.lorebookRecursionDepth },
   });
   const matchedEntries = [...lorebookResult.alwaysSend, ...lorebookResult.triggered];
 
@@ -248,7 +250,7 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
 
   const chatMessages = promptBuilder.buildMessageHistory(
     contextMessages,
-    worldDef.settings?.maxTokens
+    maxContext
   );
 
   // Stream response
@@ -512,7 +514,7 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
     return c.json({ error: "Session context not found" }, 404);
   }
 
-  const { session: regenSession, worldDef, gameState } = context;
+  const { worldDef, gameState } = context;
   const model = body.model ?? "openai/gpt-4o-mini";
 
   const resolved = await resolveProviderForModel(currentUser.id, model);
@@ -534,18 +536,20 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
   const msgIndex = historyRows.findIndex((m) => m.id === messageId);
   const priorMessages = historyRows.slice(0, msgIndex);
 
-  // Hybrid entry retrieval (BM25 + vector if embeddings exist)
-  const scanDepth = worldDef.settings?.lorebookScanDepth ?? 10;
-  const tokenBudget = worldDef.settings?.lorebookTokenBudget ?? 2048;
+  // Deterministic entry retrieval (engine-level matching)
+  const scanDepth = worldDef.settings?.lorebookScanDepth ?? 2;
+  const regenMaxContext = worldDef.settings?.maxContext ?? 200000;
+  const regenBudgetPercent = worldDef.settings?.lorebookBudgetPercent ?? 100;
+  const regenBudgetCap = worldDef.settings?.lorebookBudgetCap ?? 0;
+  let tokenBudget = Math.round((regenBudgetPercent * regenMaxContext) / 100);
+  if (regenBudgetCap > 0) tokenBudget = Math.min(tokenBudget, regenBudgetCap);
   const recentTexts = priorMessages.slice(-scanDepth).map((m) => m.content);
-  const openaiKey = await getUserApiKey(currentUser.id, "openai");
-  const lorebookResult = await retrieveLorebookEntries({
+  const lorebookResult = retrieveLorebookEntries({
     entries: worldDef.entries,
     recentMessages: recentTexts,
     state: snapshot,
     tokenBudget,
-    worldId: regenSession.worldId,
-    openaiApiKey: openaiKey,
+    settings: { lorebookRecursionDepth: worldDef.settings?.lorebookRecursionDepth },
   });
   const matchedEntries = [...lorebookResult.alwaysSend, ...lorebookResult.triggered];
 
@@ -561,7 +565,7 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
         content: m.content,
       })),
     ],
-    worldDef.settings?.maxTokens
+    regenMaxContext
   );
 
   const regenProvider = resolved.provider;
