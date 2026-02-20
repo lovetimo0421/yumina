@@ -97,6 +97,7 @@ interface EditorState {
   addEntry: (role?: WorldEntry["role"], position?: WorldEntry["position"]) => void;
   updateEntry: (id: string, updates: Partial<WorldEntry>) => void;
   removeEntry: (id: string) => void;
+  importEntryPack: (entries: Omit<WorldEntry, "id">[]) => void;
 
   // Variable actions
   addVariable: () => void;
@@ -353,6 +354,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const draft = {
         ...s.worldDraft,
         entries: s.worldDraft.entries.filter((e) => e.id !== id),
+      };
+      return commitDraft(s, draft);
+    });
+  },
+
+  importEntryPack: (packEntries) => {
+    set((s) => {
+      const newEntries = packEntries.map((e) => ({
+        ...e,
+        id: crypto.randomUUID(),
+      }));
+      const draft = {
+        ...s.worldDraft,
+        entries: [...s.worldDraft.entries, ...newEntries],
       };
       return commitDraft(s, draft);
     });

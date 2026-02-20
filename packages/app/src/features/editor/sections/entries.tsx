@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Plus, Trash2, FileText } from "lucide-react";
+import { Plus, Trash2, FileText, PackagePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editor";
+import { ENTRY_PRESET_PACKS } from "@/lib/entry-presets";
 import type { WorldEntry } from "@yumina/engine";
 
 const ROLES: { value: WorldEntry["role"]; label: string }[] = [
@@ -35,7 +36,9 @@ const ROLE_FILTER_TABS = [
 ];
 
 export function EntriesSection() {
-  const { worldDraft, addEntry, updateEntry, removeEntry } = useEditorStore();
+  const { worldDraft, addEntry, updateEntry, removeEntry, importEntryPack } =
+    useEditorStore();
+  const [showPackMenu, setShowPackMenu] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(
     worldDraft.entries[0]?.id ?? null
   );
@@ -59,26 +62,64 @@ export function EntriesSection() {
             instructions, greeting
           </p>
         </div>
-        <button
-          onClick={() => {
-            const role = roleFilter === "all" ? "custom" : roleFilter;
-            const position =
-              role === "greeting"
-                ? "greeting"
-                : role === "system"
-                  ? "top"
-                  : role === "character" || role === "personality"
-                    ? "character"
-                    : "after_char";
-            addEntry(role as WorldEntry["role"], position as WorldEntry["position"]);
-            const entries = useEditorStore.getState().worldDraft.entries;
-            setSelectedId(entries[entries.length - 1]?.id ?? null);
-          }}
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add Entry
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Import Pack */}
+          <div className="relative">
+            <button
+              onClick={() => setShowPackMenu(!showPackMenu)}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              <PackagePlus className="h-3.5 w-3.5" />
+              Import Pack
+            </button>
+            {showPackMenu && (
+              <div className="absolute right-0 top-full z-10 mt-1 w-72 rounded-lg border border-border bg-popover p-1 shadow-lg">
+                {ENTRY_PRESET_PACKS.map((pack) => (
+                  <button
+                    key={pack.id}
+                    onClick={() => {
+                      importEntryPack(pack.entries);
+                      setShowPackMenu(false);
+                    }}
+                    className="flex w-full flex-col gap-0.5 rounded-md px-3 py-2 text-left transition-colors hover:bg-accent"
+                  >
+                    <span className="text-sm font-medium text-foreground">
+                      {pack.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground/60">
+                      {pack.description}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/40">
+                      {pack.entries.length} entries ({pack.entries.filter((e) => e.enabled).length} enabled)
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add Entry */}
+          <button
+            onClick={() => {
+              const role = roleFilter === "all" ? "custom" : roleFilter;
+              const position =
+                role === "greeting"
+                  ? "greeting"
+                  : role === "system"
+                    ? "top"
+                    : role === "character" || role === "personality"
+                      ? "character"
+                      : "after_char";
+              addEntry(role as WorldEntry["role"], position as WorldEntry["position"]);
+              const entries = useEditorStore.getState().worldDraft.entries;
+              setSelectedId(entries[entries.length - 1]?.id ?? null);
+            }}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Entry
+          </button>
+        </div>
       </div>
 
       {/* Role filter tabs */}
