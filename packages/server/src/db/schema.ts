@@ -88,6 +88,8 @@ export const playSessions = pgTable("play_sessions", {
     .notNull()
     .references(() => worlds.id, { onDelete: "cascade" }),
   state: jsonb("state").notNull().$type<Record<string, unknown>>().default({}),
+  /** Structured summary of compacted (older) messages */
+  summary: text("summary"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -145,6 +147,25 @@ export const lorebookEmbeddings = pgTable("lorebook_embeddings", {
   entryId: text("entry_id").notNull(),
   embedding: jsonb("embedding").notNull().$type<number[]>(),
   contentHash: text("content_hash").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const worldMemories = pgTable("world_memories", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  worldId: text("world_id")
+    .notNull()
+    .references(() => worlds.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  category: text("category", {
+    enum: ["event", "relationship", "fact", "decision"],
+  }).notNull(),
+  importance: integer("importance").notNull().default(5),
+  sessionId: text("session_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

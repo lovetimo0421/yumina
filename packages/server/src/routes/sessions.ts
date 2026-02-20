@@ -1,8 +1,10 @@
 import { Hono } from "hono";
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { playSessions, worlds, messages } from "../db/schema.js";
+import { playSessions, worlds, messages, apiKeys, worldMemories } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
+import { decryptApiKey } from "../lib/crypto.js";
+import { extractMemories, loadWorldMemories } from "../lib/memory-extractor.js";
 import type { AppEnv } from "../lib/types.js";
 import type { WorldDefinition } from "@yumina/engine";
 import { GameStateManager } from "@yumina/engine";
@@ -161,6 +163,85 @@ sessionRoutes.patch("/:id/state", async (c) => {
   }
 
   return c.json({ data: result[0] });
+});
+
+// POST /api/sessions/:id/extract-memories — extract persistent memories from session
+sessionRoutes.post("/:id/extract-memories", async (c) => {
+  const currentUser = c.get("user");
+  const sessionId = c.req.param("id");
+
+  const sessionRows = await db
+    .select()
+    .from(playSessions)
+    .where(
+      and(eq(playSessions.id, sessionId), eq(playSessions.userId, currentUser.id))
+    );
+
+  if (sessionRows.length === 0) {
+    return c.json({ error: "Session not found" }, 404);
+  }
+
+  const session = sessionRows[0]!;
+
+  // Need an OpenAI key for the extraction model
+  const keyRows = await db
+    .select()
+    .from(apiKeys)
+    .where(and(eq(apiKeys.userId, currentUser.id), eq(apiKeys.provider, "openai")));
+
+  if (keyRows.length === 0) {
+    // Try openrouter as fallback
+    const orKeys = await db
+      .select()
+      .from(apiKeys)
+      .where(and(eq(apiKeys.userId, currentUser.id), eq(apiKeys.provider, "openrouter")));
+
+    if (orKeys.length === 0) {
+      return c.json({ error: "API key required for memory extraction" }, 400);
+    }
+
+    const apiKey = decryptApiKey(orKeys[0]!.encryptedKey, orKeys[0]!.keyIv, orKeys[0]!.keyTag);
+    const memories = await extractMemories(sessionId, session.worldId, currentUser.id, apiKey);
+    return c.json({ data: { extracted: memories.length, memories } });
+  }
+
+  const apiKey = decryptApiKey(keyRows[0]!.encryptedKey, keyRows[0]!.keyIv, keyRows[0]!.keyTag);
+  const memories = await extractMemories(sessionId, session.worldId, currentUser.id, apiKey);
+  return c.json({ data: { extracted: memories.length, memories } });
+});
+
+// GET /api/sessions/:id/memories — get persistent memories for this world+user
+sessionRoutes.get("/:id/memories", async (c) => {
+  const currentUser = c.get("user");
+  const sessionId = c.req.param("id");
+
+  const sessionRows = await db
+    .select()
+    .from(playSessions)
+    .where(
+      and(eq(playSessions.id, sessionId), eq(playSessions.userId, currentUser.id))
+    );
+
+  if (sessionRows.length === 0) {
+    return c.json({ error: "Session not found" }, 404);
+  }
+
+  const memories = await loadWorldMemories(sessionRows[0]!.worldId, currentUser.id);
+  return c.json({ data: memories });
+});
+
+// DELETE /api/worlds/:worldId/memories — clear all memories for a world
+sessionRoutes.delete("/worlds/:worldId/memories", async (c) => {
+  const currentUser = c.get("user");
+  const worldId = c.req.param("worldId");
+
+  await db
+    .delete(worldMemories)
+    .where(
+      and(eq(worldMemories.worldId, worldId), eq(worldMemories.userId, currentUser.id))
+    );
+
+  return c.json({ data: { cleared: true } });
 });
 
 export { sessionRoutes };

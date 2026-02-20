@@ -17,6 +17,8 @@ import {
 import type { WorldDefinition, GameState, AudioEffect } from "@yumina/engine";
 import type { AppEnv } from "../lib/types.js";
 import { retrieveLorebookEntries } from "../lib/lorebook-retriever.js";
+import { compactSessionIfNeeded } from "../lib/session-compactor.js";
+import { loadWorldMemories } from "../lib/memory-extractor.js";
 
 const messageRoutes = new Hono<AppEnv>();
 
@@ -139,6 +141,15 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
 
   const userMsg = userMsgResult[0]!;
 
+  // Session compaction — check if we need to summarize old messages
+  // Use a reasonable context estimate (most models: 128K, fallback 16K)
+  const contextWindowTokens = 128000;
+  const compactionApiKey = await getUserApiKey(currentUser.id, "openai") ??
+    await getUserApiKey(currentUser.id, "openrouter");
+  if (compactionApiKey) {
+    await compactSessionIfNeeded(sessionId, contextWindowTokens, compactionApiKey);
+  }
+
   // Build prompt
   const stateManager = new GameStateManager(worldDef, gameState);
   stateManager.incrementTurn();
@@ -155,12 +166,24 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
   const useStructured = worldDef.settings?.structuredOutput === true;
   const snapshot = stateManager.getSnapshot();
 
-  // Load message history
+  // Load message history (post-compaction — old messages may have been pruned)
   const historyRows = await db
     .select()
     .from(messages)
     .where(eq(messages.sessionId, sessionId))
     .orderBy(messages.createdAt);
+
+  // Load session summary (from compaction) and persistent memories
+  const sessionRows = await db
+    .select()
+    .from(playSessions)
+    .where(eq(playSessions.id, sessionId));
+  const sessionSummary = sessionRows[0]?.summary;
+
+  const worldMemoriesList = await loadWorldMemories(
+    sessionData.worldId,
+    currentUser.id
+  );
 
   // Hybrid lorebook retrieval (BM25 + vector if embeddings exist)
   const scanDepth = worldDef.settings?.lorebookScanDepth ?? 10;
@@ -181,14 +204,41 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     ? promptBuilder.buildStructuredSystemPrompt(worldDef, activeChar, snapshot, matchedEntries)
     : promptBuilder.buildSystemPrompt(worldDef, activeChar, snapshot, matchedEntries);
 
+  // Build context-aware message list
+  const contextMessages: Array<{ role: "user" | "assistant" | "system"; content: string }> = [];
+
+  // 1. System prompt
+  contextMessages.push({ role: "system", content: systemPrompt });
+
+  // 2. Session summary (from compaction of older messages)
+  if (sessionSummary) {
+    contextMessages.push({
+      role: "system",
+      content: `Previous session context (summarized):\n${sessionSummary}`,
+    });
+  }
+
+  // 3. Persistent memories from past sessions
+  if (worldMemoriesList.length > 0) {
+    const memoryText = worldMemoriesList
+      .map((m) => `- [${m.category}] ${m.content}`)
+      .join("\n");
+    contextMessages.push({
+      role: "system",
+      content: `Memories from previous sessions:\n${memoryText}`,
+    });
+  }
+
+  // 4. Actual message history
+  contextMessages.push(
+    ...historyRows.map((m) => ({
+      role: m.role as "user" | "assistant" | "system",
+      content: m.content,
+    }))
+  );
+
   const chatMessages = promptBuilder.buildMessageHistory(
-    [
-      { role: "system" as const, content: systemPrompt },
-      ...historyRows.map((m) => ({
-        role: m.role as "user" | "assistant" | "system",
-        content: m.content,
-      })),
-    ],
+    contextMessages,
     worldDef.settings?.maxTokens
   );
 
