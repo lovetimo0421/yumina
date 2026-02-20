@@ -1,33 +1,55 @@
-import type { Effect } from "../types/index.js";
+import type { Effect, AudioEffect } from "../types/index.js";
 
 export interface ParseResult {
   cleanText: string;
   effects: Effect[];
+  audioEffects: AudioEffect[];
 }
 
 /**
  * Extracts state change directives from LLM output.
  * Format: [variableId: operation value]
  * Examples: [health: -10], [gold: +50], [location: set "forest"], [hasKey: toggle]
+ * Audio: [audio: trackId play], [audio: trackId stop]
  */
 export class ResponseParser {
   private pattern: RegExp;
+  private audioPattern: RegExp;
 
   constructor(pattern?: RegExp) {
     // Match [variableId: operation] patterns
     this.pattern =
       pattern ?? /\[(\w+):\s*(set|add|subtract|multiply|toggle|append|\+|-|\*)?\s*("(?:[^"\\]|\\.)*"|[\w.-]+)?\]/g;
+    // Match [audio: trackId action] patterns
+    this.audioPattern = /\[audio:\s*(\w+)\s+(play|stop|crossfade|volume)(?:\s+([\d.]+))?\]/g;
   }
 
   parse(responseText: string): ParseResult {
     const effects: Effect[] = [];
-    const cleanText = responseText.replace(this.pattern, (_match, variableId: string, op?: string, rawValue?: string) => {
+    const audioEffects: AudioEffect[] = [];
+
+    // Extract audio directives first
+    let text = responseText.replace(this.audioPattern, (_match, trackId: string, action: string, value?: string) => {
+      const effect: AudioEffect = { trackId, action: action as AudioEffect["action"] };
+      if (value !== undefined) {
+        const num = parseFloat(value);
+        if (!isNaN(num)) {
+          if (action === "volume" || action === "crossfade") effect.volume = num;
+          else effect.fadeDuration = num;
+        }
+      }
+      audioEffects.push(effect);
+      return "";
+    });
+
+    // Then extract state change directives
+    const cleanText = text.replace(this.pattern, (_match, variableId: string, op?: string, rawValue?: string) => {
       const effect = this.parseDirective(variableId, op, rawValue);
       if (effect) effects.push(effect);
       return "";
     }).replace(/\s{2,}/g, " ").trim();
 
-    return { cleanText, effects };
+    return { cleanText, effects, audioEffects };
   }
 
   private parseDirective(

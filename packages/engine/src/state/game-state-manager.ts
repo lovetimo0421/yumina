@@ -163,6 +163,17 @@ export class GameStateManager {
     this.state = { ...this.state, activeCharacterId: characterId };
   }
 
+  getMetadata(key: string): unknown {
+    return this.state.metadata[key];
+  }
+
+  setMetadata(key: string, value: unknown): void {
+    this.state = {
+      ...this.state,
+      metadata: { ...this.state.metadata, [key]: value },
+    };
+  }
+
   onChange(callback: StateChangeCallback): () => void {
     this.listeners.add(callback);
     return () => {

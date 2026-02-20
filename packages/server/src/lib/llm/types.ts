@@ -26,9 +26,11 @@ export interface Model {
     prompt: number;
     completion: number;
   };
+  provider?: string;
 }
 
 export interface LLMProvider {
   generateStream(params: GenerateParams): AsyncIterable<StreamChunk>;
   listModels(): Promise<Model[]>;
+  verify?(): Promise<boolean>;
 }

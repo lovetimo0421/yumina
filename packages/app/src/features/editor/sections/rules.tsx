@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus, Trash2, GripVertical, ScrollText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editor";
-import type { Condition, Effect } from "@yumina/engine";
+import type { Condition, Effect, AudioEffect } from "@yumina/engine";
 
 const OPERATORS: { value: Condition["operator"]; label: string }[] = [
   { value: "eq", label: "=" },
@@ -83,6 +83,35 @@ export function RulesSection() {
     if (!selected) return;
     updateRule(selected.id, {
       effects: selected.effects.map((e, i) =>
+        i === index ? { ...e, ...updates } : e
+      ),
+    });
+  }
+
+  const audioTracks = worldDraft.audioTracks ?? [];
+
+  function addAudioEffect() {
+    if (!selected || audioTracks.length === 0) return;
+    const newAudioEffect: AudioEffect = {
+      trackId: audioTracks[0]!.id,
+      action: "play",
+    };
+    updateRule(selected.id, {
+      audioEffects: [...(selected.audioEffects ?? []), newAudioEffect],
+    });
+  }
+
+  function removeAudioEffect(index: number) {
+    if (!selected) return;
+    updateRule(selected.id, {
+      audioEffects: (selected.audioEffects ?? []).filter((_, i) => i !== index),
+    });
+  }
+
+  function updateAudioEffect(index: number, updates: Partial<AudioEffect>) {
+    if (!selected) return;
+    updateRule(selected.id, {
+      audioEffects: (selected.audioEffects ?? []).map((e, i) =>
         i === index ? { ...e, ...updates } : e
       ),
     });
@@ -380,6 +409,71 @@ export function RulesSection() {
                   </div>
                 )}
               </div>
+
+              {/* Audio Effects */}
+              {audioTracks.length > 0 && (
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <label className="text-sm font-medium text-foreground">
+                      Audio Effects
+                    </label>
+                    <button
+                      onClick={addAudioEffect}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      + Add Audio Effect
+                    </button>
+                  </div>
+                  {(selected.audioEffects ?? []).length === 0 ? (
+                    <p className="text-xs text-muted-foreground/40">
+                      No audio effects
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {(selected.audioEffects ?? []).map((ae, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-2 rounded-lg border border-border bg-accent/50 p-2"
+                        >
+                          <select
+                            value={ae.trackId}
+                            onChange={(e) =>
+                              updateAudioEffect(i, { trackId: e.target.value })
+                            }
+                            className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
+                          >
+                            {audioTracks.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={ae.action}
+                            onChange={(e) =>
+                              updateAudioEffect(i, {
+                                action: e.target.value as AudioEffect["action"],
+                              })
+                            }
+                            className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
+                          >
+                            <option value="play">Play</option>
+                            <option value="stop">Stop</option>
+                            <option value="crossfade">Crossfade</option>
+                            <option value="volume">Volume</option>
+                          </select>
+                          <button
+                            onClick={() => removeAudioEffect(i)}
+                            className="text-muted-foreground/40 hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Priority */}
               <div>

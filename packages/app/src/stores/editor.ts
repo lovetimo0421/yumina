@@ -5,6 +5,7 @@ import type {
   Character,
   Rule,
   GameComponent,
+  AudioTrack,
 } from "@yumina/engine";
 
 const apiBase = import.meta.env.VITE_API_URL || "";
@@ -23,6 +24,7 @@ function createEmptyWorld(): WorldDefinition {
     rules: [],
     characters: [],
     components: [],
+    audioTracks: [],
     settings: {
       maxTokens: 2048,
       temperature: 0.8,
@@ -38,6 +40,7 @@ export type EditorSection =
   | "characters"
   | "variables"
   | "components"
+  | "audio"
   | "rules"
   | "settings"
   | "preview";
@@ -77,6 +80,11 @@ interface EditorState {
   updateComponent: (id: string, updates: Partial<GameComponent>) => void;
   removeComponent: (id: string) => void;
   reorderComponents: (componentIds: string[]) => void;
+
+  // Audio track actions
+  addAudioTrack: () => void;
+  updateAudioTrack: (id: string, updates: Partial<AudioTrack>) => void;
+  removeAudioTrack: (id: string) => void;
 
   // Rule actions
   addRule: () => void;
@@ -143,6 +151,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         rules: schema.rules || [],
         characters: schema.characters || [],
         components: schema.components || [],
+        audioTracks: schema.audioTracks || [],
         settings: {
           maxTokens: schema.settings?.maxTokens ?? 2048,
           temperature: schema.settings?.temperature ?? 0.8,
@@ -321,6 +330,49 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         })
         .filter(Boolean) as GameComponent[];
       const draft = { ...s.worldDraft, components: reordered };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  addAudioTrack: () => {
+    set((s) => {
+      const newTrack: AudioTrack = {
+        id: crypto.randomUUID(),
+        name: "New Track",
+        type: "bgm",
+        url: "",
+        loop: true,
+        volume: 1,
+      };
+      const draft = {
+        ...s.worldDraft,
+        audioTracks: [...(s.worldDraft.audioTracks ?? []), newTrack],
+      };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  updateAudioTrack: (id, updates) => {
+    set((s) => {
+      const draft = {
+        ...s.worldDraft,
+        audioTracks: (s.worldDraft.audioTracks ?? []).map((t) =>
+          t.id === id ? { ...t, ...updates } : t
+        ),
+      };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  removeAudioTrack: (id) => {
+    set((s) => {
+      const draft = {
+        ...s.worldDraft,
+        audioTracks: (s.worldDraft.audioTracks ?? []).filter((t) => t.id !== id),
+      };
       scheduleDraftSave(draft, s.serverWorldId);
       return { worldDraft: draft, isDirty: true };
     });

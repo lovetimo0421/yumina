@@ -4,7 +4,8 @@ import { db } from "../db/index.js";
 import { apiKeys } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { encryptApiKey, decryptApiKey } from "../lib/crypto.js";
-import { OpenRouterProvider } from "../lib/llm/openrouter.js";
+import { createProvider } from "../lib/llm/provider-factory.js";
+import type { ProviderName } from "../lib/llm/provider-factory.js";
 import type { AppEnv } from "../lib/types.js";
 
 const apiKeyRoutes = new Hono<AppEnv>();
@@ -96,13 +97,16 @@ apiKeyRoutes.post("/:id/verify", async (c) => {
   const row = rows[0]!;
   const decrypted = decryptApiKey(row.encryptedKey, row.keyIv, row.keyTag);
 
-  if (row.provider === "openrouter") {
-    const provider = new OpenRouterProvider(decrypted);
-    const valid = await provider.verify();
-    return c.json({ data: { valid } });
+  try {
+    const provider = createProvider(row.provider as ProviderName, decrypted);
+    if (provider.verify) {
+      const valid = await provider.verify();
+      return c.json({ data: { valid } });
+    }
+    return c.json({ data: { valid: false, reason: "Provider does not support verification" } });
+  } catch {
+    return c.json({ data: { valid: false, reason: "Verification failed" } });
   }
-
-  return c.json({ data: { valid: false, reason: "Unknown provider" } });
 });
 
 export { apiKeyRoutes };

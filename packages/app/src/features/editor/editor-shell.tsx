@@ -8,6 +8,7 @@ import {
   Users,
   Variable,
   LayoutGrid,
+  Music,
   Cog,
   ScrollText,
   Play,
@@ -18,6 +19,7 @@ import { OverviewSection } from "./sections/overview";
 import { CharactersSection } from "./sections/characters";
 import { VariablesSection } from "./sections/variables";
 import { ComponentsSection } from "./sections/components";
+import { AudioSection } from "./sections/audio";
 import { RulesSection } from "./sections/rules";
 import { SettingsSection } from "./sections/settings";
 import { PreviewSection } from "./sections/preview";
@@ -28,6 +30,7 @@ const SECTIONS: { id: EditorSection; label: string; icon: typeof BookOpen }[] =
     { id: "characters", label: "Characters", icon: Users },
     { id: "variables", label: "Variables", icon: Variable },
     { id: "components", label: "Components", icon: LayoutGrid },
+    { id: "audio", label: "Audio", icon: Music },
     { id: "rules", label: "Rules", icon: ScrollText },
     { id: "settings", label: "Settings", icon: Cog },
     { id: "preview", label: "Preview", icon: Play },
@@ -38,6 +41,7 @@ const SECTION_COMPONENTS: Record<EditorSection, React.FC> = {
   characters: CharactersSection,
   variables: VariablesSection,
   components: ComponentsSection,
+  audio: AudioSection,
   rules: RulesSection,
   settings: SettingsSection,
   preview: PreviewSection,

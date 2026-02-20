@@ -1,21 +1,30 @@
-import type { GameState, Rule, Effect, Condition } from "../types/index.js";
+import type { GameState, Rule, Effect, Condition, AudioEffect } from "../types/index.js";
+
+export interface RuleEvalResult {
+  effects: Effect[];
+  audioEffects: AudioEffect[];
+}
 
 /**
  * Evaluates rules against current game state and returns effects to apply.
  * Pure function — no mutation, no side effects.
  */
 export class RulesEngine {
-  evaluate(state: GameState, rules: Rule[]): Effect[] {
+  evaluate(state: GameState, rules: Rule[]): RuleEvalResult {
     const sorted = [...rules].sort((a, b) => b.priority - a.priority);
     const effects: Effect[] = [];
+    const audioEffects: AudioEffect[] = [];
 
     for (const rule of sorted) {
       if (this.checkConditions(state, rule.conditions, rule.conditionLogic)) {
         effects.push(...rule.effects);
+        if (rule.audioEffects) {
+          audioEffects.push(...rule.audioEffects);
+        }
       }
     }
 
-    return effects;
+    return { effects, audioEffects };
   }
 
   private checkConditions(

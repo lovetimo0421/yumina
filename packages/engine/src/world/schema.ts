@@ -30,6 +30,24 @@ export const effectSchema = z.object({
   value: z.union([z.number(), z.string(), z.boolean()]),
 });
 
+export const audioTrackSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  type: z.enum(["bgm", "sfx", "ambient"]),
+  url: z.string(),
+  loop: z.boolean().optional(),
+  volume: z.number().min(0).max(1).optional(),
+  fadeIn: z.number().optional(),
+  fadeOut: z.number().optional(),
+});
+
+export const audioEffectSchema = z.object({
+  trackId: z.string(),
+  action: z.enum(["play", "stop", "crossfade", "volume"]),
+  volume: z.number().min(0).max(1).optional(),
+  fadeDuration: z.number().optional(),
+});
+
 export const ruleSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
@@ -37,6 +55,7 @@ export const ruleSchema = z.object({
   conditions: z.array(conditionSchema),
   conditionLogic: z.enum(["all", "any"]),
   effects: z.array(effectSchema),
+  audioEffects: z.array(audioEffectSchema).optional(),
   priority: z.number().int().default(0),
 });
 
@@ -69,6 +88,7 @@ export const worldDefinitionSchema = z.object({
   rules: z.array(ruleSchema).default([]),
   characters: z.array(characterSchema).default([]),
   components: z.array(_gameComponentSchema).default([]),
+  audioTracks: z.array(audioTrackSchema).default([]),
   settings: worldSettingsSchema,
 });
 

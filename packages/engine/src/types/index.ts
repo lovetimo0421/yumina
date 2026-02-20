@@ -16,6 +16,26 @@ export interface Condition {
   value: number | string | boolean;
 }
 
+/** An audio track that can be played during gameplay */
+export interface AudioTrack {
+  id: string;
+  name: string;
+  type: "bgm" | "sfx" | "ambient";
+  url: string;
+  loop?: boolean;
+  volume?: number;
+  fadeIn?: number;
+  fadeOut?: number;
+}
+
+/** An audio effect triggered by rules or AI responses */
+export interface AudioEffect {
+  trackId: string;
+  action: "play" | "stop" | "crossfade" | "volume";
+  volume?: number;
+  fadeDuration?: number;
+}
+
 /** A rule that triggers effects when conditions are met */
 export interface Rule {
   id: string;
@@ -24,6 +44,7 @@ export interface Rule {
   conditions: Condition[];
   conditionLogic: "all" | "any";
   effects: Effect[];
+  audioEffects?: AudioEffect[];
   priority: number;
 }
 
@@ -76,6 +97,7 @@ export interface WorldDefinition {
   rules: Rule[];
   characters: Character[];
   components: import("./components.js").GameComponent[];
+  audioTracks: AudioTrack[];
   settings: WorldSettings;
 }
 

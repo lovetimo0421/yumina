@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatStore, type StateChange } from "@/stores/chat";
+import { useAudioStore } from "@/stores/audio";
 import { resolveComponents } from "@yumina/engine";
 import type { WorldDefinition, Variable, GameState } from "@yumina/engine";
 import { ComponentRenderer } from "./components";
+import { AudioControls } from "./audio-controls";
 
 export function GamePanel() {
   const [open, setOpen] = useState(true);
@@ -16,6 +18,8 @@ export function GamePanel() {
     | undefined;
   const variables = worldDef?.variables ?? [];
   const components = worldDef?.components ?? [];
+  const audioTracks = useAudioStore((s) => s.tracks);
+  const hasAudio = audioTracks.length > 0;
 
   useEffect(() => {
     if (recentStateChanges.length === 0) return;
@@ -23,7 +27,7 @@ export function GamePanel() {
     return () => clearTimeout(timer);
   }, [recentStateChanges, clearRecentStateChanges]);
 
-  if (variables.length === 0 && components.length === 0) return null;
+  if (variables.length === 0 && components.length === 0 && !hasAudio) return null;
 
   // If components are defined, use the component system
   const hasComponents = components.length > 0;
@@ -59,6 +63,12 @@ export function GamePanel() {
 
       {open && (
         <div className="flex-1 overflow-y-auto p-3">
+          {hasAudio && (
+            <div className="mb-3">
+              <AudioControls />
+            </div>
+          )}
+
           <h3 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/40">
             {hasComponents ? "Game" : "Game State"}
           </h3>

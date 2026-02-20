@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { connectSSE } from "@/lib/sse";
+import { useAudioStore } from "./audio";
 
 export interface Message {
   id: string;
@@ -118,6 +119,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   loadSession: async (sessionId: string) => {
     try {
+      // Stop any existing audio when switching sessions
+      useAudioStore.getState().cleanup();
+
       const res = await fetch(`${apiBase}/api/sessions/${sessionId}`, {
         credentials: "include",
       });
@@ -134,6 +138,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
         messages: data.messages ?? [],
         gameState,
       });
+
+      // Load audio tracks from world definition
+      const worldDef = data.world?.schema as Record<string, unknown> | undefined;
+      if (worldDef?.audioTracks && Array.isArray(worldDef.audioTracks)) {
+        const audioStore = useAudioStore.getState();
+        audioStore.setTracks(worldDef.audioTracks as import("@yumina/engine").AudioTrack[]);
+
+        // Resume audio from persisted state
+        const metadata = data.state?.metadata as Record<string, unknown> | undefined;
+        if (metadata?.activeAudio) {
+          audioStore.resumeFromState(metadata.activeAudio);
+        }
+      }
     } catch {
       // Silently fail — the UI will show empty state
     }
@@ -209,6 +226,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const choices = data.choices as string[] | undefined;
             if (choices && Array.isArray(choices) && choices.length > 0) {
               get().setPendingChoices(choices);
+            }
+
+            // Process audio effects
+            const audioEffects = data.audioEffects as import("@yumina/engine").AudioEffect[] | undefined;
+            if (audioEffects && Array.isArray(audioEffects) && audioEffects.length > 0) {
+              useAudioStore.getState().processAudioEffects(audioEffects);
             }
 
             set((s) => ({
@@ -292,6 +315,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const choices = data.choices as string[] | undefined;
             if (choices && Array.isArray(choices) && choices.length > 0) {
               get().setPendingChoices(choices);
+            }
+
+            // Process audio effects
+            const regenAudioEffects = data.audioEffects as import("@yumina/engine").AudioEffect[] | undefined;
+            if (regenAudioEffects && Array.isArray(regenAudioEffects) && regenAudioEffects.length > 0) {
+              useAudioStore.getState().processAudioEffects(regenAudioEffects);
             }
           },
           onError: (error) => {

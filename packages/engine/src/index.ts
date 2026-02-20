@@ -8,6 +8,8 @@ export type {
   WorldDefinition,
   WorldSettings,
   GameState,
+  AudioTrack,
+  AudioEffect,
 } from "./types/index.js";
 
 // Component types
@@ -42,6 +44,8 @@ export {
   worldSettingsSchema,
   worldDefinitionSchema,
   gameStateSchema,
+  audioTrackSchema,
+  audioEffectSchema,
 } from "./world/schema.js";
 
 // State
@@ -49,6 +53,7 @@ export { GameStateManager } from "./state/game-state-manager.js";
 
 // Rules
 export { RulesEngine } from "./rules/rules-engine.js";
+export type { RuleEvalResult } from "./rules/rules-engine.js";
 
 // Prompts
 export { PromptBuilder } from "./prompts/prompt-builder.js";

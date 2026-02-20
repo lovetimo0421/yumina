@@ -89,6 +89,7 @@ Guidelines:
       variables: [],
     },
   ],
+  audioTracks: [],
   components: [
     {
       id: "health-bar",

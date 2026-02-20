@@ -43,6 +43,18 @@ export class PromptBuilder {
       'Examples: [health: -10], [gold: +50], [location: set "forest"], [hasKey: toggle]'
     );
 
+    // Audio instructions
+    if (world.audioTracks && world.audioTracks.length > 0) {
+      const trackList = world.audioTracks
+        .map((t) => `  - ${t.id} (${t.type}): ${t.name}`)
+        .join("\n");
+      parts.push(
+        `Available audio tracks:\n${trackList}\n\n` +
+        "To trigger audio, use: [audio: trackId action]\n" +
+        "Examples: [audio: battle_bgm play], [audio: tavern_ambient stop]"
+      );
+    }
+
     return parts.join("\n\n");
   }
 
@@ -92,6 +104,18 @@ export class PromptBuilder {
         .map((v) => `  - ${v.id} (${v.type}): ${v.description || v.name}`)
         .join("\n");
       parts.push(`Available variables you can modify:\n${varList}`);
+    }
+
+    // Audio track instructions for structured mode
+    if (world.audioTracks && world.audioTracks.length > 0) {
+      const trackList = world.audioTracks
+        .map((t) => `  - ${t.id} (${t.type}): ${t.name}`)
+        .join("\n");
+      parts.push(
+        `Available audio tracks:\n${trackList}\n\n` +
+        'Include "audioTriggers" in your JSON to play/stop audio:\n' +
+        '  "audioTriggers": [{"trackId": "battle_bgm", "action": "play"}]'
+      );
     }
 
     return parts.join("\n\n");

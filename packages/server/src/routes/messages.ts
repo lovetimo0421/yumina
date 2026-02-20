@@ -5,7 +5,8 @@ import { db } from "../db/index.js";
 import { messages, playSessions, worlds, apiKeys } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { decryptApiKey } from "../lib/crypto.js";
-import { OpenRouterProvider } from "../lib/llm/openrouter.js";
+import { createProvider, inferProvider } from "../lib/llm/provider-factory.js";
+import type { ProviderName } from "../lib/llm/provider-factory.js";
 import {
   GameStateManager,
   RulesEngine,
@@ -13,7 +14,7 @@ import {
   ResponseParser,
   StructuredResponseParser,
 } from "@yumina/engine";
-import type { WorldDefinition, GameState } from "@yumina/engine";
+import type { WorldDefinition, GameState, AudioEffect } from "@yumina/engine";
 import type { AppEnv } from "../lib/types.js";
 
 const messageRoutes = new Hono<AppEnv>();
@@ -35,6 +36,14 @@ async function getUserApiKey(userId: string, provider = "openrouter") {
   if (rows.length === 0) return null;
   const row = rows[0]!;
   return decryptApiKey(row.encryptedKey, row.keyIv, row.keyTag);
+}
+
+// Helper: resolve provider and API key for a model
+async function resolveProviderForModel(userId: string, modelId: string) {
+  const providerName = inferProvider(modelId);
+  const apiKey = await getUserApiKey(userId, providerName);
+  if (!apiKey) return null;
+  return { provider: createProvider(providerName, apiKey), providerName };
 }
 
 // Helper: load session with world definition
@@ -109,16 +118,13 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     return c.json({ error: "Session not found" }, 404);
   }
 
-  const apiKey = await getUserApiKey(currentUser.id);
-  if (!apiKey) {
-    return c.json({ error: "No API key configured. Add one in Settings." }, 400);
-  }
-
   const { worldDef, gameState } = context;
-  const model =
-    body.model ?? worldDef.settings?.maxTokens
-      ? "openai/gpt-4o-mini"
-      : "openai/gpt-4o-mini";
+  const model = body.model ?? "openai/gpt-4o-mini";
+
+  const resolved = await resolveProviderForModel(currentUser.id, model);
+  if (!resolved) {
+    return c.json({ error: "No API key configured for this provider. Add one in Settings." }, 400);
+  }
 
   // Save user message
   const userMsgResult = await db
@@ -171,7 +177,7 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
   );
 
   // Stream response
-  const provider = new OpenRouterProvider(apiKey);
+  const provider = resolved.provider;
   const startTime = Date.now();
 
   return streamSSE(c, async (stream) => {
@@ -210,33 +216,43 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
           let cleanText: string;
           let effects: import("@yumina/engine").Effect[];
           let choices: string[] = [];
+          let parserAudioEffects: AudioEffect[] = [];
 
           if (useStructured) {
             const result = structuredParser.parse(fullContent);
             cleanText = result.cleanText;
             effects = result.effects;
             choices = result.choices;
+            parserAudioEffects = result.audioEffects;
             // If structured parse returned raw text (JSON failed), fall back to regex
             if (effects.length === 0 && result.cleanText === fullContent) {
               const regexResult = responseParser.parse(fullContent);
               cleanText = regexResult.cleanText;
               effects = regexResult.effects;
+              parserAudioEffects = regexResult.audioEffects;
             }
           } else {
             const result = responseParser.parse(fullContent);
             cleanText = result.cleanText;
             effects = result.effects;
+            parserAudioEffects = result.audioEffects;
           }
 
           const changes = stateManager.applyEffects(effects);
 
           // Evaluate rules
-          const ruleEffects = rulesEngine.evaluate(
+          const { effects: ruleEffects, audioEffects: ruleAudioEffects } = rulesEngine.evaluate(
             stateManager.getSnapshot(),
             worldDef.rules
           );
           const ruleChanges = stateManager.applyEffects(ruleEffects);
           const allChanges = [...changes, ...ruleChanges];
+
+          // Collect all audio effects
+          const allAudioEffects = [...parserAudioEffects, ...ruleAudioEffects];
+          if (allAudioEffects.length > 0) {
+            stateManager.setMetadata("activeAudio", allAudioEffects);
+          }
 
           const finalState = stateManager.getSnapshot();
 
@@ -291,6 +307,7 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
               tokenCount: chunk.usage?.totalTokens ?? null,
               generationTimeMs,
               choices,
+              audioEffects: allAudioEffects.length > 0 ? allAudioEffects : undefined,
             }),
           });
         }
@@ -415,13 +432,13 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
     return c.json({ error: "Session context not found" }, 404);
   }
 
-  const apiKey = await getUserApiKey(currentUser.id);
-  if (!apiKey) {
-    return c.json({ error: "No API key configured" }, 400);
-  }
-
   const { worldDef, gameState } = context;
   const model = body.model ?? "openai/gpt-4o-mini";
+
+  const resolved = await resolveProviderForModel(currentUser.id, model);
+  if (!resolved) {
+    return c.json({ error: "No API key configured for this provider" }, 400);
+  }
 
   const stateManager = new GameStateManager(worldDef, gameState);
   const useStructured = worldDef.settings?.structuredOutput === true;
@@ -461,14 +478,14 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
     worldDef.settings?.maxTokens
   );
 
-  const provider = new OpenRouterProvider(apiKey);
+  const regenProvider = resolved.provider;
   const startTime = Date.now();
 
   return streamSSE(c, async (stream) => {
     let fullContent = "";
 
     try {
-      for await (const chunk of provider.generateStream({
+      for await (const chunk of regenProvider.generateStream({
         model,
         messages: chatMessages,
         maxTokens: worldDef.settings?.maxTokens ?? 2048,
@@ -500,30 +517,40 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
           let cleanText: string;
           let effects: import("@yumina/engine").Effect[];
           let choices: string[] = [];
+          let regenParserAudioEffects: AudioEffect[] = [];
 
           if (useStructured) {
             const result = structuredParser.parse(fullContent);
             cleanText = result.cleanText;
             effects = result.effects;
             choices = result.choices;
+            regenParserAudioEffects = result.audioEffects;
             if (effects.length === 0 && result.cleanText === fullContent) {
               const regexResult = responseParser.parse(fullContent);
               cleanText = regexResult.cleanText;
               effects = regexResult.effects;
+              regenParserAudioEffects = regexResult.audioEffects;
             }
           } else {
             const result = responseParser.parse(fullContent);
             cleanText = result.cleanText;
             effects = result.effects;
+            regenParserAudioEffects = result.audioEffects;
           }
 
           const changes = stateManager.applyEffects(effects);
-          const ruleEffects = rulesEngine.evaluate(
+          const { effects: regenRuleEffects, audioEffects: regenRuleAudioEffects } = rulesEngine.evaluate(
             stateManager.getSnapshot(),
             worldDef.rules
           );
-          const ruleChanges = stateManager.applyEffects(ruleEffects);
+          const ruleChanges = stateManager.applyEffects(regenRuleEffects);
           const allChanges = [...changes, ...ruleChanges];
+
+          const allRegenAudioEffects = [...regenParserAudioEffects, ...regenRuleAudioEffects];
+          if (allRegenAudioEffects.length > 0) {
+            stateManager.setMetadata("activeAudio", allRegenAudioEffects);
+          }
+
           const finalState = stateManager.getSnapshot();
 
           // Add as new swipe
@@ -582,6 +609,7 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
               tokenCount: chunk.usage?.totalTokens ?? null,
               generationTimeMs,
               choices,
+              audioEffects: allRegenAudioEffects.length > 0 ? allRegenAudioEffects : undefined,
             }),
           });
         }
@@ -757,9 +785,13 @@ messageRoutes.get("/models", async (c) => {
     return c.json({ data: { curated, all: modelCache } });
   }
 
-  const apiKey = await getUserApiKey(currentUser.id);
-  if (!apiKey) {
-    // Return curated list without pricing (public info)
+  // Gather keys for all providers the user has
+  const allKeys = await db
+    .select()
+    .from(apiKeys)
+    .where(eq(apiKeys.userId, currentUser.id));
+
+  if (allKeys.length === 0) {
     const fallback: CachedModel[] = [...CURATED_MODEL_IDS].map((id) => ({
       id,
       name: id.split("/")[1]?.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) ?? id,
@@ -771,17 +803,36 @@ messageRoutes.get("/models", async (c) => {
   }
 
   try {
-    const provider = new OpenRouterProvider(apiKey);
-    const rawModels = await provider.listModels();
+    const allModels: CachedModel[] = [];
 
-    modelCache = rawModels.map((m) => ({
-      id: m.id,
-      name: m.name,
-      provider: getProvider(m.id),
-      contextLength: m.contextLength,
-      pricing: m.pricing,
-      isCurated: CURATED_MODEL_IDS.has(m.id),
-    }));
+    for (const keyRow of allKeys) {
+      try {
+        const decrypted = decryptApiKey(keyRow.encryptedKey, keyRow.keyIv, keyRow.keyTag);
+        const llmProvider = createProvider(keyRow.provider as ProviderName, decrypted);
+        const rawModels = await llmProvider.listModels();
+
+        for (const m of rawModels) {
+          allModels.push({
+            id: m.id,
+            name: m.name,
+            provider: getProvider(m.id),
+            contextLength: m.contextLength,
+            pricing: m.pricing,
+            isCurated: CURATED_MODEL_IDS.has(m.id),
+          });
+        }
+      } catch {
+        // Skip providers that fail to list models
+      }
+    }
+
+    // Deduplicate by model ID (prefer the first occurrence)
+    const seen = new Set<string>();
+    modelCache = allModels.filter((m) => {
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
     cacheTimestamp = now;
 
     const curated = modelCache.filter((m) => m.isCurated);

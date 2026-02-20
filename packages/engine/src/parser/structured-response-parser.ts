@@ -1,4 +1,4 @@
-import type { Effect, Variable } from "../types/index.js";
+import type { Effect, Variable, AudioEffect, AudioTrack } from "../types/index.js";
 
 export interface StructuredResponse {
   narrative: string;
@@ -8,12 +8,19 @@ export interface StructuredResponse {
     value: number | string | boolean;
   }>;
   choices?: string[];
+  audioTriggers?: Array<{
+    trackId: string;
+    action: string;
+    volume?: number;
+    fadeDuration?: number;
+  }>;
 }
 
 export interface StructuredParseResult {
   cleanText: string;
   effects: Effect[];
   choices: string[];
+  audioEffects: AudioEffect[];
 }
 
 const VALID_OPERATIONS = new Set([
@@ -25,9 +32,11 @@ const VALID_OPERATIONS = new Set([
   "append",
 ]);
 
+const VALID_AUDIO_ACTIONS = new Set(["play", "stop", "crossfade", "volume"]);
+
 /**
  * Parses JSON structured output from LLMs.
- * Expected format: { narrative: string, stateChanges?: [...], choices?: [...] }
+ * Expected format: { narrative: string, stateChanges?: [...], choices?: [...], audioTriggers?: [...] }
  */
 export class StructuredResponseParser {
   /**
@@ -41,11 +50,11 @@ export class StructuredResponseParser {
       parsed = JSON.parse(jsonString);
     } catch {
       // JSON parse failed — return raw text so caller can fall back to regex
-      return { cleanText: jsonString, effects: [], choices: [] };
+      return { cleanText: jsonString, effects: [], choices: [], audioEffects: [] };
     }
 
     if (!parsed || typeof parsed.narrative !== "string") {
-      return { cleanText: jsonString, effects: [], choices: [] };
+      return { cleanText: jsonString, effects: [], choices: [], audioEffects: [] };
     }
 
     const effects: Effect[] = [];
@@ -67,6 +76,26 @@ export class StructuredResponseParser {
       }
     }
 
+    const audioEffects: AudioEffect[] = [];
+
+    if (Array.isArray(parsed.audioTriggers)) {
+      for (const trigger of parsed.audioTriggers) {
+        if (
+          typeof trigger.trackId === "string" &&
+          typeof trigger.action === "string" &&
+          VALID_AUDIO_ACTIONS.has(trigger.action)
+        ) {
+          const effect: AudioEffect = {
+            trackId: trigger.trackId,
+            action: trigger.action as AudioEffect["action"],
+          };
+          if (trigger.volume !== undefined) effect.volume = trigger.volume;
+          if (trigger.fadeDuration !== undefined) effect.fadeDuration = trigger.fadeDuration;
+          audioEffects.push(effect);
+        }
+      }
+    }
+
     const choices = Array.isArray(parsed.choices)
       ? parsed.choices.filter((c): c is string => typeof c === "string")
       : [];
@@ -75,6 +104,7 @@ export class StructuredResponseParser {
       cleanText: parsed.narrative.trim(),
       effects,
       choices,
+      audioEffects,
     };
   }
 
@@ -83,10 +113,10 @@ export class StructuredResponseParser {
    * Enumerates the actual variable IDs and valid operations so the model
    * knows exactly what it can mutate.
    */
-  buildResponseSchema(variables: Variable[]): object {
+  buildResponseSchema(variables: Variable[], audioTracks?: AudioTrack[]): object {
     const variableIds = variables.map((v) => v.id);
 
-    return {
+    const schema: Record<string, unknown> = {
       type: "object",
       properties: {
         narrative: {
@@ -128,5 +158,41 @@ export class StructuredResponseParser {
       },
       required: ["narrative"],
     };
+
+    // Add audioTriggers to schema if tracks are defined
+    if (audioTracks && audioTracks.length > 0) {
+      const trackIds = audioTracks.map((t) => t.id);
+      (schema.properties as Record<string, unknown>).audioTriggers = {
+        type: "array",
+        description:
+          "Audio triggers to play/stop background music or sound effects.",
+        items: {
+          type: "object",
+          properties: {
+            trackId: {
+              type: "string",
+              enum: trackIds,
+              description: "The ID of the audio track",
+            },
+            action: {
+              type: "string",
+              enum: [...VALID_AUDIO_ACTIONS],
+              description: "play (start track), stop (end track), crossfade (transition), volume (adjust)",
+            },
+            volume: {
+              type: "number",
+              description: "Volume level 0-1 (for volume/crossfade actions)",
+            },
+            fadeDuration: {
+              type: "number",
+              description: "Fade duration in seconds",
+            },
+          },
+          required: ["trackId", "action"],
+        },
+      };
+    }
+
+    return schema;
   }
 }
