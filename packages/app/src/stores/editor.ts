@@ -6,6 +6,8 @@ import type {
   Rule,
   GameComponent,
   AudioTrack,
+  LorebookEntry,
+  CustomComponent,
 } from "@yumina/engine";
 
 const apiBase = import.meta.env.VITE_API_URL || "";
@@ -25,6 +27,8 @@ function createEmptyWorld(): WorldDefinition {
     characters: [],
     components: [],
     audioTracks: [],
+    lorebookEntries: [],
+    customComponents: [],
     settings: {
       maxTokens: 2048,
       temperature: 0.8,
@@ -85,6 +89,16 @@ interface EditorState {
   addAudioTrack: () => void;
   updateAudioTrack: (id: string, updates: Partial<AudioTrack>) => void;
   removeAudioTrack: (id: string) => void;
+
+  // Lorebook entry actions
+  addLorebookEntry: (type?: LorebookEntry["type"]) => void;
+  updateLorebookEntry: (id: string, updates: Partial<LorebookEntry>) => void;
+  removeLorebookEntry: (id: string) => void;
+
+  // Custom component actions
+  addCustomComponent: () => void;
+  updateCustomComponent: (id: string, updates: Partial<CustomComponent>) => void;
+  removeCustomComponent: (id: string) => void;
 
   // Rule actions
   addRule: () => void;
@@ -152,6 +166,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         characters: schema.characters || [],
         components: schema.components || [],
         audioTracks: schema.audioTracks || [],
+        lorebookEntries: schema.lorebookEntries || [],
+        customComponents: schema.customComponents || [],
         settings: {
           maxTokens: schema.settings?.maxTokens ?? 2048,
           temperature: schema.settings?.temperature ?? 0.8,
@@ -372,6 +388,97 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const draft = {
         ...s.worldDraft,
         audioTracks: (s.worldDraft.audioTracks ?? []).filter((t) => t.id !== id),
+      };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  addLorebookEntry: (type = "lore" as LorebookEntry["type"]) => {
+    set((s) => {
+      const newEntry: LorebookEntry = {
+        id: crypto.randomUUID(),
+        name: "New Entry",
+        type,
+        content: "",
+        keywords: [],
+        conditions: [],
+        conditionLogic: "all",
+        priority: 0,
+        position: "after",
+        enabled: true,
+      };
+      const draft = {
+        ...s.worldDraft,
+        lorebookEntries: [...s.worldDraft.lorebookEntries, newEntry],
+      };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  updateLorebookEntry: (id, updates) => {
+    set((s) => {
+      const draft = {
+        ...s.worldDraft,
+        lorebookEntries: s.worldDraft.lorebookEntries.map((e) =>
+          e.id === id ? { ...e, ...updates } : e
+        ),
+      };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  removeLorebookEntry: (id) => {
+    set((s) => {
+      const draft = {
+        ...s.worldDraft,
+        lorebookEntries: s.worldDraft.lorebookEntries.filter((e) => e.id !== id),
+      };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  addCustomComponent: () => {
+    set((s) => {
+      const newComp: CustomComponent = {
+        id: crypto.randomUUID(),
+        name: "New Custom Component",
+        tsxCode: `export default function MyComponent({ variables }) {\n  return <div>Hello World</div>;\n}`,
+        description: "",
+        order: s.worldDraft.customComponents.length,
+        visible: true,
+        updatedAt: new Date().toISOString(),
+      };
+      const draft = {
+        ...s.worldDraft,
+        customComponents: [...s.worldDraft.customComponents, newComp],
+      };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  updateCustomComponent: (id, updates) => {
+    set((s) => {
+      const draft = {
+        ...s.worldDraft,
+        customComponents: s.worldDraft.customComponents.map((c) =>
+          c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c
+        ),
+      };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  removeCustomComponent: (id) => {
+    set((s) => {
+      const draft = {
+        ...s.worldDraft,
+        customComponents: s.worldDraft.customComponents.filter((c) => c.id !== id),
       };
       scheduleDraftSave(draft, s.serverWorldId);
       return { worldDraft: draft, isDirty: true };

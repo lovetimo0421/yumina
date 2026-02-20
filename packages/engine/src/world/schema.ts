@@ -70,6 +70,29 @@ export const characterSchema = z.object({
 
 export { gameComponentSchema } from "./component-schemas.js";
 
+export const lorebookEntrySchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  type: z.enum(["character", "lore", "plot", "style", "custom"]),
+  content: z.string(),
+  keywords: z.array(z.string()).default([]),
+  conditions: z.array(conditionSchema).default([]),
+  conditionLogic: z.enum(["all", "any"]).default("all"),
+  priority: z.number().int().default(0),
+  position: z.enum(["before", "after"]).default("after"),
+  enabled: z.boolean().default(true),
+});
+
+export const customComponentSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  tsxCode: z.string(),
+  description: z.string().default(""),
+  order: z.number().int().default(0),
+  visible: z.boolean().default(true),
+  updatedAt: z.string().default(() => new Date().toISOString()),
+});
+
 export const worldSettingsSchema = z.object({
   maxTokens: z.number().int().positive().default(2048),
   temperature: z.number().min(0).max(2).default(0.8),
@@ -89,6 +112,8 @@ export const worldDefinitionSchema = z.object({
   characters: z.array(characterSchema).default([]),
   components: z.array(_gameComponentSchema).default([]),
   audioTracks: z.array(audioTrackSchema).default([]),
+  lorebookEntries: z.array(lorebookEntrySchema).default([]),
+  customComponents: z.array(customComponentSchema).default([]),
   settings: worldSettingsSchema,
 });
 

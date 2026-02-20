@@ -86,6 +86,31 @@ export type {
 
 export { COMPONENT_TYPE_META } from "./components.js";
 
+/** A lorebook entry for contextual prompt injection */
+export interface LorebookEntry {
+  id: string;
+  name: string;
+  type: "character" | "lore" | "plot" | "style" | "custom";
+  content: string;
+  keywords: string[];
+  conditions: Condition[];
+  conditionLogic: "all" | "any";
+  priority: number;
+  position: "before" | "after";
+  enabled: boolean;
+}
+
+/** A custom TSX component created by the AI or user */
+export interface CustomComponent {
+  id: string;
+  name: string;
+  tsxCode: string;
+  description: string;
+  order: number;
+  visible: boolean;
+  updatedAt: string;
+}
+
 /** The full World definition — the complete game package */
 export interface WorldDefinition {
   id: string;
@@ -98,6 +123,8 @@ export interface WorldDefinition {
   characters: Character[];
   components: import("./components.js").GameComponent[];
   audioTracks: AudioTrack[];
+  lorebookEntries: LorebookEntry[];
+  customComponents: CustomComponent[];
   settings: WorldSettings;
 }
 

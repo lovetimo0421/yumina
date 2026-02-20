@@ -18,6 +18,7 @@ import { Route as AppWorldsRouteImport } from './routes/app/worlds'
 import { Route as AppSettingsRouteImport } from './routes/app/settings'
 import { Route as AppWorldsIndexRouteImport } from './routes/app/worlds.index'
 import { Route as AppWorldsCreateRouteImport } from './routes/app/worlds.create'
+import { Route as AppStudioWorldIdRouteImport } from './routes/app/studio.$worldId'
 import { Route as AppChatSessionIdRouteImport } from './routes/app/chat.$sessionId'
 import { Route as AppWorldsWorldIdEditRouteImport } from './routes/app/worlds.$worldId.edit'
 
@@ -66,6 +67,11 @@ const AppWorldsCreateRoute = AppWorldsCreateRouteImport.update({
   path: '/create',
   getParentRoute: () => AppWorldsRoute,
 } as any)
+const AppStudioWorldIdRoute = AppStudioWorldIdRouteImport.update({
+  id: '/studio/$worldId',
+  path: '/studio/$worldId',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppChatSessionIdRoute = AppChatSessionIdRouteImport.update({
   id: '/chat/$sessionId',
   path: '/chat/$sessionId',
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/app/worlds': typeof AppWorldsRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/app/chat/$sessionId': typeof AppChatSessionIdRoute
+  '/app/studio/$worldId': typeof AppStudioWorldIdRoute
   '/app/worlds/create': typeof AppWorldsCreateRoute
   '/app/worlds/': typeof AppWorldsIndexRoute
   '/app/worlds/$worldId/edit': typeof AppWorldsWorldIdEditRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AppSettingsRoute
   '/app': typeof AppIndexRoute
   '/app/chat/$sessionId': typeof AppChatSessionIdRoute
+  '/app/studio/$worldId': typeof AppStudioWorldIdRoute
   '/app/worlds/create': typeof AppWorldsCreateRoute
   '/app/worlds': typeof AppWorldsIndexRoute
   '/app/worlds/$worldId/edit': typeof AppWorldsWorldIdEditRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/app/worlds': typeof AppWorldsRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/app/chat/$sessionId': typeof AppChatSessionIdRoute
+  '/app/studio/$worldId': typeof AppStudioWorldIdRoute
   '/app/worlds/create': typeof AppWorldsCreateRoute
   '/app/worlds/': typeof AppWorldsIndexRoute
   '/app/worlds/$worldId/edit': typeof AppWorldsWorldIdEditRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/app/worlds'
     | '/app/'
     | '/app/chat/$sessionId'
+    | '/app/studio/$worldId'
     | '/app/worlds/create'
     | '/app/worlds/'
     | '/app/worlds/$worldId/edit'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app'
     | '/app/chat/$sessionId'
+    | '/app/studio/$worldId'
     | '/app/worlds/create'
     | '/app/worlds'
     | '/app/worlds/$worldId/edit'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/app/worlds'
     | '/app/'
     | '/app/chat/$sessionId'
+    | '/app/studio/$worldId'
     | '/app/worlds/create'
     | '/app/worlds/'
     | '/app/worlds/$worldId/edit'
@@ -227,6 +239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWorldsCreateRouteImport
       parentRoute: typeof AppWorldsRoute
     }
+    '/app/studio/$worldId': {
+      id: '/app/studio/$worldId'
+      path: '/studio/$worldId'
+      fullPath: '/app/studio/$worldId'
+      preLoaderRoute: typeof AppStudioWorldIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/chat/$sessionId': {
       id: '/app/chat/$sessionId'
       path: '/chat/$sessionId'
@@ -265,6 +284,7 @@ interface AppRouteChildren {
   AppWorldsRoute: typeof AppWorldsRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppChatSessionIdRoute: typeof AppChatSessionIdRoute
+  AppStudioWorldIdRoute: typeof AppStudioWorldIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -272,6 +292,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppWorldsRoute: AppWorldsRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppChatSessionIdRoute: AppChatSessionIdRoute,
+  AppStudioWorldIdRoute: AppStudioWorldIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

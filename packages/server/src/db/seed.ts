@@ -90,6 +90,33 @@ Guidelines:
     },
   ],
   audioTracks: [],
+  lorebookEntries: [
+    {
+      id: "tavern-lore",
+      name: "The Golden Tankard",
+      type: "lore" as const,
+      content: "The Golden Tankard was founded 50 years ago by Mira's grandmother, Old Bess. The tavern sits at the crossroads of the King's Road and the Forest Path, making it a natural gathering point for travelers. Its famous specialty is Bess's Honeymead, brewed from a secret recipe. The cellar is rumored to connect to old mine tunnels beneath Elderbrook.",
+      keywords: ["tavern", "tankard", "golden", "inn", "bess"],
+      conditions: [],
+      conditionLogic: "all" as const,
+      priority: 5,
+      position: "after" as const,
+      enabled: true,
+    },
+    {
+      id: "missing-merchant",
+      name: "The Missing Merchant",
+      type: "plot" as const,
+      content: "A wealthy merchant named Aldric has gone missing on the Forest Path three days ago. His wife has posted a reward of 100 gold for information. Mira knows that Aldric was carrying a mysterious locked chest, and she's seen suspicious hooded figures asking about him. She will share this information if the player's reputation is high enough.",
+      keywords: ["merchant", "aldric", "missing", "reward", "forest"],
+      conditions: [{ variableId: "reputation", operator: "gte" as const, value: 20 }],
+      conditionLogic: "all" as const,
+      priority: 10,
+      position: "after" as const,
+      enabled: true,
+    },
+  ],
+  customComponents: [],
   components: [
     {
       id: "health-bar",

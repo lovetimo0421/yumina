@@ -10,6 +10,8 @@ export type {
   GameState,
   AudioTrack,
   AudioEffect,
+  LorebookEntry,
+  CustomComponent,
 } from "./types/index.js";
 
 // Component types
@@ -46,6 +48,8 @@ export {
   gameStateSchema,
   audioTrackSchema,
   audioEffectSchema,
+  lorebookEntrySchema,
+  customComponentSchema,
 } from "./world/schema.js";
 
 // State
@@ -71,6 +75,9 @@ export type {
   ResolvedToggleSwitch,
   ResolvedError,
 } from "./components/index.js";
+
+// Lorebook
+export { LorebookMatcher } from "./lorebook/lorebook-matcher.js";
 
 // Parser
 export { ResponseParser } from "./parser/response-parser.js";

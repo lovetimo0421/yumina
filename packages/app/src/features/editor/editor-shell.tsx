@@ -12,6 +12,7 @@ import {
   Cog,
   ScrollText,
   Play,
+  Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEditorStore, type EditorSection } from "@/stores/editor";
@@ -51,6 +52,7 @@ export function EditorShell() {
   const router = useRouter();
   const {
     worldDraft,
+    serverWorldId,
     isDirty,
     saving,
     activeSection,
@@ -92,6 +94,20 @@ export function EditorShell() {
         />
 
         <div className="flex items-center gap-2">
+          {serverWorldId && (
+            <button
+              onClick={() =>
+                router.navigate({
+                  to: "/app/studio/$worldId",
+                  params: { worldId: serverWorldId },
+                })
+              }
+              className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+              Enter Studio
+            </button>
+          )}
           {isDirty && (
             <span className="text-xs text-muted-foreground/50">
               Unsaved changes

@@ -2,6 +2,7 @@ import type {
   WorldDefinition,
   Character,
   GameState,
+  LorebookEntry,
 } from "../types/index.js";
 
 export interface ChatMessage {
@@ -17,7 +18,8 @@ export class PromptBuilder {
   buildSystemPrompt(
     world: WorldDefinition,
     character: Character,
-    state: GameState
+    state: GameState,
+    matchedEntries?: LorebookEntry[]
   ): string {
     const parts: string[] = [];
 
@@ -25,10 +27,26 @@ export class PromptBuilder {
       parts.push(this.interpolate(world.settings.systemPrompt, state));
     }
 
+    // Inject "before" lorebook entries before character identity
+    if (matchedEntries) {
+      const before = matchedEntries.filter((e) => e.position === "before");
+      for (const entry of before) {
+        parts.push(entry.content);
+      }
+    }
+
     parts.push(`You are ${character.name}. ${character.description}`);
 
     if (character.systemPrompt) {
       parts.push(this.interpolate(character.systemPrompt, state));
+    }
+
+    // Inject "after" lorebook entries after character system prompt
+    if (matchedEntries) {
+      const after = matchedEntries.filter((e) => e.position === "after");
+      for (const entry of after) {
+        parts.push(entry.content);
+      }
     }
 
     const varSummary = this.buildVariableSummary(world, state);
@@ -65,7 +83,8 @@ export class PromptBuilder {
   buildStructuredSystemPrompt(
     world: WorldDefinition,
     character: Character,
-    state: GameState
+    state: GameState,
+    matchedEntries?: LorebookEntry[]
   ): string {
     const parts: string[] = [];
 
@@ -73,10 +92,26 @@ export class PromptBuilder {
       parts.push(this.interpolate(world.settings.systemPrompt, state));
     }
 
+    // Inject "before" lorebook entries before character identity
+    if (matchedEntries) {
+      const before = matchedEntries.filter((e) => e.position === "before");
+      for (const entry of before) {
+        parts.push(entry.content);
+      }
+    }
+
     parts.push(`You are ${character.name}. ${character.description}`);
 
     if (character.systemPrompt) {
       parts.push(this.interpolate(character.systemPrompt, state));
+    }
+
+    // Inject "after" lorebook entries after character system prompt
+    if (matchedEntries) {
+      const after = matchedEntries.filter((e) => e.position === "after");
+      for (const entry of after) {
+        parts.push(entry.content);
+      }
     }
 
     const varSummary = this.buildVariableSummary(world, state);

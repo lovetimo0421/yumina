@@ -13,6 +13,7 @@ import {
   PromptBuilder,
   ResponseParser,
   StructuredResponseParser,
+  LorebookMatcher,
 } from "@yumina/engine";
 import type { WorldDefinition, GameState, AudioEffect } from "@yumina/engine";
 import type { AppEnv } from "../lib/types.js";
@@ -25,6 +26,7 @@ const rulesEngine = new RulesEngine();
 const promptBuilder = new PromptBuilder();
 const responseParser = new ResponseParser();
 const structuredParser = new StructuredResponseParser();
+const lorebookMatcher = new LorebookMatcher();
 
 // Helper: get user's active API key for a provider
 async function getUserApiKey(userId: string, provider = "openrouter") {
@@ -154,16 +156,24 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
   const useStructured = worldDef.settings?.structuredOutput === true;
   const snapshot = stateManager.getSnapshot();
 
-  const systemPrompt = useStructured
-    ? promptBuilder.buildStructuredSystemPrompt(worldDef, activeChar, snapshot)
-    : promptBuilder.buildSystemPrompt(worldDef, activeChar, snapshot);
-
   // Load message history
   const historyRows = await db
     .select()
     .from(messages)
     .where(eq(messages.sessionId, sessionId))
     .orderBy(messages.createdAt);
+
+  // Match lorebook entries against recent messages
+  const recentTexts = historyRows.slice(-10).map((m) => m.content);
+  const matchedEntries = lorebookMatcher.match(
+    worldDef.lorebookEntries ?? [],
+    recentTexts,
+    snapshot
+  );
+
+  const systemPrompt = useStructured
+    ? promptBuilder.buildStructuredSystemPrompt(worldDef, activeChar, snapshot, matchedEntries)
+    : promptBuilder.buildSystemPrompt(worldDef, activeChar, snapshot, matchedEntries);
 
   const chatMessages = promptBuilder.buildMessageHistory(
     [
@@ -453,10 +463,6 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
     return c.json({ error: "No character defined" }, 400);
   }
 
-  const systemPrompt = useStructured
-    ? promptBuilder.buildStructuredSystemPrompt(worldDef, activeChar, snapshot)
-    : promptBuilder.buildSystemPrompt(worldDef, activeChar, snapshot);
-
   // Get messages up to (but not including) the one being regenerated
   const historyRows = await db
     .select()
@@ -466,6 +472,18 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
 
   const msgIndex = historyRows.findIndex((m) => m.id === messageId);
   const priorMessages = historyRows.slice(0, msgIndex);
+
+  // Match lorebook entries against recent prior messages
+  const recentTexts = priorMessages.slice(-10).map((m) => m.content);
+  const matchedEntries = lorebookMatcher.match(
+    worldDef.lorebookEntries ?? [],
+    recentTexts,
+    snapshot
+  );
+
+  const systemPrompt = useStructured
+    ? promptBuilder.buildStructuredSystemPrompt(worldDef, activeChar, snapshot, matchedEntries)
+    : promptBuilder.buildSystemPrompt(worldDef, activeChar, snapshot, matchedEntries);
 
   const chatMessages = promptBuilder.buildMessageHistory(
     [

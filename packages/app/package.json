@@ -25,17 +25,20 @@
     "better-auth": "^1",
     "class-variance-authority": "^0.7",
     "clsx": "^2",
+    "dockview-react": "^5.0.0",
     "hono": "^4",
     "lucide-react": "^0.511",
     "posthog-js": "^1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "sucrase": "^3.35.1",
     "tailwind-merge": "^3",
     "zustand": "^5"
   },
   "devDependencies": {
     "@eslint/js": "^9",
     "@sentry/react": "^9",
+    "@tailwindcss/vite": "^4",
     "@tanstack/router-devtools": "^1",
     "@tanstack/router-plugin": "^1",
     "@types/node": "^22",
@@ -47,7 +50,6 @@
     "eslint-plugin-react-refresh": "^0.4",
     "globals": "^16",
     "tailwindcss": "^4",
-    "@tailwindcss/vite": "^4",
     "typescript": "^5.7",
     "typescript-eslint": "^8",
     "vite": "^6"

@@ -9,6 +9,7 @@ import { worldRoutes } from "./routes/worlds.js";
 import { apiKeyRoutes } from "./routes/api-keys.js";
 import { sessionRoutes } from "./routes/sessions.js";
 import { messageRoutes } from "./routes/messages.js";
+import { studioRoutes } from "./routes/studio.js";
 
 const app = new Hono();
 
@@ -23,6 +24,7 @@ app.route("/api/worlds", worldRoutes);
 app.route("/api/keys", apiKeyRoutes);
 app.route("/api/sessions", sessionRoutes);
 app.route("/api", messageRoutes);
+app.route("/api/studio", studioRoutes);
 
 // Root
 app.get("/", (c) => {

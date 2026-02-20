@@ -1,0 +1,32 @@
+/* Dockview theme — maps Yumina dark theme to dockview CSS variables */
+
+.dockview-theme-yumina {
+  --dv-background-color: #171717;
+  --dv-paneview-header-border-color: #000000;
+  --dv-tabs-and-actions-container-background-color: #1a1a1a;
+  --dv-activegroup-visiblepanel-tab-background-color: #1e1e1e;
+  --dv-activegroup-hiddenpanel-tab-background-color: #171717;
+  --dv-inactivegroup-visiblepanel-tab-background-color: #1a1a1a;
+  --dv-inactivegroup-hiddenpanel-tab-background-color: #171717;
+  --dv-tab-divider-color: #000000;
+  --dv-activegroup-visiblepanel-tab-color: #dcdcd2;
+  --dv-activegroup-hiddenpanel-tab-color: #919191;
+  --dv-inactivegroup-visiblepanel-tab-color: #919191;
+  --dv-inactivegroup-hiddenpanel-tab-color: #666666;
+  --dv-separator-border: #000000;
+  --dv-group-view-background-color: #171717;
+  --dv-tabs-container-scrollbar-color: rgba(255, 255, 255, 0.1);
+  --dv-icon-hover-background-color: rgba(255, 255, 255, 0.1);
+  --dv-floating-box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --dv-drag-over-background-color: rgba(225, 138, 36, 0.1);
+  --dv-drag-over-border-color: #e18a24;
+}
+
+.dockview-theme-yumina .tab {
+  font-size: 0.8125rem;
+  padding: 0 12px;
+}
+
+.dockview-theme-yumina .dv-tabs-and-actions-container {
+  height: 34px;
+}
