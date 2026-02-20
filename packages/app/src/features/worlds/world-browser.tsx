@@ -1,7 +1,8 @@
 import { useEffect } from "react";
+import { Link } from "@tanstack/react-router";
 import { useWorldsStore } from "@/stores/worlds";
 import { WorldCard } from "./world-card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 
 export function WorldBrowser() {
   const { worlds, loading, error, fetchWorlds } = useWorldsStore();
@@ -13,11 +14,20 @@ export function WorldBrowser() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-4xl p-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Worlds</h1>
-          <p className="mt-1 text-sm text-muted-foreground/50">
-            Choose a world to start your adventure
-          </p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Worlds</h1>
+            <p className="mt-1 text-sm text-muted-foreground/50">
+              Choose a world to start your adventure
+            </p>
+          </div>
+          <Link
+            to="/app/worlds/create"
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" />
+            Create World
+          </Link>
         </div>
 
         {loading && (
@@ -42,7 +52,7 @@ export function WorldBrowser() {
               <code className="rounded bg-accent px-1.5 py-0.5 text-foreground/60">
                 pnpm db:seed
               </code>{" "}
-              to add the demo world.
+              to add the demo world, or create your own.
             </p>
           </div>
         )}

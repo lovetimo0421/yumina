@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { Play, Loader2 } from "lucide-react";
+import { Play, Loader2, Pencil } from "lucide-react";
+import { useSession } from "@/lib/auth-client";
 import type { WorldItem } from "@/stores/worlds";
 
 interface WorldCardProps {
@@ -12,6 +13,8 @@ const apiBase = import.meta.env.VITE_API_URL || "";
 export function WorldCard({ world }: WorldCardProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { data: session } = useSession();
+  const isOwner = session?.user?.id === world.creatorId;
 
   const handlePlay = async () => {
     setLoading(true);
@@ -52,7 +55,22 @@ export function WorldCard({ world }: WorldCardProps) {
       </div>
 
       <div className="flex flex-1 flex-col p-4">
-        <h3 className="font-semibold text-foreground">{world.name}</h3>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-semibold text-foreground">{world.name}</h3>
+          {isOwner && (
+            <button
+              onClick={() =>
+                router.navigate({
+                  to: "/app/worlds/$worldId/edit",
+                  params: { worldId: world.id },
+                })
+              }
+              className="shrink-0 rounded-md p-1 text-muted-foreground/40 transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
         <p className="mt-1 flex-1 text-sm text-muted-foreground/50 line-clamp-2">
           {world.description || "No description"}
         </p>

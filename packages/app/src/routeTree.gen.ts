@@ -16,7 +16,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppWorldsRouteImport } from './routes/app/worlds'
 import { Route as AppSettingsRouteImport } from './routes/app/settings'
+import { Route as AppWorldsIndexRouteImport } from './routes/app/worlds.index'
+import { Route as AppWorldsCreateRouteImport } from './routes/app/worlds.create'
 import { Route as AppChatSessionIdRouteImport } from './routes/app/chat.$sessionId'
+import { Route as AppWorldsWorldIdEditRouteImport } from './routes/app/worlds.$worldId.edit'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -53,10 +56,25 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppWorldsIndexRoute = AppWorldsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppWorldsRoute,
+} as any)
+const AppWorldsCreateRoute = AppWorldsCreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => AppWorldsRoute,
+} as any)
 const AppChatSessionIdRoute = AppChatSessionIdRouteImport.update({
   id: '/chat/$sessionId',
   path: '/chat/$sessionId',
   getParentRoute: () => AppRoute,
+} as any)
+const AppWorldsWorldIdEditRoute = AppWorldsWorldIdEditRouteImport.update({
+  id: '/$worldId/edit',
+  path: '/$worldId/edit',
+  getParentRoute: () => AppWorldsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -65,18 +83,23 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/app/settings': typeof AppSettingsRoute
-  '/app/worlds': typeof AppWorldsRoute
+  '/app/worlds': typeof AppWorldsRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/app/chat/$sessionId': typeof AppChatSessionIdRoute
+  '/app/worlds/create': typeof AppWorldsCreateRoute
+  '/app/worlds/': typeof AppWorldsIndexRoute
+  '/app/worlds/$worldId/edit': typeof AppWorldsWorldIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/app/settings': typeof AppSettingsRoute
-  '/app/worlds': typeof AppWorldsRoute
   '/app': typeof AppIndexRoute
   '/app/chat/$sessionId': typeof AppChatSessionIdRoute
+  '/app/worlds/create': typeof AppWorldsCreateRoute
+  '/app/worlds': typeof AppWorldsIndexRoute
+  '/app/worlds/$worldId/edit': typeof AppWorldsWorldIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -85,9 +108,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/app/settings': typeof AppSettingsRoute
-  '/app/worlds': typeof AppWorldsRoute
+  '/app/worlds': typeof AppWorldsRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/app/chat/$sessionId': typeof AppChatSessionIdRoute
+  '/app/worlds/create': typeof AppWorldsCreateRoute
+  '/app/worlds/': typeof AppWorldsIndexRoute
+  '/app/worlds/$worldId/edit': typeof AppWorldsWorldIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -100,15 +126,20 @@ export interface FileRouteTypes {
     | '/app/worlds'
     | '/app/'
     | '/app/chat/$sessionId'
+    | '/app/worlds/create'
+    | '/app/worlds/'
+    | '/app/worlds/$worldId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/register'
     | '/app/settings'
-    | '/app/worlds'
     | '/app'
     | '/app/chat/$sessionId'
+    | '/app/worlds/create'
+    | '/app/worlds'
+    | '/app/worlds/$worldId/edit'
   id:
     | '__root__'
     | '/'
@@ -119,6 +150,9 @@ export interface FileRouteTypes {
     | '/app/worlds'
     | '/app/'
     | '/app/chat/$sessionId'
+    | '/app/worlds/create'
+    | '/app/worlds/'
+    | '/app/worlds/$worldId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -179,6 +213,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/worlds/': {
+      id: '/app/worlds/'
+      path: '/'
+      fullPath: '/app/worlds/'
+      preLoaderRoute: typeof AppWorldsIndexRouteImport
+      parentRoute: typeof AppWorldsRoute
+    }
+    '/app/worlds/create': {
+      id: '/app/worlds/create'
+      path: '/create'
+      fullPath: '/app/worlds/create'
+      preLoaderRoute: typeof AppWorldsCreateRouteImport
+      parentRoute: typeof AppWorldsRoute
+    }
     '/app/chat/$sessionId': {
       id: '/app/chat/$sessionId'
       path: '/chat/$sessionId'
@@ -186,19 +234,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppChatSessionIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/worlds/$worldId/edit': {
+      id: '/app/worlds/$worldId/edit'
+      path: '/$worldId/edit'
+      fullPath: '/app/worlds/$worldId/edit'
+      preLoaderRoute: typeof AppWorldsWorldIdEditRouteImport
+      parentRoute: typeof AppWorldsRoute
+    }
   }
 }
 
+interface AppWorldsRouteChildren {
+  AppWorldsCreateRoute: typeof AppWorldsCreateRoute
+  AppWorldsIndexRoute: typeof AppWorldsIndexRoute
+  AppWorldsWorldIdEditRoute: typeof AppWorldsWorldIdEditRoute
+}
+
+const AppWorldsRouteChildren: AppWorldsRouteChildren = {
+  AppWorldsCreateRoute: AppWorldsCreateRoute,
+  AppWorldsIndexRoute: AppWorldsIndexRoute,
+  AppWorldsWorldIdEditRoute: AppWorldsWorldIdEditRoute,
+}
+
+const AppWorldsRouteWithChildren = AppWorldsRoute._addFileChildren(
+  AppWorldsRouteChildren,
+)
+
 interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
-  AppWorldsRoute: typeof AppWorldsRoute
+  AppWorldsRoute: typeof AppWorldsRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppChatSessionIdRoute: typeof AppChatSessionIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
-  AppWorldsRoute: AppWorldsRoute,
+  AppWorldsRoute: AppWorldsRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppChatSessionIdRoute: AppChatSessionIdRoute,
 }

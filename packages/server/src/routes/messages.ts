@@ -651,19 +651,92 @@ messageRoutes.post("/messages/:id/swipe", async (c) => {
   });
 });
 
-// GET /api/models — list available models
+// ── Model listing with cache and categorization ──
+
+const CURATED_MODEL_IDS = new Set([
+  "anthropic/claude-sonnet-4",
+  "anthropic/claude-opus-4",
+  "openai/gpt-4o",
+  "openai/gpt-4o-mini",
+  "openai/o3-mini",
+  "google/gemini-2.5-pro-preview",
+  "google/gemini-2.0-flash-001",
+  "meta-llama/llama-4-maverick",
+  "mistralai/mistral-large-latest",
+  "deepseek/deepseek-chat-v3-0324",
+]);
+
+function getProvider(modelId: string): string {
+  const prefix = modelId.split("/")[0] ?? "unknown";
+  const map: Record<string, string> = {
+    anthropic: "Anthropic",
+    openai: "OpenAI",
+    google: "Google",
+    "meta-llama": "Meta",
+    mistralai: "Mistral",
+    deepseek: "DeepSeek",
+    cohere: "Cohere",
+    "nousresearch": "Nous Research",
+  };
+  return map[prefix] ?? prefix;
+}
+
+interface CachedModel {
+  id: string;
+  name: string;
+  provider: string;
+  contextLength: number;
+  pricing?: { prompt: number; completion: number };
+  isCurated: boolean;
+}
+
+let modelCache: CachedModel[] | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// GET /api/models — list available models with caching and categorization
 messageRoutes.get("/models", async (c) => {
   const currentUser = c.get("user");
+  const now = Date.now();
+
+  // Return cache if fresh
+  if (modelCache && now - cacheTimestamp < CACHE_TTL) {
+    const curated = modelCache.filter((m) => m.isCurated);
+    return c.json({ data: { curated, all: modelCache } });
+  }
 
   const apiKey = await getUserApiKey(currentUser.id);
   if (!apiKey) {
-    return c.json({ error: "No API key configured" }, 400);
+    // Return curated list without pricing (public info)
+    const fallback: CachedModel[] = [...CURATED_MODEL_IDS].map((id) => ({
+      id,
+      name: id.split("/")[1]?.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) ?? id,
+      provider: getProvider(id),
+      contextLength: 0,
+      isCurated: true,
+    }));
+    return c.json({ data: { curated: fallback, all: fallback } });
   }
 
-  const provider = new OpenRouterProvider(apiKey);
-  const models = await provider.listModels();
+  try {
+    const provider = new OpenRouterProvider(apiKey);
+    const rawModels = await provider.listModels();
 
-  return c.json({ data: models });
+    modelCache = rawModels.map((m) => ({
+      id: m.id,
+      name: m.name,
+      provider: getProvider(m.id),
+      contextLength: m.contextLength,
+      pricing: m.pricing,
+      isCurated: CURATED_MODEL_IDS.has(m.id),
+    }));
+    cacheTimestamp = now;
+
+    const curated = modelCache.filter((m) => m.isCurated);
+    return c.json({ data: { curated, all: modelCache } });
+  } catch {
+    return c.json({ error: "Failed to fetch models" }, 500);
+  }
 });
 
 export { messageRoutes };

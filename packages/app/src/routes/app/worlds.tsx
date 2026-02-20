@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { WorldBrowser } from "@/features/worlds/world-browser";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/worlds")({
-  component: WorldBrowser,
+  component: () => <Outlet />,
 });
