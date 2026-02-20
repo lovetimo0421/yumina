@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chat";
 
 const CURATED_MODELS = [
@@ -19,7 +20,6 @@ export function ModelSelector() {
   const current =
     CURATED_MODELS.find((m) => m.id === selectedModel) ?? CURATED_MODELS[0]!;
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -35,16 +35,19 @@ export function ModelSelector() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:bg-white/8 hover:text-foreground"
+        className="hover-surface flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground"
       >
-        <span className="max-w-[120px] truncate">{current.name}</span>
+        <span className="max-w-[140px] truncate">{current.name}</span>
         <ChevronDown
-          className={`h-3 w-3 opacity-60 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+          className={cn(
+            "h-3 w-3 opacity-40 transition-transform duration-150",
+            open && "rotate-180"
+          )}
         />
       </button>
 
       {open && (
-        <div className="absolute bottom-[calc(100%+6px)] right-0 z-50 min-w-[240px] rounded-xl border border-white/12 bg-[var(--glass-bg)] p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+        <div className="glass absolute bottom-[calc(100%+4px)] left-0 z-50 min-w-[240px] rounded-xl p-1.5 shadow-xl shadow-black/30">
           {CURATED_MODELS.map((model) => (
             <button
               key={model.id}
@@ -52,16 +55,16 @@ export function ModelSelector() {
                 setSelectedModel(model.id);
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-150 hover:bg-white/10"
+              className="hover-surface flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left"
             >
               <div className="flex-1">
                 <p className="text-sm text-foreground">{model.name}</p>
-                <p className="text-[11px] text-muted-foreground/60">
+                <p className="text-[11px] text-muted-foreground/50">
                   {model.desc}
                 </p>
               </div>
               {selectedModel === model.id && (
-                <Check className="h-4 w-4 shrink-0 text-primary" />
+                <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
               )}
             </button>
           ))}

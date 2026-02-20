@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
-  Home,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
   Globe,
-  MessageSquare,
   Trash2,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui";
@@ -23,7 +22,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const navItems = [
-  { to: "/app" as const, label: "Home", icon: Home },
   { to: "/app/worlds" as const, label: "Worlds", icon: Globe },
   { to: "/app/settings" as const, label: "Settings", icon: Settings },
 ];
@@ -42,11 +40,11 @@ function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return `${mins}m`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${days}d`;
 }
 
 export function Sidebar() {
@@ -63,7 +61,7 @@ export function Sidebar() {
         });
         if (res.ok) {
           const { data } = await res.json();
-          setSessions(data.slice(0, 10));
+          setSessions(data.slice(0, 15));
         }
       } catch {
         // Silently fail
@@ -105,20 +103,16 @@ export function Sidebar() {
       .slice(0, 2) ?? "?";
 
   return (
-    <aside
-      className={cn(
-        "flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-200 overflow-hidden"
-      )}
-      style={{ width: sidebarOpen ? "var(--sidebar-width)" : "var(--sidebar-collapsed-width, 60px)" }}
-    >
-      {/* Logo + collapse */}
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
+    <aside className="flex h-screen flex-col overflow-hidden bg-sidebar">
+      {/* Logo + collapse — matching BT header */}
+      <div className="flex h-12 shrink-0 items-center gap-2 px-4">
         {sidebarOpen && (
-          <span className="text-lg font-bold text-primary">Yumina</span>
+          <span className="text-base font-bold text-primary">Yumina</span>
         )}
+        <div className="flex-1" />
         <button
           onClick={toggleSidebar}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-white/8 hover:text-foreground"
+          className="hover-surface flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/60"
         >
           {sidebarOpen ? (
             <PanelLeftClose className="h-4 w-4" />
@@ -128,15 +122,15 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="shrink-0 space-y-0.5 p-2">
+      {/* Navigation — flat list like BT */}
+      <nav className="shrink-0 px-2 pb-1">
         {navItems.map((item) => (
           <Link
             key={item.to}
             to={item.to}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors duration-150 hover:bg-white/8 hover:text-foreground",
-              "[&.active]:bg-white/12 [&.active]:text-foreground",
+              "hover-surface flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/80",
+              "[&.active]:active-surface [&.active]:text-foreground",
               !sidebarOpen && "justify-center px-2"
             )}
           >
@@ -146,13 +140,13 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Recent sessions */}
-      {sidebarOpen && sessions.length > 0 && (
+      {/* Recent worlds — scrollable list like BT sidebar */}
+      {sidebarOpen && (
         <>
-          <div className="mx-3 border-t border-border" />
-          <div className="flex-1 overflow-y-auto px-2 py-2">
-            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-              Recent
+          <div className="mx-3 border-t border-border/30" />
+          <div className="flex-1 overflow-y-auto px-2 pt-2">
+            <p className="mb-2 px-3 text-[11px] font-medium text-muted-foreground/40">
+              Recent Worlds
             </p>
             <div className="space-y-0.5">
               {sessions.map((s) => (
@@ -160,58 +154,67 @@ export function Sidebar() {
                   key={s.id}
                   to="/app/chat/$sessionId"
                   params={{ sessionId: s.id }}
-                  className="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors duration-150 hover:bg-white/8 hover:text-foreground [&.active]:bg-white/12 [&.active]:text-foreground"
+                  className="hover-surface group flex items-center gap-3 rounded-lg px-3 py-2 [&.active]:active-surface"
                 >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-xs">
-                    <MessageSquare className="h-3.5 w-3.5" />
+                  {/* Circular avatar like BT */}
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs text-muted-foreground/60">
+                    <BookOpen className="h-3.5 w-3.5" />
                   </div>
                   <div className="flex-1 overflow-hidden">
-                    <p className="truncate text-sm">
+                    <p className="truncate text-sm text-foreground/80">
                       {s.worldName ?? "Session"}
                     </p>
-                    <p className="text-[11px] text-muted-foreground/60">
+                    <p className="text-[11px] text-muted-foreground/40">
                       {timeAgo(s.updatedAt ?? s.createdAt)}
                     </p>
                   </div>
                   <button
-                    className="hidden shrink-0 rounded-md p-1 text-muted-foreground/50 transition-colors hover:text-destructive group-hover:block"
+                    className="hidden shrink-0 rounded-md p-1 text-muted-foreground/20 hover:text-destructive group-hover:block"
                     onClick={(e) => handleDeleteSession(e, s.id)}
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
                 </Link>
               ))}
+              {sessions.length === 0 && (
+                <p className="px-3 py-4 text-center text-xs text-muted-foreground/30">
+                  No sessions yet
+                </p>
+              )}
             </div>
           </div>
         </>
       )}
 
-      <div className="flex-1" />
+      {!sidebarOpen && <div className="flex-1" />}
 
-      {/* User profile */}
-      <div className="shrink-0 border-t border-border p-2">
+      {/* User profile — matching BT bottom profile */}
+      <div className="shrink-0 px-2 py-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 hover:bg-white/8",
+                "hover-surface flex w-full items-center gap-3 rounded-lg px-3 py-2",
                 !sidebarOpen && "justify-center px-0"
               )}
             >
               <Avatar className="h-8 w-8 shrink-0">
                 <AvatarImage src={session?.user?.image ?? undefined} />
-                <AvatarFallback className="bg-secondary text-xs">
+                <AvatarFallback className="bg-accent text-xs text-muted-foreground/60">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               {sidebarOpen && (
                 <div className="flex-1 overflow-hidden text-left">
-                  <p className="truncate text-sm font-medium text-foreground">
+                  <p className="truncate text-sm text-foreground/80">
                     {session?.user?.name ?? "User"}
                   </p>
-                  <p className="truncate text-[11px] text-muted-foreground/60">
-                    {session?.user?.email}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    <span className="text-[11px] text-muted-foreground/40">
+                      Connected
+                    </span>
+                  </div>
                 </div>
               )}
             </button>

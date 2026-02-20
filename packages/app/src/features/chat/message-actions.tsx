@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Pencil, RefreshCw, Copy, Trash2, Check, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useChatStore, type Message } from "@/stores/chat";
 
 interface MessageActionsProps {
@@ -54,24 +55,18 @@ export function MessageActions({ message }: MessageActionsProps) {
     setConfirmDelete(false);
   };
 
-  const handleRegenerate = () => {
-    if (message.role === "assistant") {
-      regenerateMessage(message.id);
-    }
-  };
-
   if (isEditing) {
     return (
-      <div className="flex w-full flex-col gap-2 pt-1">
+      <div className="mt-2 flex flex-col gap-2">
         <textarea
           value={editContent}
           onChange={(e) => setEditContent(e.target.value)}
-          className="min-h-[60px] w-full resize-y rounded-lg border border-border bg-background/50 p-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          className="min-h-[60px] w-full resize-y rounded-lg border border-border bg-background p-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none"
         />
         <div className="flex gap-1.5">
           <button
             onClick={handleEdit}
-            className="flex h-7 items-center gap-1 rounded-md bg-primary/20 px-2.5 text-xs font-medium text-primary transition-colors hover:bg-primary/30"
+            className="flex h-7 items-center gap-1 rounded-md bg-primary/15 px-2.5 text-xs font-medium text-primary transition-colors hover:bg-primary/25"
           >
             <Check className="h-3 w-3" /> Save
           </button>
@@ -80,7 +75,7 @@ export function MessageActions({ message }: MessageActionsProps) {
               setIsEditing(false);
               setEditContent(message.content);
             }}
-            className="flex h-7 items-center gap-1 rounded-md px-2.5 text-xs text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground"
+            className="hover-surface flex h-7 items-center gap-1 rounded-md px-2.5 text-xs text-muted-foreground"
           >
             <X className="h-3 w-3" /> Cancel
           </button>
@@ -95,13 +90,13 @@ export function MessageActions({ message }: MessageActionsProps) {
         <span className="text-[11px] text-muted-foreground">Delete?</span>
         <button
           onClick={handleDelete}
-          className="h-6 rounded-md bg-destructive/20 px-2 text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/30"
+          className="h-6 rounded-md bg-destructive/15 px-2 text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/25"
         >
           Yes
         </button>
         <button
           onClick={() => setConfirmDelete(false)}
-          className="h-6 rounded-md px-2 text-[11px] text-muted-foreground transition-colors hover:bg-white/8"
+          className="hover-surface h-6 rounded-md px-2 text-[11px] text-muted-foreground"
         >
           No
         </button>
@@ -111,36 +106,39 @@ export function MessageActions({ message }: MessageActionsProps) {
 
   return (
     <div className="flex items-center gap-0.5">
-      <ActionButton onClick={handleCopy} title="Copy">
+      <ActionBtn onClick={handleCopy} title="Copy">
         {copied ? (
-          <Check className="h-3 w-3 text-green-400" />
+          <Check className="h-3 w-3 text-primary" />
         ) : (
           <Copy className="h-3 w-3" />
         )}
-      </ActionButton>
+      </ActionBtn>
 
-      <ActionButton onClick={() => setIsEditing(true)} title="Edit">
+      <ActionBtn onClick={() => setIsEditing(true)} title="Edit">
         <Pencil className="h-3 w-3" />
-      </ActionButton>
+      </ActionBtn>
 
       {message.role === "assistant" && (
-        <ActionButton onClick={handleRegenerate} title="Regenerate">
+        <ActionBtn
+          onClick={() => regenerateMessage(message.id)}
+          title="Regenerate"
+        >
           <RefreshCw className="h-3 w-3" />
-        </ActionButton>
+        </ActionBtn>
       )}
 
-      <ActionButton
+      <ActionBtn
         onClick={() => setConfirmDelete(true)}
         title="Delete"
         className="hover:text-destructive"
       >
         <Trash2 className="h-3 w-3" />
-      </ActionButton>
+      </ActionBtn>
     </div>
   );
 }
 
-function ActionButton({
+function ActionBtn({
   children,
   onClick,
   title,
@@ -155,7 +153,10 @@ function ActionButton({
     <button
       onClick={onClick}
       title={title}
-      className={`flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/50 transition-all duration-150 hover:bg-white/8 hover:text-foreground ${className ?? ""}`}
+      className={cn(
+        "hover-surface flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/40 transition-colors hover:text-foreground",
+        className
+      )}
     >
       {children}
     </button>

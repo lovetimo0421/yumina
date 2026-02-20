@@ -53,20 +53,20 @@ export function SwipeControls({ message }: SwipeControlsProps) {
       <button
         onClick={() => handleSwipe("left")}
         disabled={currentIndex <= 0 || isStreaming}
-        className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/50 transition-colors hover:bg-white/8 hover:text-foreground disabled:opacity-30 disabled:cursor-default"
+        className="hover-surface flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/40 disabled:opacity-20 disabled:pointer-events-none"
         title="Previous response"
       >
         <ChevronLeft className="h-3.5 w-3.5" />
       </button>
 
-      <span className="min-w-[32px] text-center text-[11px] text-muted-foreground/50">
+      <span className="min-w-[32px] text-center text-[11px] text-muted-foreground/40">
         {totalSwipes > 0 ? `${currentIndex + 1}/${totalSwipes}` : "1/1"}
       </span>
 
       <button
         onClick={() => handleSwipe("right")}
         disabled={isStreaming}
-        className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/50 transition-colors hover:bg-white/8 hover:text-foreground disabled:opacity-30 disabled:cursor-default"
+        className="hover-surface flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/40 disabled:opacity-20 disabled:pointer-events-none"
         title={
           currentIndex >= totalSwipes - 1
             ? "Generate new response"

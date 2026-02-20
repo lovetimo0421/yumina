@@ -42,74 +42,70 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-8">
-      <h1 className="text-2xl font-bold">Settings</h1>
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-2xl space-y-6 p-8">
+        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
 
-      <Card className="rounded-xl">
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription className="text-muted-foreground/60">
-            Update your profile information
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSave} className="space-y-4">
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium text-foreground"
-              >
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={session?.user?.email ?? ""}
-                disabled
-                className="opacity-50"
-              />
-              <p className="text-xs text-muted-foreground/50">
-                Email cannot be changed
-              </p>
-            </div>
+        <Card className="rounded-xl">
+          <CardHeader>
+            <CardTitle>Profile</CardTitle>
+            <CardDescription className="text-muted-foreground/50">
+              Update your profile information
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSave} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium text-foreground">
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={session?.user?.email ?? ""}
+                  disabled
+                  className="opacity-40"
+                />
+                <p className="text-xs text-muted-foreground/40">
+                  Email cannot be changed
+                </p>
+              </div>
 
-            <div className="space-y-2">
-              <label
-                htmlFor="name"
-                className="text-sm font-medium text-foreground"
-              >
-                Display name
-              </label>
-              <Input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-                required
-              />
-            </div>
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-sm font-medium text-foreground">
+                  Display name
+                </label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  required
+                />
+              </div>
 
-            {message && (
-              <p
-                className={`text-sm ${
-                  message.includes("success")
-                    ? "text-green-400"
-                    : "text-destructive"
-                }`}
-              >
-                {message}
-              </p>
-            )}
+              {message && (
+                <p
+                  className={`text-sm ${
+                    message.includes("success")
+                      ? "text-primary"
+                      : "text-destructive"
+                  }`}
+                >
+                  {message}
+                </p>
+              )}
 
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save changes"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving..." : "Save changes"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-      <ApiKeysSettings />
+        <ApiKeysSettings />
+      </div>
     </div>
   );
 }

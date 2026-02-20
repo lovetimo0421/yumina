@@ -1,15 +1,23 @@
 import type { ReactNode } from "react";
 import { Sidebar } from "./sidebar";
+import { useUiStore } from "@/stores/ui";
 
 interface AppShellProps {
   children: ReactNode;
 }
 
 export function AppShell({ children }: AppShellProps) {
+  const { sidebarOpen } = useUiStore();
+
   return (
-    <div className="grid h-screen overflow-hidden" style={{ gridTemplateColumns: "var(--sidebar-width, 260px) 1fr" }}>
+    <div
+      className="grid h-screen overflow-hidden transition-[grid-template-columns] duration-200"
+      style={{
+        gridTemplateColumns: `${sidebarOpen ? "var(--sidebar-width, 260px)" : "var(--sidebar-collapsed-width, 60px)"} 1fr`,
+      }}
+    >
       <Sidebar />
-      <main className="overflow-auto">{children}</main>
+      <main className="overflow-hidden">{children}</main>
     </div>
   );
 }

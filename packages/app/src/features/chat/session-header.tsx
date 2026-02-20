@@ -19,14 +19,16 @@ export function SessionHeader() {
     <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
       <Link
         to="/app/worlds"
-        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-white/8 hover:text-foreground"
+        className="hover-surface flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
       </Link>
 
       <div className="flex-1 overflow-hidden">
-        <h2 className="truncate text-sm font-medium">{worldName}</h2>
-        <p className="truncate text-[11px] text-muted-foreground/60">
+        <h2 className="truncate text-sm font-medium text-foreground">
+          {worldName}
+        </h2>
+        <p className="truncate text-[11px] text-muted-foreground/50">
           {characterName}
         </p>
       </div>
@@ -49,9 +51,9 @@ function StreamingTimer({ startTime }: { startTime: number }) {
   }, [startTime]);
 
   return (
-    <div className="flex items-center gap-1.5 shrink-0">
+    <div className="flex shrink-0 items-center gap-1.5">
       <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-      <span className="text-xs text-muted-foreground/60">
+      <span className="text-xs text-muted-foreground/50">
         {(elapsed / 1000).toFixed(1)}s
       </span>
     </div>

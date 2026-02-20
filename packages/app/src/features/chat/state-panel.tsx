@@ -26,14 +26,13 @@ export function StatePanel() {
     <div
       className={cn(
         "flex shrink-0 flex-col border-l border-border bg-background transition-all duration-200",
-        open ? "w-64" : "w-10"
+        open ? "w-60" : "w-10"
       )}
     >
-      {/* Toggle */}
       <div className="flex h-12 items-center justify-center border-b border-border">
         <button
           onClick={() => setOpen(!open)}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/50 transition-colors duration-150 hover:bg-white/8 hover:text-foreground"
+          className="hover-surface flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/40"
         >
           {open ? (
             <ChevronRight className="h-4 w-4" />
@@ -45,7 +44,7 @@ export function StatePanel() {
 
       {open && (
         <div className="flex-1 overflow-y-auto p-3">
-          <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+          <h3 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/40">
             Game State
           </h3>
 
@@ -62,11 +61,10 @@ export function StatePanel() {
             ))}
           </div>
 
-          {/* Change notifications */}
           {recentStateChanges.length > 0 && (
             <div className="mt-4 space-y-1">
               {recentStateChanges.map((change, i) => (
-                <StateChangeNotification key={i} change={change} />
+                <ChangeNotice key={i} change={change} />
               ))}
             </div>
           )}
@@ -90,34 +88,17 @@ function VariableDisplay({
   if (variable.type === "number" && typeof value === "number") {
     const min = variable.min ?? 0;
     const max = variable.max ?? 100;
-    const pct = Math.max(
-      0,
-      Math.min(100, ((value - min) / (max - min)) * 100)
-    );
+    const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
 
     return (
-      <div
-        className={cn(
-          "rounded-lg bg-secondary/50 p-3 transition-all",
-          isChanged && "state-changed"
-        )}
-      >
+      <div className={cn("rounded-lg bg-accent p-3", isChanged && "state-changed")}>
         <div className="flex items-center justify-between text-xs">
-          <span className="font-medium text-foreground/80">
-            {variable.name}
-          </span>
-          <span className="font-mono text-muted-foreground">{value}</span>
+          <span className="font-medium text-foreground/80">{variable.name}</span>
+          <span className="font-mono text-muted-foreground/60">{value}</span>
         </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background/50">
+        <div className="mt-2 h-1 overflow-hidden rounded-full bg-background">
           <div
-            className={cn(
-              "h-full rounded-full transition-all duration-700",
-              pct > 60
-                ? "bg-green-500/70"
-                : pct > 30
-                  ? "bg-yellow-500/70"
-                  : "bg-red-500/70"
-            )}
+            className="h-full rounded-full bg-primary/60 transition-all duration-700"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -127,43 +108,22 @@ function VariableDisplay({
 
   if (variable.type === "boolean") {
     return (
-      <div
-        className={cn(
-          "flex items-center justify-between rounded-lg bg-secondary/50 p-3 transition-all",
-          isChanged && "state-changed"
-        )}
-      >
-        <span className="text-xs font-medium text-foreground/80">
-          {variable.name}
-        </span>
-        <div
-          className={cn(
-            "h-2.5 w-2.5 rounded-full transition-colors",
-            value ? "bg-green-500" : "bg-muted-foreground/30"
-          )}
-        />
+      <div className={cn("flex items-center justify-between rounded-lg bg-accent p-3", isChanged && "state-changed")}>
+        <span className="text-xs font-medium text-foreground/80">{variable.name}</span>
+        <div className={cn("h-2 w-2 rounded-full", value ? "bg-primary" : "bg-muted-foreground/20")} />
       </div>
     );
   }
 
   return (
-    <div
-      className={cn(
-        "rounded-lg bg-secondary/50 p-3 transition-all",
-        isChanged && "state-changed"
-      )}
-    >
-      <span className="text-xs font-medium text-foreground/80">
-        {variable.name}
-      </span>
-      <p className="mt-0.5 truncate text-xs text-muted-foreground">
-        {String(value)}
-      </p>
+    <div className={cn("rounded-lg bg-accent p-3", isChanged && "state-changed")}>
+      <span className="text-xs font-medium text-foreground/80">{variable.name}</span>
+      <p className="mt-0.5 truncate text-xs text-muted-foreground/60">{String(value)}</p>
     </div>
   );
 }
 
-function StateChangeNotification({ change }: { change: StateChange }) {
+function ChangeNotice({ change }: { change: StateChange }) {
   const isIncrease =
     typeof change.newValue === "number" &&
     typeof change.oldValue === "number" &&
@@ -178,9 +138,7 @@ function StateChangeNotification({ change }: { change: StateChange }) {
     <div
       className={cn(
         "rounded-md px-2.5 py-1 text-[11px] font-medium",
-        isIncrease
-          ? "bg-green-500/10 text-green-400"
-          : "bg-red-500/10 text-red-400"
+        isIncrease ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"
       )}
     >
       {change.variableId}
