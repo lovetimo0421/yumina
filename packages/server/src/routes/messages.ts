@@ -240,6 +240,12 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
 
   contextMessages.push(...historyMessages);
 
+  // 5. Post-history entries (jailbreak / post-history instructions — after all chat)
+  const postHistoryParts = promptBuilder.buildPostHistoryEntries(worldDef, snapshot, matchedEntries);
+  for (const part of postHistoryParts) {
+    contextMessages.push({ role: "system", content: part });
+  }
+
   const chatMessages = promptBuilder.buildMessageHistory(
     contextMessages,
     worldDef.settings?.maxTokens
@@ -256,8 +262,13 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
       for await (const chunk of provider.generateStream({
         model,
         messages: chatMessages,
-        maxTokens: worldDef.settings?.maxTokens ?? 2048,
-        temperature: worldDef.settings?.temperature ?? 0.8,
+        maxTokens: worldDef.settings?.maxTokens ?? 4096,
+        temperature: worldDef.settings?.temperature ?? 1.0,
+        topP: worldDef.settings?.topP,
+        frequencyPenalty: worldDef.settings?.frequencyPenalty,
+        presencePenalty: worldDef.settings?.presencePenalty,
+        topK: worldDef.settings?.topK,
+        minP: worldDef.settings?.minP,
         ...(useStructured && {
           responseFormat: { type: "json_object" as const },
         }),
@@ -563,8 +574,13 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
       for await (const chunk of regenProvider.generateStream({
         model,
         messages: chatMessages,
-        maxTokens: worldDef.settings?.maxTokens ?? 2048,
-        temperature: worldDef.settings?.temperature ?? 0.8,
+        maxTokens: worldDef.settings?.maxTokens ?? 4096,
+        temperature: worldDef.settings?.temperature ?? 1.0,
+        topP: worldDef.settings?.topP,
+        frequencyPenalty: worldDef.settings?.frequencyPenalty,
+        presencePenalty: worldDef.settings?.presencePenalty,
+        topK: worldDef.settings?.topK,
+        minP: worldDef.settings?.minP,
         ...(useStructured && {
           responseFormat: { type: "json_object" as const },
         }),

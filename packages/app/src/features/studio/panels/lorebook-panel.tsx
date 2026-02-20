@@ -39,9 +39,11 @@ const POSITIONS: { value: WorldEntry["position"]; label: string }[] = [
   { value: "before_char", label: "Before Char" },
   { value: "character", label: "Character" },
   { value: "after_char", label: "After Char" },
+  { value: "persona", label: "Persona" },
   { value: "bottom", label: "Bottom" },
   { value: "depth", label: "Depth" },
   { value: "greeting", label: "Greeting" },
+  { value: "post_history", label: "Post-History" },
 ];
 
 export function LorebookPanel(_props: IDockviewPanelProps) {

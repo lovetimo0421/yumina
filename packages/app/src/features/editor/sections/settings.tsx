@@ -23,7 +23,7 @@ export function SettingsSection() {
             type="number"
             value={settings.maxTokens}
             onChange={(e) =>
-              setSettings("maxTokens", parseInt(e.target.value) || 2048)
+              setSettings("maxTokens", parseInt(e.target.value) || 4096)
             }
             min={256}
             max={16384}
@@ -33,6 +33,136 @@ export function SettingsSection() {
           <p className="mt-1 text-xs text-muted-foreground/40">
             Maximum response length (256 - 16384)
           </p>
+        </div>
+
+        {/* Temperature */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-foreground">
+            Temperature:{" "}
+            <span className="text-primary">{settings.temperature}</span>
+          </label>
+          <input
+            type="range"
+            value={settings.temperature}
+            onChange={(e) =>
+              setSettings("temperature", parseFloat(e.target.value))
+            }
+            min={0}
+            max={2}
+            step={0.05}
+            className="w-full accent-primary"
+          />
+          <div className="flex justify-between text-xs text-muted-foreground/40">
+            <span>Precise (0)</span>
+            <span>Creative (2)</span>
+          </div>
+        </div>
+
+        {/* Top P */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-foreground">
+            Top P:{" "}
+            <span className="text-primary">{settings.topP ?? 1}</span>
+          </label>
+          <input
+            type="range"
+            value={settings.topP ?? 1}
+            onChange={(e) =>
+              setSettings("topP", parseFloat(e.target.value))
+            }
+            min={0}
+            max={1}
+            step={0.05}
+            className="w-full accent-primary"
+          />
+          <div className="flex justify-between text-xs text-muted-foreground/40">
+            <span>Focused (0)</span>
+            <span>Full range (1)</span>
+          </div>
+        </div>
+
+        {/* Frequency Penalty + Presence Penalty */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Frequency Penalty:{" "}
+              <span className="text-primary">
+                {settings.frequencyPenalty ?? 0}
+              </span>
+            </label>
+            <input
+              type="range"
+              value={settings.frequencyPenalty ?? 0}
+              onChange={(e) =>
+                setSettings("frequencyPenalty", parseFloat(e.target.value))
+              }
+              min={-2}
+              max={2}
+              step={0.1}
+              className="w-full accent-primary"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Presence Penalty:{" "}
+              <span className="text-primary">
+                {settings.presencePenalty ?? 0}
+              </span>
+            </label>
+            <input
+              type="range"
+              value={settings.presencePenalty ?? 0}
+              onChange={(e) =>
+                setSettings("presencePenalty", parseFloat(e.target.value))
+              }
+              min={-2}
+              max={2}
+              step={0.1}
+              className="w-full accent-primary"
+            />
+          </div>
+        </div>
+
+        {/* Top K + Min P (advanced) */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Top K
+            </label>
+            <input
+              type="number"
+              value={settings.topK ?? 0}
+              onChange={(e) =>
+                setSettings("topK", parseInt(e.target.value) || 0)
+              }
+              min={0}
+              max={500}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="mt-1 text-xs text-muted-foreground/40">
+              0 = disabled
+            </p>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Min P:{" "}
+              <span className="text-primary">{settings.minP ?? 0}</span>
+            </label>
+            <input
+              type="range"
+              value={settings.minP ?? 0}
+              onChange={(e) =>
+                setSettings("minP", parseFloat(e.target.value))
+              }
+              min={0}
+              max={1}
+              step={0.01}
+              className="w-full accent-primary"
+            />
+            <p className="mt-1 text-xs text-muted-foreground/40">
+              0 = disabled
+            </p>
+          </div>
         </div>
 
         {/* Structured Output */}
@@ -51,31 +181,8 @@ export function SettingsSection() {
           <p className="mt-1.5 ml-6 text-xs text-muted-foreground/40">
             When enabled, the AI responds in JSON format for more reliable state
             changes and choice lists. Falls back to regex parsing if the model
-            doesn't support it. Works best with GPT-4o, Claude, and Gemini.
+            doesn't support it.
           </p>
-        </div>
-
-        {/* Temperature */}
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-foreground">
-            Temperature:{" "}
-            <span className="text-primary">{settings.temperature}</span>
-          </label>
-          <input
-            type="range"
-            value={settings.temperature}
-            onChange={(e) =>
-              setSettings("temperature", parseFloat(e.target.value))
-            }
-            min={0}
-            max={2}
-            step={0.1}
-            className="w-full accent-primary"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground/40">
-            <span>Precise (0)</span>
-            <span>Creative (2)</span>
-          </div>
         </div>
 
         {/* Entry Retrieval Settings */}

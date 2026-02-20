@@ -223,8 +223,11 @@ A stout woman with auburn hair tied back in a braid looks up from behind the bar
     },
   ],
   settings: {
-    maxTokens: 2048,
-    temperature: 0.8,
+    maxTokens: 4096,
+    temperature: 1.0,
+    topP: 1,
+    frequencyPenalty: 0,
+    presencePenalty: 0,
     structuredOutput: false,
   },
 };

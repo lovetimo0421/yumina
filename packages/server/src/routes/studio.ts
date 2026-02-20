@@ -157,7 +157,7 @@ Available action types:
 - addVariable: { id, name, type: "number"|"string"|"boolean", defaultValue, description?, min?, max? }
 - updateVariable: { id, ...fieldsToUpdate }
 - removeVariable: { id }
-- addEntry: { id, name, content, role: "system"|"character"|"personality"|"scenario"|"lore"|"plot"|"style"|"example"|"greeting"|"custom", position: "top"|"before_char"|"character"|"after_char"|"bottom"|"depth"|"greeting", depth?, insertionOrder?, alwaysSend?, keywords?, conditions?, conditionLogic?, priority?, enabled? }
+- addEntry: { id, name, content, role: "system"|"character"|"personality"|"scenario"|"lore"|"plot"|"style"|"example"|"greeting"|"custom", position: "top"|"before_char"|"character"|"after_char"|"persona"|"bottom"|"depth"|"greeting"|"post_history", depth?, insertionOrder?, alwaysSend?, keywords?, conditions?, conditionLogic?, priority?, enabled? }
 - updateEntry: { id, ...fieldsToUpdate }
 - removeEntry: { id }
 - addRule: { id, name, description?, conditions, conditionLogic, effects, priority }
@@ -175,13 +175,15 @@ Available action types:
 - updateSettings: { ...settingsFieldsToUpdate }
 
 Entry position slots (in prompt order):
-- "top": World rules, core setting — high AI attention (primacy)
+- "top": Main prompt, system instructions — high AI attention (primacy)
 - "before_char": World info that frames the character
 - "character": Character identity, description, personality — high attention
-- "after_char": Supplementary lore, plot hooks, style guides
-- "bottom": Format instructions, directives
+- "after_char": Scenario, supplementary lore, plot hooks, style guides
+- "persona": User persona / self-description
+- "bottom": Format instructions, author's notes
 - "depth": Dynamic context injected N messages from end (requires depth field)
 - "greeting": First assistant message only (not in system prompt)
+- "post_history": After all chat history — jailbreak / post-history instructions
 
 Rules:
 - "message" is REQUIRED — explain what you did in plain language

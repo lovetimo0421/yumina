@@ -9,12 +9,27 @@ export interface ChatMessage {
   content: string;
 }
 
-/** Position slots in prompt assembly order */
+/**
+ * Position slots in prompt assembly order.
+ * Maps to SillyTavern's story_string:
+ *   top         = main prompt + anchorBefore
+ *   before_char = wiBefore
+ *   character   = charDescription + charPersonality
+ *   after_char  = scenario + wiAfter
+ *   persona     = personaDescription
+ *   bottom      = anchorAfter + format instructions
+ *
+ * Not in system prompt (handled separately):
+ *   depth       = injected N messages from end in chat history
+ *   greeting    = first assistant message
+ *   post_history = jailbreak / post-history instructions (after all chat)
+ */
 const POSITION_ORDER: WorldEntry["position"][] = [
   "top",
   "before_char",
   "character",
   "after_char",
+  "persona",
   "bottom",
 ];
 
@@ -81,6 +96,22 @@ export class PromptBuilder {
       }));
   }
 
+  /**
+   * Get post-history entries (jailbreak / post-history instructions).
+   * These go AFTER all chat history as the final system message before AI responds.
+   */
+  buildPostHistoryEntries(
+    world: WorldDefinition,
+    state: GameState,
+    matchedEntries?: WorldEntry[]
+  ): string[] {
+    const allEntries = this.collectEntries(world, matchedEntries);
+    return allEntries
+      .filter((e) => e.position === "post_history")
+      .sort((a, b) => a.insertionOrder - b.insertionOrder)
+      .map((e) => this.interpolate(e.content, state));
+  }
+
   buildMessageHistory(
     messages: ChatMessage[],
     maxTokens?: number
@@ -105,7 +136,8 @@ export class PromptBuilder {
   }
 
   /**
-   * Collect all relevant entries: alwaysSend + matched, excluding greeting and depth.
+   * Collect all relevant entries: alwaysSend + matched.
+   * Includes all positions — callers filter by position as needed.
    */
   private collectEntries(
     world: WorldDefinition,

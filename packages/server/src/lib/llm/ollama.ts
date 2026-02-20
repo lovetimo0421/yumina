@@ -23,6 +23,11 @@ export class OllamaProvider implements LLMProvider {
         options: {
           num_predict: params.maxTokens,
           temperature: params.temperature,
+          ...(params.topP !== undefined && { top_p: params.topP }),
+          ...(params.topK !== undefined && params.topK > 0 && { top_k: params.topK }),
+          ...(params.minP !== undefined && params.minP > 0 && { min_p: params.minP }),
+          ...(params.frequencyPenalty !== undefined && { frequency_penalty: params.frequencyPenalty }),
+          ...(params.presencePenalty !== undefined && { presence_penalty: params.presencePenalty }),
         },
         ...(params.responseFormat && { format: "json" }),
       }),

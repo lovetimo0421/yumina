@@ -26,6 +26,9 @@ export class OpenAIProvider implements LLMProvider {
         temperature: params.temperature,
         stream: true,
         stream_options: { include_usage: true },
+        ...(params.topP !== undefined && { top_p: params.topP }),
+        ...(params.frequencyPenalty !== undefined && { frequency_penalty: params.frequencyPenalty }),
+        ...(params.presencePenalty !== undefined && { presence_penalty: params.presencePenalty }),
         ...(params.responseFormat && {
           response_format: { type: params.responseFormat.type },
         }),

@@ -20,9 +20,11 @@ export class AnthropicProvider implements LLMProvider {
     const body: Record<string, unknown> = {
       model,
       messages: nonSystemMessages.map((m) => ({ role: m.role, content: m.content })),
-      max_tokens: params.maxTokens ?? 2048,
+      max_tokens: params.maxTokens ?? 4096,
       temperature: params.temperature,
       stream: true,
+      ...(params.topP !== undefined && { top_p: params.topP }),
+      ...(params.topK !== undefined && params.topK > 0 && { top_k: params.topK }),
     };
 
     if (systemMsg) {

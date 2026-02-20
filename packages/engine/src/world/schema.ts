@@ -91,7 +91,7 @@ export const worldEntrySchema = z.object({
   name: z.string().min(1),
   content: z.string(),
   role: z.enum(["system", "character", "personality", "scenario", "lore", "plot", "style", "example", "greeting", "custom"]),
-  position: z.enum(["top", "before_char", "character", "after_char", "bottom", "depth", "greeting"]),
+  position: z.enum(["top", "before_char", "character", "after_char", "persona", "bottom", "depth", "greeting", "post_history"]),
   depth: z.number().int().optional(),
   insertionOrder: z.number().int().default(0),
   alwaysSend: z.boolean().default(false),
@@ -113,8 +113,13 @@ export const customComponentSchema = z.object({
 });
 
 export const worldSettingsSchema = z.object({
-  maxTokens: z.number().int().positive().default(2048),
-  temperature: z.number().min(0).max(2).default(0.8),
+  maxTokens: z.number().int().positive().default(4096),
+  temperature: z.number().min(0).max(2).default(1.0),
+  topP: z.number().min(0).max(1).optional(),
+  frequencyPenalty: z.number().min(-2).max(2).optional(),
+  presencePenalty: z.number().min(-2).max(2).optional(),
+  topK: z.number().int().min(0).optional(),
+  minP: z.number().min(0).max(1).optional(),
   systemPrompt: z.string().optional(),
   greeting: z.string().optional(),
   structuredOutput: z.boolean().optional().default(false),

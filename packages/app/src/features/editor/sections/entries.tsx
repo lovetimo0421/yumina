@@ -17,14 +17,16 @@ const ROLES: { value: WorldEntry["role"]; label: string }[] = [
   { value: "custom", label: "Custom" },
 ];
 
-const POSITIONS: { value: WorldEntry["position"]; label: string }[] = [
-  { value: "top", label: "Top" },
-  { value: "before_char", label: "Before Character" },
-  { value: "character", label: "Character" },
-  { value: "after_char", label: "After Character" },
-  { value: "bottom", label: "Bottom" },
-  { value: "depth", label: "Depth" },
-  { value: "greeting", label: "Greeting" },
+const POSITIONS: { value: WorldEntry["position"]; label: string; hint: string }[] = [
+  { value: "top", label: "Top", hint: "System instructions, main prompt" },
+  { value: "before_char", label: "Before Character", hint: "World info before char definition" },
+  { value: "character", label: "Character", hint: "Description + personality" },
+  { value: "after_char", label: "After Character", hint: "Scenario, supplementary lore" },
+  { value: "persona", label: "Persona", hint: "User persona / self-description" },
+  { value: "bottom", label: "Bottom", hint: "Format instructions, author's notes" },
+  { value: "depth", label: "Depth", hint: "Injected N messages from end" },
+  { value: "greeting", label: "Greeting", hint: "First assistant message" },
+  { value: "post_history", label: "Post-History", hint: "After all chat (jailbreak)" },
 ];
 
 const ROLE_FILTER_TABS = [

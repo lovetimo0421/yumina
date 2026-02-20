@@ -108,7 +108,7 @@ export interface WorldEntry {
   name: string;
   content: string;
   role: "system" | "character" | "personality" | "scenario" | "lore" | "plot" | "style" | "example" | "greeting" | "custom";
-  position: "top" | "before_char" | "character" | "after_char" | "bottom" | "depth" | "greeting";
+  position: "top" | "before_char" | "character" | "after_char" | "persona" | "bottom" | "depth" | "greeting" | "post_history";
   /** For position="depth" only — number of messages from the end to inject */
   depth?: number;
   /** Within same position, lower = earlier */
@@ -157,6 +157,11 @@ export interface WorldDefinition {
 export interface WorldSettings {
   maxTokens: number;
   temperature: number;
+  topP?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  topK?: number;
+  minP?: number;
   /** @deprecated Use an entry with role="system" + position="top" */
   systemPrompt?: string;
   /** @deprecated Use an entry with role="greeting" + position="greeting" */

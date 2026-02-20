@@ -3,6 +3,11 @@ export interface GenerateParams {
   messages: Array<{ role: "user" | "assistant" | "system"; content: string }>;
   maxTokens?: number;
   temperature?: number;
+  topP?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  topK?: number;
+  minP?: number;
   stream?: boolean;
   /** Request JSON structured output from the model */
   responseFormat?: { type: "json_object" };
