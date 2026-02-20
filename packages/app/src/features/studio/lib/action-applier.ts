@@ -175,6 +175,7 @@ export function applyStudioActions(actions: StudioAction[]): string {
               priority: (d.priority as number) ?? 0,
               position: (d.position as "before" | "after") ?? "after",
               enabled: d.enabled !== false,
+              alwaysSend: d.alwaysSend === true,
             });
           }
           summaries.push(`Added lorebook entry "${d.name}"`);

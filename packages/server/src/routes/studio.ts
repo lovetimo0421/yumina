@@ -167,7 +167,7 @@ Available action types:
 - addAudioTrack: { id, name, type: "bgm"|"sfx"|"ambient", url, loop?, volume? }
 - updateAudioTrack: { id, ...fieldsToUpdate }
 - removeAudioTrack: { id }
-- addLorebookEntry: { id, name, type: "character"|"lore"|"plot"|"style"|"custom", content, keywords, priority?, position?, enabled? }
+- addLorebookEntry: { id, name, type: "character"|"lore"|"plot"|"style"|"custom", content, keywords, priority?, position?, enabled?, alwaysSend? }
 - updateLorebookEntry: { id, ...fieldsToUpdate }
 - removeLorebookEntry: { id }
 - addCustomComponent: { id, name, tsxCode, description? }

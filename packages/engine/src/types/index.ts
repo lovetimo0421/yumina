@@ -98,6 +98,8 @@ export interface LorebookEntry {
   priority: number;
   position: "before" | "after";
   enabled: boolean;
+  /** Always inject this entry regardless of keyword/condition triggers */
+  alwaysSend: boolean;
 }
 
 /** A custom TSX component created by the AI or user */
@@ -136,6 +138,10 @@ export interface WorldSettings {
   greeting: string;
   /** Enable JSON structured output mode (default false, uses regex parsing) */
   structuredOutput?: boolean;
+  /** Max total tokens for triggered lorebook entries (default 2048) */
+  lorebookTokenBudget?: number;
+  /** Number of recent messages to scan for keyword matches (default 10) */
+  lorebookScanDepth?: number;
 }
 
 /** Runtime game state during a play session */

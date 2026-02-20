@@ -81,6 +81,7 @@ export const lorebookEntrySchema = z.object({
   priority: z.number().int().default(0),
   position: z.enum(["before", "after"]).default("after"),
   enabled: z.boolean().default(true),
+  alwaysSend: z.boolean().default(false),
 });
 
 export const customComponentSchema = z.object({
@@ -99,6 +100,8 @@ export const worldSettingsSchema = z.object({
   systemPrompt: z.string().default(""),
   greeting: z.string().default(""),
   structuredOutput: z.boolean().optional().default(false),
+  lorebookTokenBudget: z.number().int().positive().optional().default(2048),
+  lorebookScanDepth: z.number().int().positive().optional().default(10),
 });
 
 export const worldDefinitionSchema = z.object({

@@ -1,36 +1,103 @@
 import type { LorebookEntry, Condition, GameState } from "../types/index.js";
 
+/** Rough token estimate: 1 token ≈ 4 characters */
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+export interface LorebookMatchResult {
+  /** Entries that always inject (alwaysSend=true), not subject to token budget */
+  alwaysSend: LorebookEntry[];
+  /** Entries matched by keyword/condition, trimmed to fit token budget */
+  triggered: LorebookEntry[];
+  /** Total estimated tokens used by triggered entries */
+  triggeredTokens: number;
+}
+
 /**
  * Matches lorebook entries against recent messages and game state.
- * Reuses the same condition evaluation logic as RulesEngine.
+ * Splits results into always-send (unbounded) and triggered (token-budgeted).
  */
 export class LorebookMatcher {
+  /**
+   * Full match with token budgeting.
+   * @param entries All lorebook entries for this world
+   * @param recentMessages Recent message texts to scan for keywords
+   * @param state Current game state for condition evaluation
+   * @param tokenBudget Max tokens for triggered entries (default 2048)
+   */
+  matchWithBudget(
+    entries: LorebookEntry[],
+    recentMessages: string[],
+    state: GameState,
+    tokenBudget = 2048
+  ): LorebookMatchResult {
+    const combinedText = recentMessages.join(" ").toLowerCase();
+
+    const alwaysSend: LorebookEntry[] = [];
+    const triggered: LorebookEntry[] = [];
+
+    for (const entry of entries) {
+      if (!entry.enabled) continue;
+
+      // Always-send entries bypass keyword/condition checks
+      if (entry.alwaysSend) {
+        alwaysSend.push(entry);
+        continue;
+      }
+
+      // Keyword matching
+      const keywordMatch =
+        entry.keywords.length === 0 ||
+        entry.keywords.some((kw) => combinedText.includes(kw.toLowerCase()));
+
+      if (!keywordMatch) continue;
+
+      // Condition check
+      if (
+        entry.conditions.length > 0 &&
+        !this.checkConditions(state, entry.conditions, entry.conditionLogic)
+      ) {
+        continue;
+      }
+
+      triggered.push(entry);
+    }
+
+    // Sort triggered by priority (highest first)
+    triggered.sort((a, b) => b.priority - a.priority);
+
+    // Apply token budget — fill from highest priority down
+    const budgeted: LorebookEntry[] = [];
+    let usedTokens = 0;
+
+    for (const entry of triggered) {
+      const entryTokens = estimateTokens(entry.content);
+      if (usedTokens + entryTokens > tokenBudget && budgeted.length > 0) {
+        break;
+      }
+      budgeted.push(entry);
+      usedTokens += entryTokens;
+    }
+
+    return {
+      alwaysSend,
+      triggered: budgeted,
+      triggeredTokens: usedTokens,
+    };
+  }
+
+  /**
+   * Legacy match method — returns flat array (always-send + triggered combined).
+   * Used for backwards compatibility with existing callers.
+   */
   match(
     entries: LorebookEntry[],
     recentMessages: string[],
     state: GameState
   ): LorebookEntry[] {
-    const combinedText = recentMessages.join(" ").toLowerCase();
-
-    const matched = entries.filter((entry) => {
-      if (!entry.enabled) return false;
-
-      const keywordMatch =
-        entry.keywords.length === 0 ||
-        entry.keywords.some((kw) => combinedText.includes(kw.toLowerCase()));
-
-      if (!keywordMatch) return false;
-
-      if (entry.conditions.length === 0) return true;
-
-      return this.checkConditions(
-        state,
-        entry.conditions,
-        entry.conditionLogic
-      );
-    });
-
-    return matched.sort((a, b) => b.priority - a.priority);
+    const result = this.matchWithBudget(entries, recentMessages, state);
+    return [...result.alwaysSend, ...result.triggered];
   }
 
   private checkConditions(

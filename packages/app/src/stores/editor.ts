@@ -248,6 +248,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           systemPrompt: schema.settings?.systemPrompt ?? "",
           greeting: schema.settings?.greeting ?? "",
           structuredOutput: schema.settings?.structuredOutput ?? false,
+          lorebookTokenBudget: schema.settings?.lorebookTokenBudget ?? 2048,
+          lorebookScanDepth: schema.settings?.lorebookScanDepth ?? 10,
         },
       };
       set({
@@ -472,6 +474,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         priority: 0,
         position: "after",
         enabled: true,
+        alwaysSend: false,
       };
       const draft = {
         ...s.worldDraft,

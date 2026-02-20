@@ -163,13 +163,17 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     .where(eq(messages.sessionId, sessionId))
     .orderBy(messages.createdAt);
 
-  // Match lorebook entries against recent messages
-  const recentTexts = historyRows.slice(-10).map((m) => m.content);
-  const matchedEntries = lorebookMatcher.match(
+  // Match lorebook entries with token budgeting
+  const scanDepth = worldDef.settings?.lorebookScanDepth ?? 10;
+  const tokenBudget = worldDef.settings?.lorebookTokenBudget ?? 2048;
+  const recentTexts = historyRows.slice(-scanDepth).map((m) => m.content);
+  const lorebookResult = lorebookMatcher.matchWithBudget(
     worldDef.lorebookEntries ?? [],
     recentTexts,
-    snapshot
+    snapshot,
+    tokenBudget
   );
+  const matchedEntries = [...lorebookResult.alwaysSend, ...lorebookResult.triggered];
 
   const systemPrompt = useStructured
     ? promptBuilder.buildStructuredSystemPrompt(worldDef, activeChar, snapshot, matchedEntries)
@@ -473,13 +477,17 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
   const msgIndex = historyRows.findIndex((m) => m.id === messageId);
   const priorMessages = historyRows.slice(0, msgIndex);
 
-  // Match lorebook entries against recent prior messages
-  const recentTexts = priorMessages.slice(-10).map((m) => m.content);
-  const matchedEntries = lorebookMatcher.match(
+  // Match lorebook entries with token budgeting
+  const scanDepth = worldDef.settings?.lorebookScanDepth ?? 10;
+  const tokenBudget = worldDef.settings?.lorebookTokenBudget ?? 2048;
+  const recentTexts = priorMessages.slice(-scanDepth).map((m) => m.content);
+  const lorebookResult = lorebookMatcher.matchWithBudget(
     worldDef.lorebookEntries ?? [],
     recentTexts,
-    snapshot
+    snapshot,
+    tokenBudget
   );
+  const matchedEntries = [...lorebookResult.alwaysSend, ...lorebookResult.triggered];
 
   const systemPrompt = useStructured
     ? promptBuilder.buildStructuredSystemPrompt(worldDef, activeChar, snapshot, matchedEntries)

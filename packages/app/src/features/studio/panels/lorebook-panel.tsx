@@ -181,6 +181,11 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
             <span className="flex-1 text-left text-xs text-foreground">
               {entry.name}
             </span>
+            {entry.alwaysSend && (
+              <span className="rounded bg-primary/10 px-1 py-0.5 text-[10px] text-primary">
+                ALWAYS
+              </span>
+            )}
             <span
               className={`rounded px-1 py-0.5 text-[10px] ${
                 entry.enabled
@@ -280,20 +285,41 @@ function EntriesTab({ type }: { type: LorebookEntry["type"] }) {
                 </div>
               </div>
 
-              {/* Enabled toggle */}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={entry.enabled}
-                  onChange={(e) =>
-                    updateLorebookEntry(entry.id, {
-                      enabled: e.target.checked,
-                    })
-                  }
-                  className="accent-primary"
-                />
-                <span className="text-xs text-foreground">Enabled</span>
-              </label>
+              {/* Toggles */}
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={entry.enabled}
+                    onChange={(e) =>
+                      updateLorebookEntry(entry.id, {
+                        enabled: e.target.checked,
+                      })
+                    }
+                    className="accent-primary"
+                  />
+                  <span className="text-xs text-foreground">Enabled</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={entry.alwaysSend ?? false}
+                    onChange={(e) =>
+                      updateLorebookEntry(entry.id, {
+                        alwaysSend: e.target.checked,
+                      })
+                    }
+                    className="accent-primary"
+                  />
+                  <span className="text-xs text-foreground">Always Send</span>
+                </label>
+              </div>
+              {entry.alwaysSend && (
+                <p className="text-[10px] text-muted-foreground/60">
+                  This entry is always injected into the prompt, regardless of
+                  keywords or conditions. Not subject to token budget.
+                </p>
+              )}
             </div>
           )}
         </div>
