@@ -3,7 +3,7 @@ import { useChatStore } from "@/stores/chat";
 import { SessionHeader } from "./session-header";
 import { MessageList } from "./message-list";
 import { MessageInput } from "./message-input";
-import { StatePanel } from "./state-panel";
+import { GamePanel } from "./game-panel";
 
 interface ChatViewProps {
   sessionId: string;
@@ -37,7 +37,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       </div>
 
       {/* Game state sidebar */}
-      <StatePanel />
+      <GamePanel />
     </div>
   );
 }

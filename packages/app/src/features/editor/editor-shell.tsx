@@ -7,6 +7,7 @@ import {
   BookOpen,
   Users,
   Variable,
+  LayoutGrid,
   Cog,
   ScrollText,
   Play,
@@ -16,6 +17,7 @@ import { useEditorStore, type EditorSection } from "@/stores/editor";
 import { OverviewSection } from "./sections/overview";
 import { CharactersSection } from "./sections/characters";
 import { VariablesSection } from "./sections/variables";
+import { ComponentsSection } from "./sections/components";
 import { RulesSection } from "./sections/rules";
 import { SettingsSection } from "./sections/settings";
 import { PreviewSection } from "./sections/preview";
@@ -25,6 +27,7 @@ const SECTIONS: { id: EditorSection; label: string; icon: typeof BookOpen }[] =
     { id: "overview", label: "Overview", icon: BookOpen },
     { id: "characters", label: "Characters", icon: Users },
     { id: "variables", label: "Variables", icon: Variable },
+    { id: "components", label: "Components", icon: LayoutGrid },
     { id: "rules", label: "Rules", icon: ScrollText },
     { id: "settings", label: "Settings", icon: Cog },
     { id: "preview", label: "Preview", icon: Play },
@@ -34,6 +37,7 @@ const SECTION_COMPONENTS: Record<EditorSection, React.FC> = {
   overview: OverviewSection,
   characters: CharactersSection,
   variables: VariablesSection,
+  components: ComponentsSection,
   rules: RulesSection,
   settings: SettingsSection,
   preview: PreviewSection,

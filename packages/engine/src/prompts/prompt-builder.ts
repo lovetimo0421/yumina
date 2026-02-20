@@ -46,6 +46,57 @@ export class PromptBuilder {
     return parts.join("\n\n");
   }
 
+  /**
+   * Build system prompt for structured (JSON) output mode.
+   * Same context as buildSystemPrompt but instructs the model to respond in JSON format.
+   */
+  buildStructuredSystemPrompt(
+    world: WorldDefinition,
+    character: Character,
+    state: GameState
+  ): string {
+    const parts: string[] = [];
+
+    if (world.settings.systemPrompt) {
+      parts.push(this.interpolate(world.settings.systemPrompt, state));
+    }
+
+    parts.push(`You are ${character.name}. ${character.description}`);
+
+    if (character.systemPrompt) {
+      parts.push(this.interpolate(character.systemPrompt, state));
+    }
+
+    const varSummary = this.buildVariableSummary(world, state);
+    if (varSummary) {
+      parts.push(`Current game state:\n${varSummary}`);
+    }
+
+    // JSON format instructions
+    parts.push(
+      'You MUST respond with a JSON object in this exact format:\n' +
+      '{\n' +
+      '  "narrative": "Your in-character response text here",\n' +
+      '  "stateChanges": [{"variableId": "id", "operation": "set|add|subtract|multiply|toggle|append", "value": ...}],\n' +
+      '  "choices": ["Choice 1", "Choice 2"]\n' +
+      '}\n\n' +
+      'Rules:\n' +
+      '- "narrative" is REQUIRED — your in-character roleplay response\n' +
+      '- "stateChanges" is optional — only include when game variables should change\n' +
+      '- "choices" is optional — include when you want to present the player with 2-4 choices\n' +
+      '- Respond ONLY with the JSON object, no other text'
+    );
+
+    if (world.variables.length > 0) {
+      const varList = world.variables
+        .map((v) => `  - ${v.id} (${v.type}): ${v.description || v.name}`)
+        .join("\n");
+      parts.push(`Available variables you can modify:\n${varList}`);
+    }
+
+    return parts.join("\n\n");
+  }
+
   buildMessageHistory(
     messages: ChatMessage[],
     maxTokens?: number

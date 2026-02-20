@@ -11,6 +11,7 @@ import {
   RulesEngine,
   PromptBuilder,
   ResponseParser,
+  StructuredResponseParser,
 } from "@yumina/engine";
 import type { WorldDefinition, GameState } from "@yumina/engine";
 import type { AppEnv } from "../lib/types.js";
@@ -22,6 +23,7 @@ messageRoutes.use("/*", authMiddleware);
 const rulesEngine = new RulesEngine();
 const promptBuilder = new PromptBuilder();
 const responseParser = new ResponseParser();
+const structuredParser = new StructuredResponseParser();
 
 // Helper: get user's active API key for a provider
 async function getUserApiKey(userId: string, provider = "openrouter") {
@@ -143,11 +145,12 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     return c.json({ error: "No character defined in world" }, 400);
   }
 
-  const systemPrompt = promptBuilder.buildSystemPrompt(
-    worldDef,
-    activeChar,
-    stateManager.getSnapshot()
-  );
+  const useStructured = worldDef.settings?.structuredOutput === true;
+  const snapshot = stateManager.getSnapshot();
+
+  const systemPrompt = useStructured
+    ? promptBuilder.buildStructuredSystemPrompt(worldDef, activeChar, snapshot)
+    : promptBuilder.buildSystemPrompt(worldDef, activeChar, snapshot);
 
   // Load message history
   const historyRows = await db
@@ -180,6 +183,9 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
         messages: chatMessages,
         maxTokens: worldDef.settings?.maxTokens ?? 2048,
         temperature: worldDef.settings?.temperature ?? 0.8,
+        ...(useStructured && {
+          responseFormat: { type: "json_object" as const },
+        }),
       })) {
         if (chunk.type === "text") {
           fullContent += chunk.content;
@@ -200,9 +206,29 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
         if (chunk.type === "done") {
           const generationTimeMs = Date.now() - startTime;
 
-          // Parse response for state changes
-          const parsed = responseParser.parse(fullContent);
-          const changes = stateManager.applyEffects(parsed.effects);
+          // Parse response — structured JSON or regex fallback
+          let cleanText: string;
+          let effects: import("@yumina/engine").Effect[];
+          let choices: string[] = [];
+
+          if (useStructured) {
+            const result = structuredParser.parse(fullContent);
+            cleanText = result.cleanText;
+            effects = result.effects;
+            choices = result.choices;
+            // If structured parse returned raw text (JSON failed), fall back to regex
+            if (effects.length === 0 && result.cleanText === fullContent) {
+              const regexResult = responseParser.parse(fullContent);
+              cleanText = regexResult.cleanText;
+              effects = regexResult.effects;
+            }
+          } else {
+            const result = responseParser.parse(fullContent);
+            cleanText = result.cleanText;
+            effects = result.effects;
+          }
+
+          const changes = stateManager.applyEffects(effects);
 
           // Evaluate rules
           const ruleEffects = rulesEngine.evaluate(
@@ -220,7 +246,7 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
             .values({
               sessionId,
               role: "assistant",
-              content: parsed.cleanText,
+              content: cleanText,
               stateChanges:
                 allChanges.length > 0
                   ? (allChanges as unknown as Record<string, unknown>)
@@ -230,7 +256,7 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
               generationTimeMs,
               swipes: [
                 {
-                  content: parsed.cleanText,
+                  content: cleanText,
                   stateChanges:
                     allChanges.length > 0
                       ? (allChanges as unknown as Record<string, unknown>)
@@ -264,6 +290,7 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
               state: finalState,
               tokenCount: chunk.usage?.totalTokens ?? null,
               generationTimeMs,
+              choices,
             }),
           });
         }
@@ -397,6 +424,8 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
   const model = body.model ?? "openai/gpt-4o-mini";
 
   const stateManager = new GameStateManager(worldDef, gameState);
+  const useStructured = worldDef.settings?.structuredOutput === true;
+  const snapshot = stateManager.getSnapshot();
 
   const activeChar =
     worldDef.characters.find(
@@ -407,11 +436,9 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
     return c.json({ error: "No character defined" }, 400);
   }
 
-  const systemPrompt = promptBuilder.buildSystemPrompt(
-    worldDef,
-    activeChar,
-    stateManager.getSnapshot()
-  );
+  const systemPrompt = useStructured
+    ? promptBuilder.buildStructuredSystemPrompt(worldDef, activeChar, snapshot)
+    : promptBuilder.buildSystemPrompt(worldDef, activeChar, snapshot);
 
   // Get messages up to (but not including) the one being regenerated
   const historyRows = await db
@@ -446,6 +473,9 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
         messages: chatMessages,
         maxTokens: worldDef.settings?.maxTokens ?? 2048,
         temperature: worldDef.settings?.temperature ?? 0.8,
+        ...(useStructured && {
+          responseFormat: { type: "json_object" as const },
+        }),
       })) {
         if (chunk.type === "text") {
           fullContent += chunk.content;
@@ -465,8 +495,29 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
 
         if (chunk.type === "done") {
           const generationTimeMs = Date.now() - startTime;
-          const parsed = responseParser.parse(fullContent);
-          const changes = stateManager.applyEffects(parsed.effects);
+
+          // Parse response — structured JSON or regex fallback
+          let cleanText: string;
+          let effects: import("@yumina/engine").Effect[];
+          let choices: string[] = [];
+
+          if (useStructured) {
+            const result = structuredParser.parse(fullContent);
+            cleanText = result.cleanText;
+            effects = result.effects;
+            choices = result.choices;
+            if (effects.length === 0 && result.cleanText === fullContent) {
+              const regexResult = responseParser.parse(fullContent);
+              cleanText = regexResult.cleanText;
+              effects = regexResult.effects;
+            }
+          } else {
+            const result = responseParser.parse(fullContent);
+            cleanText = result.cleanText;
+            effects = result.effects;
+          }
+
+          const changes = stateManager.applyEffects(effects);
           const ruleEffects = rulesEngine.evaluate(
             stateManager.getSnapshot(),
             worldDef.rules
@@ -484,7 +535,7 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
             tokenCount?: number;
           }>;
           const newSwipe = {
-            content: parsed.cleanText,
+            content: cleanText,
             stateChanges:
               allChanges.length > 0
                 ? (allChanges as unknown as Record<string, unknown>)
@@ -498,7 +549,7 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
           await db
             .update(messages)
             .set({
-              content: parsed.cleanText,
+              content: cleanText,
               stateChanges:
                 allChanges.length > 0
                   ? (allChanges as unknown as Record<string, unknown>)
@@ -530,6 +581,7 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
               totalSwipes: updatedSwipes.length,
               tokenCount: chunk.usage?.totalTokens ?? null,
               generationTimeMs,
+              choices,
             }),
           });
         }

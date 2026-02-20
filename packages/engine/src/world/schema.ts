@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { gameComponentSchema as _gameComponentSchema } from "./component-schemas.js";
 
 export const variableSchema = z.object({
   id: z.string(),
@@ -48,18 +49,14 @@ export const characterSchema = z.object({
   variables: z.array(variableSchema),
 });
 
-export const componentSchema = z.object({
-  id: z.string(),
-  type: z.string(),
-  name: z.string().min(1),
-  config: z.record(z.unknown()),
-});
+export { gameComponentSchema } from "./component-schemas.js";
 
 export const worldSettingsSchema = z.object({
   maxTokens: z.number().int().positive().default(2048),
   temperature: z.number().min(0).max(2).default(0.8),
   systemPrompt: z.string().default(""),
   greeting: z.string().default(""),
+  structuredOutput: z.boolean().optional().default(false),
 });
 
 export const worldDefinitionSchema = z.object({
@@ -71,7 +68,7 @@ export const worldDefinitionSchema = z.object({
   variables: z.array(variableSchema).default([]),
   rules: z.array(ruleSchema).default([]),
   characters: z.array(characterSchema).default([]),
-  components: z.array(componentSchema).default([]),
+  components: z.array(_gameComponentSchema).default([]),
   settings: worldSettingsSchema,
 });
 

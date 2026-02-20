@@ -4,6 +4,8 @@ export interface GenerateParams {
   maxTokens?: number;
   temperature?: number;
   stream?: boolean;
+  /** Request JSON structured output from the model */
+  responseFormat?: { type: "json_object" };
 }
 
 export interface StreamChunk {

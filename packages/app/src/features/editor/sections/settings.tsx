@@ -104,6 +104,26 @@ export function SettingsSection() {
           </p>
         </div>
 
+        {/* Structured Output */}
+        <div>
+          <label className="flex items-center gap-2.5 text-sm font-medium text-foreground">
+            <input
+              type="checkbox"
+              checked={settings.structuredOutput ?? false}
+              onChange={(e) =>
+                setSettings("structuredOutput", e.target.checked)
+              }
+              className="rounded"
+            />
+            Structured Output (JSON mode)
+          </label>
+          <p className="mt-1.5 ml-6 text-xs text-muted-foreground/40">
+            When enabled, the AI responds in JSON format for more reliable state
+            changes and choice lists. Falls back to regex parsing if the model
+            doesn't support it. Works best with GPT-4o, Claude, and Gemini.
+          </p>
+        </div>
+
         {/* Temperature */}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-foreground">

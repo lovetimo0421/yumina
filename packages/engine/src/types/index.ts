@@ -44,13 +44,26 @@ export interface Character {
   variables: Variable[];
 }
 
-/** A component in the world (reusable building block) */
-export interface Component {
-  id: string;
-  type: string;
-  name: string;
-  config: Record<string, unknown>;
-}
+// Re-export component types
+export type {
+  ComponentType,
+  GameComponent,
+  StatBarComponent,
+  TextDisplayComponent,
+  ChoiceListComponent,
+  ImagePanelComponent,
+  InventoryGridComponent,
+  ToggleSwitchComponent,
+  StatBarConfig,
+  TextDisplayConfig,
+  ChoiceListConfig,
+  ImagePanelConfig,
+  InventoryGridConfig,
+  ToggleSwitchConfig,
+  ComponentTypeMeta,
+} from "./components.js";
+
+export { COMPONENT_TYPE_META } from "./components.js";
 
 /** The full World definition — the complete game package */
 export interface WorldDefinition {
@@ -62,7 +75,7 @@ export interface WorldDefinition {
   variables: Variable[];
   rules: Rule[];
   characters: Character[];
-  components: Component[];
+  components: import("./components.js").GameComponent[];
   settings: WorldSettings;
 }
 
@@ -72,6 +85,8 @@ export interface WorldSettings {
   temperature: number;
   systemPrompt: string;
   greeting: string;
+  /** Enable JSON structured output mode (default false, uses regex parsing) */
+  structuredOutput?: boolean;
 }
 
 /** Runtime game state during a play session */

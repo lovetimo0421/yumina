@@ -4,6 +4,7 @@ import type {
   Variable,
   Character,
   Rule,
+  GameComponent,
 } from "@yumina/engine";
 
 const apiBase = import.meta.env.VITE_API_URL || "";
@@ -27,6 +28,7 @@ function createEmptyWorld(): WorldDefinition {
       temperature: 0.8,
       systemPrompt: "",
       greeting: "",
+      structuredOutput: false,
     },
   };
 }
@@ -35,6 +37,7 @@ export type EditorSection =
   | "overview"
   | "characters"
   | "variables"
+  | "components"
   | "rules"
   | "settings"
   | "preview";
@@ -56,7 +59,7 @@ interface EditorState {
   ) => void;
   setSettings: (
     key: keyof WorldDefinition["settings"],
-    value: string | number
+    value: string | number | boolean
   ) => void;
 
   // Character actions
@@ -68,6 +71,12 @@ interface EditorState {
   addVariable: () => void;
   updateVariable: (id: string, updates: Partial<Variable>) => void;
   removeVariable: (id: string) => void;
+
+  // Component actions
+  addComponent: (type?: GameComponent["type"]) => void;
+  updateComponent: (id: string, updates: Partial<GameComponent>) => void;
+  removeComponent: (id: string) => void;
+  reorderComponents: (componentIds: string[]) => void;
 
   // Rule actions
   addRule: () => void;
@@ -139,6 +148,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           temperature: schema.settings?.temperature ?? 0.8,
           systemPrompt: schema.settings?.systemPrompt ?? "",
           greeting: schema.settings?.greeting ?? "",
+          structuredOutput: schema.settings?.structuredOutput ?? false,
         },
       };
       set({
@@ -253,6 +263,64 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...s.worldDraft,
         variables: s.worldDraft.variables.filter((v) => v.id !== id),
       };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  addComponent: (type = "stat-bar" as GameComponent["type"]) => {
+    set((s) => {
+      const newComp: GameComponent = {
+        id: crypto.randomUUID(),
+        type,
+        name: "New Component",
+        order: s.worldDraft.components.length,
+        visible: true,
+        config: { variableId: "" },
+      } as GameComponent;
+      const draft = {
+        ...s.worldDraft,
+        components: [...s.worldDraft.components, newComp],
+      };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  updateComponent: (id, updates) => {
+    set((s) => {
+      const draft = {
+        ...s.worldDraft,
+        components: s.worldDraft.components.map((c) =>
+          c.id === id ? { ...c, ...updates } as GameComponent : c
+        ),
+      };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  removeComponent: (id) => {
+    set((s) => {
+      const draft = {
+        ...s.worldDraft,
+        components: s.worldDraft.components.filter((c) => c.id !== id),
+      };
+      scheduleDraftSave(draft, s.serverWorldId);
+      return { worldDraft: draft, isDirty: true };
+    });
+  },
+
+  reorderComponents: (componentIds) => {
+    set((s) => {
+      const compMap = new Map(s.worldDraft.components.map((c) => [c.id, c]));
+      const reordered = componentIds
+        .map((id, i) => {
+          const comp = compMap.get(id);
+          return comp ? { ...comp, order: i } : null;
+        })
+        .filter(Boolean) as GameComponent[];
+      const draft = { ...s.worldDraft, components: reordered };
       scheduleDraftSave(draft, s.serverWorldId);
       return { worldDraft: draft, isDirty: true };
     });

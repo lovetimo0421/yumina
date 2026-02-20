@@ -1,12 +1,19 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Send, Square, Plus } from "lucide-react";
+import { Send, Square, Plus, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chat";
 import { ModelSelector } from "./model-selector";
 
 export function MessageInput() {
   const [content, setContent] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { sendMessage, stopGeneration, isStreaming } = useChatStore();
+  const {
+    sendMessage,
+    stopGeneration,
+    isStreaming,
+    pendingChoices,
+    clearPendingChoices,
+  } = useChatStore();
 
   const handleSend = useCallback(() => {
     const trimmed = content.trim();
@@ -17,6 +24,15 @@ export function MessageInput() {
       textareaRef.current.style.height = "auto";
     }
   }, [content, isStreaming, sendMessage]);
+
+  const handleChoiceClick = useCallback(
+    (choice: string) => {
+      if (isStreaming) return;
+      sendMessage(choice);
+      setContent("");
+    },
+    [isStreaming, sendMessage]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -35,6 +51,31 @@ export function MessageInput() {
   return (
     <div className="shrink-0 px-4 pb-4 pt-2">
       <div className="mx-auto max-w-3xl">
+        {/* Choice buttons */}
+        {pendingChoices.length > 0 && !isStreaming && (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            {pendingChoices.map((choice, i) => (
+              <button
+                key={i}
+                onClick={() => handleChoiceClick(choice)}
+                className={cn(
+                  "rounded-lg border border-border/50 bg-accent px-3 py-1.5 text-xs font-medium text-foreground/80",
+                  "transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
+                )}
+              >
+                {choice}
+              </button>
+            ))}
+            <button
+              onClick={clearPendingChoices}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/30 transition-colors hover:text-muted-foreground/60"
+              title="Dismiss choices"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
         {/* Glass reply bar card */}
         <div className="glass overflow-hidden rounded-2xl">
           {/* Textarea — full width */}
@@ -46,7 +87,9 @@ export function MessageInput() {
             placeholder={
               isStreaming
                 ? "Generating..."
-                : "Type whatever you want to do in this world!"
+                : pendingChoices.length > 0
+                  ? "Pick a choice above, or type your own action..."
+                  : "Type whatever you want to do in this world!"
             }
             disabled={isStreaming}
             rows={1}

@@ -89,7 +89,46 @@ Guidelines:
       variables: [],
     },
   ],
-  components: [],
+  components: [
+    {
+      id: "health-bar",
+      type: "stat-bar",
+      name: "Health",
+      order: 0,
+      visible: true,
+      config: {
+        variableId: "health",
+        color: "hsl(0, 72%, 51%)",
+        showValue: true,
+        showLabel: true,
+      },
+    },
+    {
+      id: "gold-bar",
+      type: "stat-bar",
+      name: "Gold",
+      order: 1,
+      visible: true,
+      config: {
+        variableId: "gold",
+        color: "hsl(45, 93%, 47%)",
+        showValue: true,
+        showLabel: true,
+      },
+    },
+    {
+      id: "reputation-display",
+      type: "text-display",
+      name: "Reputation",
+      order: 2,
+      visible: true,
+      config: {
+        variableId: "reputation",
+        format: "Reputation: {{value}}",
+        fontSize: "sm",
+      },
+    },
+  ],
   settings: {
     maxTokens: 2048,
     temperature: 0.8,

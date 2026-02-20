@@ -24,6 +24,9 @@ export class OpenRouterProvider implements LLMProvider {
         max_tokens: params.maxTokens,
         temperature: params.temperature,
         stream: true,
+        ...(params.responseFormat && {
+          response_format: { type: params.responseFormat.type },
+        }),
       }),
     });
 

@@ -56,6 +56,9 @@ interface ChatState {
   // Recent state changes for notifications
   recentStateChanges: StateChange[];
 
+  // AI-provided choices
+  pendingChoices: string[];
+
   // Model selection
   selectedModel: string;
 
@@ -72,6 +75,8 @@ interface ChatState {
   stopGeneration: () => void;
   addRecentStateChange: (change: StateChange) => void;
   clearRecentStateChanges: () => void;
+  setPendingChoices: (choices: string[]) => void;
+  clearPendingChoices: () => void;
 
   // Load session data from API
   loadSession: (sessionId: string) => Promise<void>;
@@ -88,6 +93,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamStartTime: null,
   abortController: null,
   recentStateChanges: [],
+  pendingChoices: [],
   selectedModel: "anthropic/claude-sonnet-4",
 
   setSession: (session) => set({ session }),
@@ -142,6 +148,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isStreaming: true,
       streamingContent: "",
       streamStartTime: Date.now(),
+      pendingChoices: [],
     });
 
     const controller = connectSSE(
@@ -196,6 +203,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
               for (const change of changes) {
                 get().addRecentStateChange(change);
               }
+            }
+
+            // Extract AI-provided choices
+            const choices = data.choices as string[] | undefined;
+            if (choices && Array.isArray(choices) && choices.length > 0) {
+              get().setPendingChoices(choices);
             }
 
             set((s) => ({
@@ -275,6 +288,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 get().addRecentStateChange(change);
               }
             }
+
+            const choices = data.choices as string[] | undefined;
+            if (choices && Array.isArray(choices) && choices.length > 0) {
+              get().setPendingChoices(choices);
+            }
           },
           onError: (error) => {
             console.error("Regeneration error:", error);
@@ -311,4 +329,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     })),
 
   clearRecentStateChanges: () => set({ recentStateChanges: [] }),
+
+  setPendingChoices: (choices) => set({ pendingChoices: choices }),
+  clearPendingChoices: () => set({ pendingChoices: [] }),
 }));
