@@ -12,6 +12,7 @@ import { apiKeyRoutes } from "./routes/api-keys.js";
 import { sessionRoutes } from "./routes/sessions.js";
 import { messageRoutes } from "./routes/messages.js";
 import { studioRoutes } from "./routes/studio.js";
+import { assetRoutes } from "./routes/assets.js";
 
 const app = new Hono();
 
@@ -27,6 +28,7 @@ app.route("/api/keys", apiKeyRoutes);
 app.route("/api/sessions", sessionRoutes);
 app.route("/api", messageRoutes);
 app.route("/api/studio", studioRoutes);
+app.route("/api", assetRoutes);
 
 // Serve static frontend in production
 if (process.env.NODE_ENV === "production") {

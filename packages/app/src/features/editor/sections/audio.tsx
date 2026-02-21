@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
-import { Plus, Trash2, Music, Play, Square } from "lucide-react";
+import { Plus, Trash2, Music, Play, Square, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editor";
+import { AssetPicker } from "../asset-picker";
 import type { AudioTrack } from "@yumina/engine";
 
 const TRACK_TYPES: { value: AudioTrack["type"]; label: string; color: string }[] = [
@@ -11,7 +12,7 @@ const TRACK_TYPES: { value: AudioTrack["type"]; label: string; color: string }[]
 ];
 
 export function AudioSection() {
-  const { worldDraft, addAudioTrack, updateAudioTrack, removeAudioTrack } =
+  const { worldDraft, serverWorldId, addAudioTrack, updateAudioTrack, removeAudioTrack } =
     useEditorStore();
   const audioTracks = worldDraft.audioTracks ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -19,6 +20,7 @@ export function AudioSection() {
   );
   const previewRef = useRef<HTMLAudioElement | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
 
   const selected = audioTracks.find((t) => t.id === selectedId);
 
@@ -152,9 +154,18 @@ export function AudioSection() {
                     type="text"
                     value={selected.url}
                     onChange={(e) => updateAudioTrack(selected.id, { url: e.target.value })}
-                    placeholder="https://example.com/audio.mp3"
+                    placeholder="https://example.com/audio.mp3 or @asset:id"
                     className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-2 focus:ring-ring"
                   />
+                  {serverWorldId && (
+                    <button
+                      onClick={() => setShowPicker(true)}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-accent"
+                      title="Browse uploaded assets"
+                    >
+                      <FolderOpen className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                   {selected.url && (
                     <button
                       onClick={() => togglePreview(selected.url, selected.id)}
@@ -238,6 +249,17 @@ export function AudioSection() {
             </div>
           )}
         </div>
+      )}
+      {showPicker && serverWorldId && selected && (
+        <AssetPicker
+          worldId={serverWorldId}
+          filterType="audio"
+          onSelect={(ref) => {
+            updateAudioTrack(selected.id, { url: ref });
+            setShowPicker(false);
+          }}
+          onClose={() => setShowPicker(false)}
+        />
       )}
     </div>
   );

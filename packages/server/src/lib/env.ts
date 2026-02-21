@@ -14,6 +14,12 @@ const envSchema = z.object({
   APP_URL: z.string().url().default("http://localhost:5173"),
   PORT: z.coerce.number().default(3000),
   SENTRY_DSN: z.string().default(""),
+  // S3-compatible storage (Railway Storage Buckets)
+  AWS_S3_BUCKET_NAME: z.string().default(""),
+  AWS_ACCESS_KEY_ID: z.string().default(""),
+  AWS_SECRET_ACCESS_KEY: z.string().default(""),
+  AWS_ENDPOINT_URL: z.string().default("https://t3.storageapi.dev"),
+  AWS_DEFAULT_REGION: z.string().default("sjc"),
 });
 
 const parsed = envSchema.safeParse(process.env);

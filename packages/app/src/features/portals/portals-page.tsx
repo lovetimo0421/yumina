@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "@tanstack/react-router";
 import {
   Play,
@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Eye,
   EyeOff,
+  Camera,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useWorldsStore, type WorldItem } from "@/stores/worlds";
@@ -307,6 +308,9 @@ function ProfileCard({
   onDelete: () => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [uploadingThumb, setUploadingThumb] = useState(false);
+  const [thumbUrl, setThumbUrl] = useState<string | null>(world.thumbnailUrl ?? null);
+  const thumbInputRef = useRef<HTMLInputElement>(null);
   const schema = world.schema as Record<string, unknown>;
   const entries = (schema.entries ?? []) as Array<{
     position?: string;
@@ -336,9 +340,75 @@ function ProfileCard({
         <div className="flex-1 overflow-y-auto">
           {/* Header — avatar + name */}
           <div className="flex flex-col items-center px-6 pt-8 pb-4">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-primary/40 bg-gradient-to-br from-primary/20 to-primary/5 text-3xl font-bold text-primary/60">
-              {(world.name || "W")[0]?.toUpperCase()}
-            </div>
+            {/* Clickable avatar for thumbnail upload */}
+            <button
+              onClick={() => thumbInputRef.current?.click()}
+              disabled={uploadingThumb}
+              className="group relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-primary/40 bg-gradient-to-br from-primary/20 to-primary/5 text-3xl font-bold text-primary/60"
+              title="Click to upload thumbnail"
+            >
+              {thumbUrl ? (
+                <img src={thumbUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                (world.name || "W")[0]?.toUpperCase()
+              )}
+              {/* Upload overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                {uploadingThumb ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                ) : (
+                  <Camera className="h-5 w-5 text-white" />
+                )}
+              </div>
+            </button>
+            <input
+              ref={thumbInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                e.target.value = "";
+                setUploadingThumb(true);
+                try {
+                  // 1. Get presigned upload URL
+                  const urlRes = await fetch(`${apiBase}/api/worlds/${world.id}/thumbnail`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ filename: file.name, contentType: file.type }),
+                  });
+                  if (!urlRes.ok) { toast.error("Failed to get upload URL"); return; }
+                  const { data: urlData } = await urlRes.json();
+
+                  // 2. Upload directly to S3
+                  const uploadRes = await fetch(urlData.uploadUrl, {
+                    method: "PUT",
+                    headers: { "Content-Type": file.type },
+                    body: file,
+                  });
+                  if (!uploadRes.ok) { toast.error("Upload failed"); return; }
+
+                  // 3. Confirm with server
+                  const confirmRes = await fetch(`${apiBase}/api/worlds/${world.id}/thumbnail/confirm`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ key: urlData.key }),
+                  });
+                  if (!confirmRes.ok) { toast.error("Failed to save thumbnail"); return; }
+                  const { data: confirmData } = await confirmRes.json();
+
+                  setThumbUrl(confirmData.thumbnailUrl);
+                  toast.success("Thumbnail updated!");
+                } catch {
+                  toast.error("Thumbnail upload failed");
+                } finally {
+                  setUploadingThumb(false);
+                }
+              }}
+            />
 
             <h2 className="mt-4 text-lg font-semibold text-foreground">
               {world.name || "Untitled"}

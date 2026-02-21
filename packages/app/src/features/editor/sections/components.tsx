@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Plus, Trash2, LayoutGrid, ChevronDown, Settings2 } from "lucide-react";
+import { Plus, Trash2, LayoutGrid, ChevronDown, Settings2, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editor";
+import { AssetPicker } from "../asset-picker";
 import {
   COMPONENT_TYPE_META,
   type GameComponent,
@@ -16,6 +17,7 @@ const COMPONENT_TYPES = Object.entries(COMPONENT_TYPE_META) as [
 export function ComponentsSection() {
   const {
     worldDraft,
+    serverWorldId,
     addComponent,
     updateComponent,
     removeComponent,
@@ -28,6 +30,7 @@ export function ComponentsSection() {
   const [selectedId, setSelectedId] = useState<string | null>(
     worldDraft.components[0]?.id ?? null
   );
+  const [assetPickerForTransform, setAssetPickerForTransform] = useState<string | null>(null);
 
   const selected = worldDraft.components.find((c) => c.id === selectedId);
 
@@ -340,9 +343,21 @@ export function ComponentsSection() {
                           →
                         </div>
                         <div>
-                          <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">
-                            Replacement (HTML ok)
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">
+                              Replacement (HTML ok)
+                            </label>
+                            {serverWorldId && (
+                              <button
+                                onClick={() => setAssetPickerForTransform(t.id)}
+                                className="flex items-center gap-1 text-[10px] text-primary/60 hover:text-primary"
+                                title="Insert asset reference"
+                              >
+                                <FolderOpen className="h-3 w-3" />
+                                Insert Asset
+                              </button>
+                            )}
+                          </div>
                           <input
                             type="text"
                             value={t.replacement}
@@ -375,6 +390,24 @@ export function ComponentsSection() {
           </div>
         </div>
       </details>
+
+      {/* Asset Picker for display transforms */}
+      {assetPickerForTransform && serverWorldId && (
+        <AssetPicker
+          worldId={serverWorldId}
+          filterType="image"
+          onSelect={(ref) => {
+            const t = displayTransforms.find((dt) => dt.id === assetPickerForTransform);
+            if (t) {
+              updateDisplayTransform(t.id, {
+                replacement: t.replacement + ref,
+              });
+            }
+            setAssetPickerForTransform(null);
+          }}
+          onClose={() => setAssetPickerForTransform(null)}
+        />
+      )}
     </div>
   );
 }

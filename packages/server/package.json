@@ -21,6 +21,8 @@
     "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.995.0",
+    "@aws-sdk/s3-request-presigner": "^3.995.0",
     "@hono/node-server": "^1",
     "@yumina/engine": "workspace:*",
     "@yumina/shared": "workspace:*",

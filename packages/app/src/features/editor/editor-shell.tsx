@@ -12,6 +12,7 @@ import {
   Play,
   Wand2,
   ChevronDown,
+  FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEditorStore, type EditorSection } from "@/stores/editor";
@@ -21,6 +22,7 @@ import { ComponentsSection } from "./sections/components";
 import { AudioSection } from "./sections/audio";
 import { RulesSection } from "./sections/rules";
 import { PreviewSection } from "./sections/preview";
+import { AssetsSection } from "./sections/assets";
 
 const SECTIONS: { id: EditorSection; label: string; icon: typeof FileText }[] =
   [
@@ -28,6 +30,7 @@ const SECTIONS: { id: EditorSection; label: string; icon: typeof FileText }[] =
     { id: "variables", label: "Variables", icon: Variable },
     { id: "components", label: "Components", icon: LayoutGrid },
     { id: "audio", label: "Audio", icon: Music },
+    { id: "assets", label: "Assets", icon: FolderOpen },
     { id: "rules", label: "Rules", icon: ScrollText },
     { id: "preview", label: "Preview", icon: Play },
   ];
@@ -37,6 +40,7 @@ const SECTION_COMPONENTS: Record<EditorSection, React.FC> = {
   variables: VariablesSection,
   components: ComponentsSection,
   audio: AudioSection,
+  assets: AssetsSection,
   rules: RulesSection,
   preview: PreviewSection,
 };

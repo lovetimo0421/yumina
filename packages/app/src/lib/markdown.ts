@@ -89,6 +89,26 @@ export function renderMarkdown(text: string): string {
   return renderMessage(text);
 }
 
+/**
+ * Pre-resolve @asset:{id} references in display transform replacements.
+ * Call this once when session loads, cache the result.
+ * Returns a new transforms array with @asset: refs replaced by presigned URLs.
+ */
+export async function resolveTransformAssets(
+  transforms: DisplayTransform[],
+): Promise<DisplayTransform[]> {
+  const hasAssetRef = transforms.some((t) => t.replacement.includes("@asset:"));
+  if (!hasAssetRef) return transforms;
+
+  const { resolveAssetRefs } = await import("./asset-url");
+  return Promise.all(
+    transforms.map(async (t) => {
+      if (!t.replacement.includes("@asset:")) return t;
+      return { ...t, replacement: await resolveAssetRefs(t.replacement) };
+    }),
+  );
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")

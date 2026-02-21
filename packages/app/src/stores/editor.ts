@@ -68,6 +68,7 @@ export type EditorSection =
   | "variables"
   | "components"
   | "audio"
+  | "assets"
   | "rules"
   | "preview";
 

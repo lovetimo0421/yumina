@@ -4,6 +4,7 @@ import { db } from "../db/index.js";
 import { worlds, user, playSessions, messages } from "../db/schema.js";
 import { GameStateManager, PromptBuilder, migrateWorldDefinition } from "@yumina/engine";
 import type { WorldDefinition } from "@yumina/engine";
+import { isS3Configured, generateDownloadUrl } from "../lib/s3.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { createWorldSchema, updateWorldSchema } from "@yumina/shared";
 import type { AppEnv } from "../lib/types.js";
@@ -11,6 +12,16 @@ import type { AppEnv } from "../lib/types.js";
 const worldRoutes = new Hono<AppEnv>();
 
 worldRoutes.use("/*", authMiddleware);
+
+/** Resolve thumbnailUrl: if it's an S3 key, generate a presigned URL */
+async function resolveThumbnail(url: string | null): Promise<string | null> {
+  if (!url || url.startsWith("http") || !isS3Configured()) return url;
+  try {
+    return await generateDownloadUrl(url);
+  } catch {
+    return url;
+  }
+}
 
 // GET /api/worlds — list user's worlds + published worlds
 worldRoutes.get("/", async (c) => {
@@ -70,7 +81,15 @@ worldRoutes.get("/hub", async (c) => {
     .orderBy(orderBy)
     .limit(50);
 
-  return c.json({ data: result });
+  // Resolve S3 thumbnail keys to presigned URLs
+  const resolved = await Promise.all(
+    result.map(async (w) => ({
+      ...w,
+      thumbnailUrl: await resolveThumbnail(w.thumbnailUrl),
+    }))
+  );
+
+  return c.json({ data: resolved });
 });
 
 // GET /api/worlds/:id — get a single world
@@ -82,7 +101,10 @@ worldRoutes.get("/:id", async (c) => {
     return c.json({ error: "World not found" }, 404);
   }
 
-  return c.json({ data: result[0] });
+  const world = result[0]!;
+  world.thumbnailUrl = await resolveThumbnail(world.thumbnailUrl);
+
+  return c.json({ data: world });
 });
 
 // POST /api/worlds

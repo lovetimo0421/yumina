@@ -73,7 +73,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     }
   },
 
-  playTrack: (id, opts) => {
+  playTrack: async (id, opts) => {
     const state = get();
     const track = state.tracks.find((t) => t.id === id);
     if (!track) return;
@@ -85,7 +85,16 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       existing.audio.src = "";
     }
 
-    const audio = new Audio(track.url);
+    // Resolve @asset: references to presigned URLs
+    let url = track.url;
+    if (url.startsWith("@asset:")) {
+      try {
+        const { resolveAssetUrl } = await import("@/lib/asset-url");
+        url = await resolveAssetUrl(url);
+      } catch { /* use raw url */ }
+    }
+
+    const audio = new Audio(url);
     const targetVolume = opts?.volume ?? track.volume ?? 1;
     const fadeDuration = opts?.fadeDuration ?? track.fadeIn ?? 0;
     const shouldLoop = track.loop ?? (track.type === "bgm" || track.type === "ambient");
