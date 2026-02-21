@@ -41,20 +41,19 @@ export function renderMessage(
   // ── 2. Escape HTML in remaining text ───────────────────────────────
   html = escapeHtml(html);
 
-  // ── 3. Built-in markdown ───────────────────────────────────────────
+  // ── 3. Built-in markdown (bold, italic — NO line breaks yet) ──────
   // Bold + italic: ***...***
   html = html.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
   // Bold: **...**
   html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   // Italic: *...*
   html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<em>$1</em>");
-  // Line breaks
-  html = html.replace(/\n/g, "<br />");
 
   // ── 4. Restore code blocks ─────────────────────────────────────────
   html = html.replace(/\x00CB(\d+)\x00/g, (_match, idx) => codeBlocks[Number(idx)] ?? "");
 
   // ── 5. World-defined display transforms ────────────────────────────
+  // Transforms run BEFORE \n→<br/> so multiline patterns (^$, m flag) work
   const sorted = transforms
     .filter((t) => t.enabled)
     .sort((a, b) => a.order - b.order);
@@ -67,6 +66,9 @@ export function renderMessage(
       // skip invalid regex
     }
   }
+
+  // ── 5.5. Line breaks (after transforms so multiline patterns work) ─
+  html = html.replace(/\n/g, "<br />");
 
   // ── 6. Sanitize ────────────────────────────────────────────────────
   html = DOMPurify.sanitize(html, {

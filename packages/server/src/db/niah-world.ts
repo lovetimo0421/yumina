@@ -799,20 +799,17 @@ After the tag, describe what the player sees through the narrow peephole: face, 
 
 *"The first confirmed Visitor identification trait: some individuals have teeth that are excessively perfect and uniform, inconsistent with normal human tooth wear patterns. Stay vigilant. This is your FEMA. Stay safe."*
 
-The TV screen flickers a few times, then goes dark.
+📺 The TV screen flickers a few times, then goes dark.
 
-You are alone in this single-story house. The Hallway connects all rooms — exiting the bedroom and going clockwise:
-🚿 Bathroom → 🛋️ Living Room → 🛏️ Bedroom → 💼 Office → 🍳 Kitchen → 📦 Storage Room
+You are alone in this single-story house. The **Hallway** connects all rooms — exiting the bedroom and going clockwise:
+🚿 **Bathroom** → 🛋️ **Living Room** → 🛏️ **Bedroom** → 💼 **Office** → 🍳 **Kitchen** → 📦 **Storage Room**
 
-The front door has a Peephole. There is a handgun in the Storage Room. The kitchen fridge holds a can of EnerJeka energy drink and a bottle of Bober Černý dark beer. The Office has a telephone. The Bathroom has a mirror.
+The front door has a **Peephole**. There is a **handgun** in the Storage Room. The kitchen fridge holds a can of **EnerJeka** energy drink and a bottle of **Bober Černý** dark beer. The Office has a **telephone**. The Bathroom has a **mirror**.
 
 ---
-⚡ **Energy: 3/3**
-❤️ **HP: 3**
-🔫 Armed
-📋 FEMA Notice: 0
+⚡ **Energy: 3/3** | ❤️ **HP: 3** | 🔫 Armed | 📋 FEMA Notice: 0
 📰 **Known Visitor Traits:** Excessively perfect teeth
-🏠 All rooms empty
+🏠 **All Rooms: Empty**
 ---
 
 Night has fully fallen. Dead silence outside.
@@ -840,7 +837,7 @@ C. Refuse to open the door, tell her to leave
 D. Carefully observe her appearance through the peephole
 E. Other — type anything you want to do
 
-<sum>Night 1 begins. TV news reveals first Visitor trait: excessively perfect teeth. First knocker: Sarah Chen (HUMAN — convenience store cashier). Tonight's knockers: Sarah (H), then Jake Morrison (V).</sum>
+<sum>Night 1 begins. TV news reveals first Visitor trait: excessively perfect teeth. First knocker: Sarah Chen (HUMAN — convenience store cashier). Tonight's knockers: Sarah (H), Jefray Ding (H), then Jake Morrison (V).</sum>
 
 [phase: set "night"]
 [day: set 1]
