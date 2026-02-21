@@ -45,7 +45,8 @@ COPY --from=build /app/packages/server/drizzle.config.ts packages/server/
 COPY --from=build /app/packages/server/src/db/schema.ts packages/server/src/db/schema.ts
 
 ENV NODE_ENV=production
+WORKDIR /app/packages/server
 EXPOSE 3000
 
 # Start the server
-CMD ["node", "packages/server/dist/index.js"]
+CMD ["node", "dist/index.js"]
