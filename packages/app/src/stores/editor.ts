@@ -290,6 +290,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           structuredOutput: schema.settings?.structuredOutput ?? false,
           lorebookScanDepth: schema.settings?.lorebookScanDepth ?? 2,
           lorebookRecursionDepth: schema.settings?.lorebookRecursionDepth ?? 0,
+          layoutMode: schema.settings?.layoutMode,
+          uiMode: schema.settings?.uiMode,
         },
       };
 
