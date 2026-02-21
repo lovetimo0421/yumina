@@ -59,7 +59,6 @@ export function applyStudioActions(actions: StudioAction[]): string {
               role,
               position,
               depth: d.depth as number | undefined,
-              insertionOrder: (d.insertionOrder as number) ?? newest.insertionOrder,
               alwaysSend: d.alwaysSend === true,
               keywords: (d.keywords as string[]) ?? [],
               priority: (d.priority as number) ?? 0,

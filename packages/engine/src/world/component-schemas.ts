@@ -42,6 +42,23 @@ export const toggleSwitchConfigSchema = z.object({
   color: z.string().optional(),
 });
 
+export const formFieldConfigSchema = z.object({
+  id: z.string(),
+  label: z.string().min(1),
+  type: z.enum(["text", "number", "select", "textarea", "toggle"]),
+  placeholder: z.string().optional(),
+  options: z.array(z.string()).optional(),
+  required: z.boolean().optional(),
+  defaultValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
+});
+
+export const formConfigSchema = z.object({
+  fields: z.array(formFieldConfigSchema).default([]),
+  submitLabel: z.string().optional(),
+  messageTemplate: z.string().optional(),
+  hideAfterSubmit: z.boolean().optional(),
+});
+
 // ── Base fields shared by all components ──
 
 const baseComponentFields = {
@@ -89,6 +106,12 @@ const toggleSwitchComponentSchema = z.object({
   config: toggleSwitchConfigSchema,
 });
 
+const formComponentSchema = z.object({
+  ...baseComponentFields,
+  type: z.literal("form"),
+  config: formConfigSchema,
+});
+
 // ── Discriminated union schema ──
 
 export const gameComponentSchema = z.discriminatedUnion("type", [
@@ -98,4 +121,5 @@ export const gameComponentSchema = z.discriminatedUnion("type", [
   imagePanelComponentSchema,
   inventoryGridComponentSchema,
   toggleSwitchComponentSchema,
+  formComponentSchema,
 ]);

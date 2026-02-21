@@ -75,12 +75,15 @@ export type {
   ImagePanelComponent,
   InventoryGridComponent,
   ToggleSwitchComponent,
+  FormComponent,
   StatBarConfig,
   TextDisplayConfig,
   ChoiceListConfig,
   ImagePanelConfig,
   InventoryGridConfig,
   ToggleSwitchConfig,
+  FormConfig,
+  FormFieldConfig,
   ComponentTypeMeta,
 } from "./components.js";
 
@@ -111,12 +114,11 @@ export interface WorldEntry {
   position: "top" | "before_char" | "character" | "after_char" | "persona" | "bottom" | "depth" | "greeting" | "post_history";
   /** For position="depth" only — number of messages from the end to inject */
   depth?: number;
-  /** Within same position, lower = earlier */
-  insertionOrder: number;
   alwaysSend: boolean;
   keywords: string[];
   conditions: Condition[];
   conditionLogic: "all" | "any";
+  /** Higher priority = placed earlier within position slot */
   priority: number;
   enabled: boolean;
   /** Match keywords as whole words only (default false — substring matching) */
@@ -127,12 +129,25 @@ export interface WorldEntry {
   secondaryKeywords?: string[];
   /** Logic for secondary keywords (default "AND_ANY") */
   secondaryKeywordLogic?: "AND_ANY" | "AND_ALL" | "NOT_ANY" | "NOT_ALL";
-  /** Group name — entries sharing a group compete, highest score wins (default "" — no group) */
-  group?: string;
   /** If true, this entry's content won't trigger other entries during recursion (default false) */
   preventRecursion?: boolean;
   /** If true, this entry won't be triggered during recursion scans (default false) */
   excludeRecursion?: boolean;
+}
+
+/** A regex display transform applied to message content before rendering */
+export interface DisplayTransform {
+  id: string;
+  name: string;
+  /** Regex pattern (applied to raw message text) */
+  pattern: string;
+  /** Replacement string — can include HTML + $1/$2 captures */
+  replacement: string;
+  /** Regex flags (default "g") */
+  flags?: string;
+  /** Lower runs first */
+  order: number;
+  enabled: boolean;
 }
 
 /** A custom TSX component created by the AI or user */
@@ -164,6 +179,7 @@ export interface WorldDefinition {
   /** @deprecated Use entries instead */
   lorebookEntries?: LorebookEntry[];
   customComponents: CustomComponent[];
+  displayTransforms: DisplayTransform[];
   settings: WorldSettings;
 }
 
@@ -188,14 +204,16 @@ export interface WorldSettings {
   structuredOutput?: boolean;
   /** @deprecated Use lorebookBudgetPercent instead */
   lorebookTokenBudget?: number;
-  /** Percentage of maxContext for triggered entry budget (default 100) */
+  /** @deprecated Token budgets removed — all triggered entries are included */
   lorebookBudgetPercent?: number;
-  /** Hard cap on lorebook budget in tokens (default 0 = no cap) */
+  /** @deprecated Token budgets removed — all triggered entries are included */
   lorebookBudgetCap?: number;
   /** Number of recent messages to scan for keyword matches (default 2) */
   lorebookScanDepth?: number;
   /** Max recursion depth for cascading entry triggers. 0 = disabled (default 0). Range 0-10. */
   lorebookRecursionDepth?: number;
+  /** Game panel layout mode (default "split") */
+  layoutMode?: "split" | "game-focus" | "immersive";
 }
 
 /** Runtime game state during a play session */

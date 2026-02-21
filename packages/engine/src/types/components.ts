@@ -5,7 +5,8 @@ export type ComponentType =
   | "choice-list"
   | "image-panel"
   | "inventory-grid"
-  | "toggle-switch";
+  | "toggle-switch"
+  | "form";
 
 // ── Per-type config interfaces ──
 
@@ -59,6 +60,27 @@ export interface ToggleSwitchConfig {
   color?: string;
 }
 
+export interface FormFieldConfig {
+  id: string;
+  label: string;
+  type: "text" | "number" | "select" | "textarea" | "toggle";
+  placeholder?: string;
+  /** Options for "select" type fields */
+  options?: string[];
+  required?: boolean;
+  defaultValue?: string | number | boolean;
+}
+
+export interface FormConfig {
+  fields: FormFieldConfig[];
+  /** Button text (default "Submit") */
+  submitLabel?: string;
+  /** Template for the user message. Use {{fieldId}} to interpolate field values. */
+  messageTemplate?: string;
+  /** Hide the form after successful submission (default true) */
+  hideAfterSubmit?: boolean;
+}
+
 // ── Discriminated union ──
 
 interface BaseComponent {
@@ -100,13 +122,19 @@ export interface ToggleSwitchComponent extends BaseComponent {
   config: ToggleSwitchConfig;
 }
 
+export interface FormComponent extends BaseComponent {
+  type: "form";
+  config: FormConfig;
+}
+
 export type GameComponent =
   | StatBarComponent
   | TextDisplayComponent
   | ChoiceListComponent
   | ImagePanelComponent
   | InventoryGridComponent
-  | ToggleSwitchComponent;
+  | ToggleSwitchComponent
+  | FormComponent;
 
 // ── Metadata for the editor ──
 
@@ -146,5 +174,10 @@ export const COMPONENT_TYPE_META: Record<ComponentType, ComponentTypeMeta> = {
     label: "Toggle Switch",
     description: "On/off indicator bound to a boolean variable",
     compatibleVariableTypes: ["boolean"],
+  },
+  form: {
+    label: "Form",
+    description: "Interactive form that collects user input and sends it as a message",
+    compatibleVariableTypes: ["string", "number", "boolean"],
   },
 };

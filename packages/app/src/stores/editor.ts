@@ -7,8 +7,11 @@ import type {
   AudioTrack,
   WorldEntry,
   CustomComponent,
+  DisplayTransform,
 } from "@yumina/engine";
 import { migrateWorldDefinition } from "@yumina/engine";
+import type { VariablePresetPack } from "@/lib/variable-presets";
+import type { WorldTemplate } from "@/lib/world-templates";
 
 const apiBase = import.meta.env.VITE_API_URL || "";
 
@@ -19,7 +22,7 @@ const MAX_HISTORY = 50;
 function createEmptyWorld(): WorldDefinition {
   return {
     id: crypto.randomUUID(),
-    version: "2.0.0",
+    version: "3.0.0",
     name: "",
     description: "",
     author: "",
@@ -30,7 +33,6 @@ function createEmptyWorld(): WorldDefinition {
         content: "Write {{char}}'s next reply in a fictional chat between {{char}} and {{user}}.",
         role: "system",
         position: "top",
-        insertionOrder: 0,
         alwaysSend: true,
         keywords: [],
         conditions: [],
@@ -44,6 +46,7 @@ function createEmptyWorld(): WorldDefinition {
     components: [],
     audioTracks: [],
     customComponents: [],
+    displayTransforms: [],
     settings: {
       maxTokens: 12000,
       maxContext: 200000,
@@ -53,8 +56,6 @@ function createEmptyWorld(): WorldDefinition {
       presencePenalty: 0,
       playerName: "User",
       structuredOutput: false,
-      lorebookBudgetPercent: 100,
-      lorebookBudgetCap: 0,
       lorebookScanDepth: 2,
       lorebookRecursionDepth: 0,
     },
@@ -109,6 +110,7 @@ interface EditorState {
   addVariable: () => void;
   updateVariable: (id: string, updates: Partial<Variable>) => void;
   removeVariable: (id: string) => void;
+  importVariablePack: (pack: VariablePresetPack) => void;
 
   // Component actions
   addComponent: (type?: GameComponent["type"]) => void;
@@ -126,11 +128,20 @@ interface EditorState {
   updateCustomComponent: (id: string, updates: Partial<CustomComponent>) => void;
   removeCustomComponent: (id: string) => void;
 
+  // Display transform actions
+  addDisplayTransform: () => void;
+  updateDisplayTransform: (id: string, updates: Partial<DisplayTransform>) => void;
+  removeDisplayTransform: (id: string) => void;
+
   // Rule actions
   addRule: () => void;
   updateRule: (id: string, updates: Partial<Rule>) => void;
   removeRule: (id: string) => void;
   reorderRules: (ruleIds: string[]) => void;
+
+  // Templates & import
+  loadTemplate: (template: WorldTemplate) => void;
+  loadWorldDefinition: (def: WorldDefinition) => void;
 
   // Save
   saveDraft: () => Promise<void>;
@@ -263,6 +274,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         audioTracks: schema.audioTracks || [],
         lorebookEntries: schema.lorebookEntries,
         customComponents: schema.customComponents || [],
+        displayTransforms: schema.displayTransforms || [],
         settings: {
           maxTokens: schema.settings?.maxTokens ?? 12000,
           maxContext: schema.settings?.maxContext ?? 200000,
@@ -276,9 +288,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           systemPrompt: schema.settings?.systemPrompt,
           greeting: schema.settings?.greeting,
           structuredOutput: schema.settings?.structuredOutput ?? false,
-          lorebookTokenBudget: schema.settings?.lorebookTokenBudget,
-          lorebookBudgetPercent: schema.settings?.lorebookBudgetPercent ?? 100,
-          lorebookBudgetCap: schema.settings?.lorebookBudgetCap ?? 0,
           lorebookScanDepth: schema.settings?.lorebookScanDepth ?? 2,
           lorebookRecursionDepth: schema.settings?.lorebookRecursionDepth ?? 0,
         },
@@ -322,17 +331,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   addEntry: (role = "custom", position = "after_char") => {
     set((s) => {
-      const maxOrder = s.worldDraft.entries.reduce(
-        (max, e) => Math.max(max, e.insertionOrder),
-        -1
-      );
       const newEntry: WorldEntry = {
         id: crypto.randomUUID(),
         name: "New Entry",
         content: "",
         role,
         position,
-        insertionOrder: maxOrder + 1,
         alwaysSend: false,
         keywords: [],
         conditions: [],
@@ -343,7 +347,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         useFuzzyMatch: false,
         secondaryKeywords: [],
         secondaryKeywordLogic: "AND_ANY",
-        group: "",
         preventRecursion: false,
         excludeRecursion: false,
       };
@@ -425,6 +428,25 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const draft = {
         ...s.worldDraft,
         variables: s.worldDraft.variables.filter((v) => v.id !== id),
+      };
+      return commitDraft(s, draft);
+    });
+  },
+
+  importVariablePack: (pack) => {
+    set((s) => {
+      const existingIds = new Set(s.worldDraft.variables.map((v) => v.id));
+      const newVars = pack.variables.filter((v) => !existingIds.has(v.id));
+      const startOrder = s.worldDraft.components.length;
+      const newComps = pack.components.map((c, i) => ({
+        ...c,
+        id: crypto.randomUUID(),
+        order: startOrder + i,
+      })) as GameComponent[];
+      const draft = {
+        ...s.worldDraft,
+        variables: [...s.worldDraft.variables, ...newVars],
+        components: [...s.worldDraft.components, ...newComps],
       };
       return commitDraft(s, draft);
     });
@@ -571,6 +593,47 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
+  addDisplayTransform: () => {
+    set((s) => {
+      const newTransform: DisplayTransform = {
+        id: crypto.randomUUID(),
+        name: "New Transform",
+        pattern: "",
+        replacement: "",
+        flags: "g",
+        order: s.worldDraft.displayTransforms.length,
+        enabled: true,
+      };
+      const draft = {
+        ...s.worldDraft,
+        displayTransforms: [...s.worldDraft.displayTransforms, newTransform],
+      };
+      return commitDraft(s, draft);
+    });
+  },
+
+  updateDisplayTransform: (id, updates) => {
+    set((s) => {
+      const draft = {
+        ...s.worldDraft,
+        displayTransforms: s.worldDraft.displayTransforms.map((t) =>
+          t.id === id ? { ...t, ...updates } : t
+        ),
+      };
+      return commitDraft(s, draft);
+    });
+  },
+
+  removeDisplayTransform: (id) => {
+    set((s) => {
+      const draft = {
+        ...s.worldDraft,
+        displayTransforms: s.worldDraft.displayTransforms.filter((t) => t.id !== id),
+      };
+      return commitDraft(s, draft);
+    });
+  },
+
   addRule: () => {
     set((s) => {
       const newRule: Rule = {
@@ -624,6 +687,35 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const draft = { ...s.worldDraft, rules: reordered };
       return commitDraft(s, draft);
     });
+  },
+
+  loadTemplate: (template) => {
+    const draft = template.build();
+    set({
+      worldDraft: draft,
+      serverWorldId: null,
+      isDirty: true,
+      activeSection: "overview",
+      _past: [],
+      _future: [],
+      canUndo: false,
+      canRedo: false,
+    });
+    localStorage.removeItem(DRAFT_KEY);
+  },
+
+  loadWorldDefinition: (def) => {
+    set({
+      worldDraft: def,
+      serverWorldId: null,
+      isDirty: true,
+      activeSection: "overview",
+      _past: [],
+      _future: [],
+      canUndo: false,
+      canRedo: false,
+    });
+    localStorage.removeItem(DRAFT_KEY);
   },
 
   saveDraft: async () => {

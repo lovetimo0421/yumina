@@ -31,14 +31,14 @@ export class LorebookMatcher {
    * @param entries All entries for this world (filters out greeting/disabled internally)
    * @param recentMessages Recent message texts to scan for keywords
    * @param state Current game state for condition evaluation
-   * @param tokenBudget Max tokens for triggered entries (default 2048)
+   * @param tokenBudget Max tokens for triggered entries (default Infinity — include all)
    * @param settings Optional world settings (for recursion depth)
    */
   matchWithBudget(
     entries: WorldEntry[],
     recentMessages: string[],
     state: GameState,
-    tokenBudget = 2048,
+    tokenBudget = Infinity,
     settings?: Partial<Pick<WorldSettings, "lorebookRecursionDepth">>
   ): LorebookMatchResult {
     const recursionDepth = Math.min(
@@ -160,35 +160,8 @@ export class LorebookMatcher {
       }
     }
 
-    // 3. GROUP RESOLUTION
-    const ungrouped: ScoredEntry[] = [];
-    const groups = new Map<string, ScoredEntry[]>();
-
-    for (const scored of scoredEntries) {
-      const group = scored.entry.group;
-      if (!group) {
-        ungrouped.push(scored);
-      } else {
-        const arr = groups.get(group);
-        if (arr) {
-          arr.push(scored);
-        } else {
-          groups.set(group, [scored]);
-        }
-      }
-    }
-
-    // Pick winner from each group: highest score, tiebreak by priority
-    const resolved: ScoredEntry[] = [...ungrouped];
-    for (const members of groups.values()) {
-      members.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return b.entry.priority - a.entry.priority;
-      });
-      resolved.push(members[0]!);
-    }
-
-    // 4. SORT: priority desc, then score desc
+    // 3. SORT: priority desc, then score desc
+    const resolved = scoredEntries;
     resolved.sort((a, b) => {
       if (b.entry.priority !== a.entry.priority) {
         return b.entry.priority - a.entry.priority;
@@ -196,7 +169,7 @@ export class LorebookMatcher {
       return b.score - a.score;
     });
 
-    // 5. BUDGET: fill from top until token budget exhausted
+    // 4. BUDGET: fill from top until token budget exhausted
     const budgeted: WorldEntry[] = [];
     let usedTokens = 0;
 

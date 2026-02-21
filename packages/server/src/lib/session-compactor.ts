@@ -1,4 +1,4 @@
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and, inArray } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { messages, playSessions } from "../db/schema.js";
 import { createProvider, inferProvider } from "./llm/provider-factory.js";
@@ -61,11 +61,11 @@ export async function compactSessionIfNeeded(
 
   const session = sessionRows[0]!;
 
-  // Load all messages
+  // Load only non-compacted messages
   const allMessages = await db
     .select()
     .from(messages)
-    .where(eq(messages.sessionId, sessionId))
+    .where(and(eq(messages.sessionId, sessionId), eq(messages.compacted, false)))
     .orderBy(asc(messages.createdAt));
 
   if (allMessages.length <= KEEP_RECENT_MESSAGES) {
@@ -128,10 +128,12 @@ export async function compactSessionIfNeeded(
       return { compacted: false };
     }
 
-    // Delete the old messages from DB by ID
-    for (const msg of toSummarize) {
-      await db.delete(messages).where(eq(messages.id, msg.id));
-    }
+    // Mark old messages as compacted (soft-delete — still visible in UI)
+    const compactIds = toSummarize.map((m) => m.id);
+    await db
+      .update(messages)
+      .set({ compacted: true })
+      .where(inArray(messages.id, compactIds));
 
     // Update session with new summary
     await db

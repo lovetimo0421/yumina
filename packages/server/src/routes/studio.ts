@@ -157,7 +157,7 @@ Available action types:
 - addVariable: { id, name, type: "number"|"string"|"boolean", defaultValue, description?, min?, max? }
 - updateVariable: { id, ...fieldsToUpdate }
 - removeVariable: { id }
-- addEntry: { id, name, content, role: "system"|"character"|"personality"|"scenario"|"lore"|"plot"|"style"|"example"|"greeting"|"custom", position: "top"|"before_char"|"character"|"after_char"|"persona"|"bottom"|"depth"|"greeting"|"post_history", depth?, insertionOrder?, alwaysSend?, keywords?, conditions?, conditionLogic?, priority?, enabled? }
+- addEntry: { id, name, content, role: "system"|"character"|"personality"|"scenario"|"lore"|"plot"|"style"|"example"|"greeting"|"custom", position: "top"|"before_char"|"character"|"after_char"|"persona"|"bottom"|"depth"|"greeting"|"post_history", depth?, alwaysSend?, keywords?, conditions?, conditionLogic?, priority?, enabled? }
 - updateEntry: { id, ...fieldsToUpdate }
 - removeEntry: { id }
 - addRule: { id, name, description?, conditions, conditionLogic, effects, priority }
@@ -184,6 +184,11 @@ Entry position slots (in prompt order):
 - "depth": Dynamic context injected N messages from end (requires depth field)
 - "greeting": First assistant message only (not in system prompt)
 - "post_history": After all chat history — jailbreak / post-history instructions
+
+Macros (automatically resolved in entry content):
+- {{char}} — replaced with the name of the first enabled character entry
+- {{user}} — replaced with playerName from settings (default "User")
+- {{variableId}} — replaced with the current value of a game variable
 
 Rules:
 - "message" is REQUIRED — explain what you did in plain language

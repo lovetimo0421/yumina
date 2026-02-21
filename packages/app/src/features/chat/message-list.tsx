@@ -1,16 +1,27 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useChatStore } from "@/stores/chat";
 import { MessageBubble } from "./message-bubble";
 import { MessageActions } from "./message-actions";
 import { SwipeControls } from "./swipe-controls";
+import type { WorldDefinition, DisplayTransform } from "@yumina/engine";
 
 export function MessageList() {
-  const { messages, isStreaming, streamingContent } = useChatStore();
+  const { messages, isStreaming, streamingContent, session } = useChatStore();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [compactedExpanded, setCompactedExpanded] = useState(false);
+
+  const displayTransforms = useMemo<DisplayTransform[]>(() => {
+    const worldDef = session?.world?.schema as unknown as WorldDefinition | undefined;
+    return worldDef?.displayTransforms ?? [];
+  }, [session?.world?.schema]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, streamingContent]);
+
+  // Split messages into compacted and active
+  const compactedMessages = messages.filter((m) => m.compacted);
+  const activeMessages = messages.filter((m) => !m.compacted);
 
   if (messages.length === 0 && !isStreaming) {
     return (
@@ -24,8 +35,27 @@ export function MessageList() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      {messages.map((message) => (
-        <MessageBubble key={message.id} message={message}>
+      {/* Compacted messages section */}
+      {compactedMessages.length > 0 && (
+        <div className="border-b border-border">
+          <button
+            onClick={() => setCompactedExpanded(!compactedExpanded)}
+            className="w-full px-4 py-2 text-center text-xs text-muted-foreground/50 hover:text-muted-foreground/70 transition-colors"
+          >
+            {compactedExpanded ? "Hide" : "Show"} {compactedMessages.length} earlier messages (summarized)
+          </button>
+          {compactedExpanded && (
+            <div className="opacity-50">
+              {compactedMessages.map((message) => (
+                <MessageBubble key={message.id} message={message} dimmed displayTransforms={displayTransforms} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeMessages.map((message) => (
+        <MessageBubble key={message.id} message={message} displayTransforms={displayTransforms}>
           <MessageActions message={message} />
           {message.role === "assistant" && (
             <SwipeControls message={message} />
@@ -44,6 +74,7 @@ export function MessageList() {
           }}
           isStreaming
           streamingContent={streamingContent}
+          displayTransforms={displayTransforms}
         />
       )}
 

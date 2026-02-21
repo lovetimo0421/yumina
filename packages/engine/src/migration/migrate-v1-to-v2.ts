@@ -2,14 +2,25 @@ import type { WorldDefinition, WorldEntry } from "../types/index.js";
 
 /**
  * Migrates a v1 WorldDefinition (characters[], lorebookEntries[], settings.systemPrompt/greeting)
- * to v2 format (entries[]). Idempotent — returns the input unchanged if already v2.
+ * to v2 format (entries[]), then v2→v3 (remove insertionOrder/group, merge into priority).
+ * Idempotent — returns the input unchanged if already v3.
  */
 export function migrateWorldDefinition(raw: WorldDefinition): WorldDefinition {
+  // Step 1: v1 → v2 migration (legacy characters/lorebook → entries)
+  let migrated = migrateV1ToV2(raw);
+
+  // Step 2: v2 → v3 migration (remove insertionOrder/group, merge into priority)
+  migrated = migrateV2ToV3(migrated);
+
+  return migrated;
+}
+
+/**
+ * v1 → v2: Convert characters[], lorebookEntries[], settings.systemPrompt/greeting → entries[]
+ */
+function migrateV1ToV2(raw: WorldDefinition): WorldDefinition {
   // Already migrated: has entries and no legacy fields with content
-  if (
-    raw.entries &&
-    raw.entries.length > 0
-  ) {
+  if (raw.entries && raw.entries.length > 0) {
     return raw;
   }
 
@@ -25,7 +36,7 @@ export function migrateWorldDefinition(raw: WorldDefinition): WorldDefinition {
   }
 
   const entries: WorldEntry[] = [];
-  let order = 0;
+  let priorityBase = 100;
 
   // 1. Migrate settings.systemPrompt → entry at position "top"
   if (raw.settings?.systemPrompt) {
@@ -35,44 +46,40 @@ export function migrateWorldDefinition(raw: WorldDefinition): WorldDefinition {
       content: raw.settings.systemPrompt,
       role: "system",
       position: "top",
-      insertionOrder: order++,
       alwaysSend: true,
       keywords: [],
       conditions: [],
       conditionLogic: "all",
-      priority: 100,
+      priority: priorityBase,
       enabled: true,
     });
+    priorityBase -= 10;
   }
 
   // 2. Migrate characters → entries at position "character"
   if (raw.characters) {
     for (const char of raw.characters) {
-      // Character identity entry
       entries.push({
         id: char.id,
         name: char.name,
         content: `You are ${char.name}. ${char.description}${char.systemPrompt ? `\n\n${char.systemPrompt}` : ""}`,
         role: "character",
         position: "character",
-        insertionOrder: order++,
         alwaysSend: true,
         keywords: [],
         conditions: [],
         conditionLogic: "all",
-        priority: 90,
+        priority: priorityBase,
         enabled: true,
       });
+      priorityBase -= 10;
     }
   }
 
   // 3. Migrate lorebookEntries → entries with mapped positions
   if (raw.lorebookEntries) {
     for (const lore of raw.lorebookEntries) {
-      // Map old position to new position slots
       const position = lore.position === "before" ? "before_char" : "after_char";
-
-      // Map old type to new role
       const roleMap: Record<string, WorldEntry["role"]> = {
         character: "character",
         lore: "lore",
@@ -87,7 +94,6 @@ export function migrateWorldDefinition(raw: WorldDefinition): WorldDefinition {
         content: lore.content,
         role: roleMap[lore.type] ?? "custom",
         position,
-        insertionOrder: order++,
         alwaysSend: lore.alwaysSend,
         keywords: lore.keywords,
         conditions: lore.conditions,
@@ -106,7 +112,6 @@ export function migrateWorldDefinition(raw: WorldDefinition): WorldDefinition {
       content: raw.settings.greeting,
       role: "greeting",
       position: "greeting",
-      insertionOrder: order++,
       alwaysSend: true,
       keywords: [],
       conditions: [],
@@ -118,15 +123,64 @@ export function migrateWorldDefinition(raw: WorldDefinition): WorldDefinition {
 
   // Build migrated definition — strip legacy fields from settings
   const { systemPrompt: _, greeting: __, ...cleanSettings } = raw.settings ?? {
-    maxTokens: 2048,
-    temperature: 0.8,
+    maxTokens: 12000,
+    temperature: 1.0,
   };
+
+  // Migrate flat lorebookTokenBudget to percentage-based if present
+  if (cleanSettings.lorebookTokenBudget && !cleanSettings.lorebookBudgetPercent) {
+    const maxCtx = cleanSettings.maxContext ?? 200000;
+    cleanSettings.lorebookBudgetPercent = Math.min(
+      100,
+      Math.round((cleanSettings.lorebookTokenBudget / maxCtx) * 100) || 1
+    );
+  }
 
   return {
     ...raw,
     entries,
-    // Carry avatar from first character if world doesn't have one
     avatar: raw.avatar ?? raw.characters?.[0]?.avatar,
     settings: cleanSettings as WorldDefinition["settings"],
+  };
+}
+
+/**
+ * v2 → v3: Remove insertionOrder and group from entries. Merge insertionOrder into priority.
+ * Detection: any entry has `insertionOrder` property.
+ * Conversion: newPriority = (1000 - insertionOrder * 10) + existingPriority
+ */
+function migrateV2ToV3(raw: WorldDefinition): WorldDefinition {
+  // Check if any entry still has insertionOrder (v2 format)
+  const hasInsertionOrder = raw.entries.some(
+    (e) => "insertionOrder" in e && (e as Record<string, unknown>).insertionOrder !== undefined
+  );
+
+  if (!hasInsertionOrder && raw.version === "3.0.0") {
+    return raw;
+  }
+
+  // If no entries or already clean, just bump version
+  if (!hasInsertionOrder) {
+    return { ...raw, version: "3.0.0" };
+  }
+
+  const entries = raw.entries.map((e) => {
+    const entry = { ...e } as WorldEntry & { insertionOrder?: number; group?: string };
+    const insertionOrder = entry.insertionOrder ?? 0;
+    const existingPriority = entry.priority ?? 0;
+
+    // Merge: higher insertionOrder → lower priority (placed later)
+    const newPriority = (1000 - insertionOrder * 10) + existingPriority;
+
+    delete entry.insertionOrder;
+    delete entry.group;
+
+    return { ...entry, priority: newPriority } as WorldEntry;
+  });
+
+  return {
+    ...raw,
+    version: "3.0.0",
+    entries,
   };
 }

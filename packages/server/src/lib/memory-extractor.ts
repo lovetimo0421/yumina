@@ -13,7 +13,7 @@ Respond with a JSON array of memory objects:
 [
   {
     "content": "concise description of the fact/event/decision",
-    "category": "event" | "relationship" | "fact" | "decision",
+    "category": "event" | "relationship" | "fact" | "decision" | "item" | "location" | "agreement" | "world_state",
     "importance": 1-10
   }
 ]
@@ -23,6 +23,10 @@ Categories:
 - "relationship": How the player relates to NPCs (e.g., "Mira considers the player a trusted friend")
 - "fact": World state facts (e.g., "The merchant's chest was found empty")
 - "decision": Choices the player made (e.g., "Player chose to spare the thief")
+- "item": Item acquisition or loss (e.g., "Player obtained the Enchanted Sword")
+- "location": Location discoveries or changes (e.g., "Player discovered the hidden cave behind the waterfall")
+- "agreement": Promises, contracts, deals (e.g., "Player agreed to deliver the package by dawn")
+- "world_state": Persistent world changes (e.g., "The bridge was destroyed in the flood")
 
 Rules:
 - Extract 3-10 memories per session
@@ -33,7 +37,7 @@ Rules:
 
 interface ExtractedMemory {
   content: string;
-  category: "event" | "relationship" | "fact" | "decision";
+  category: "event" | "relationship" | "fact" | "decision" | "item" | "location" | "agreement" | "world_state";
   importance: number;
 }
 
@@ -96,7 +100,7 @@ export async function extractMemories(
       .filter(
         (m) =>
           m.content &&
-          ["event", "relationship", "fact", "decision"].includes(m.category)
+          ["event", "relationship", "fact", "decision", "item", "location", "agreement", "world_state"].includes(m.category)
       )
       .map((m) => ({
         ...m,

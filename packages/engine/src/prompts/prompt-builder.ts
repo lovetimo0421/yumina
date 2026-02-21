@@ -36,7 +36,7 @@ const POSITION_ORDER: WorldEntry["position"][] = [
 /**
  * Composes LLM prompts from world definition + current state.
  * Uses the unified WorldEntry[] model — entries are grouped by position slot,
- * sorted by insertionOrder within each slot, and concatenated.
+ * sorted by priority DESC within each slot, and concatenated.
  */
 export class PromptBuilder {
   /**
@@ -74,7 +74,7 @@ export class PromptBuilder {
       (e) => e.position === "greeting" && e.enabled
     );
     if (!greetingEntry) return "";
-    return this.interpolate(greetingEntry.content, state);
+    return this.interpolate(greetingEntry.content, world, state);
   }
 
   /**
@@ -89,9 +89,9 @@ export class PromptBuilder {
     const allEntries = this.collectEntries(world, matchedEntries);
     return allEntries
       .filter((e) => e.position === "depth" && e.depth !== undefined)
-      .sort((a, b) => a.insertionOrder - b.insertionOrder)
+      .sort((a, b) => b.priority - a.priority)
       .map((e) => ({
-        content: this.interpolate(e.content, state),
+        content: this.interpolate(e.content, world, state),
         depth: e.depth!,
       }));
   }
@@ -108,8 +108,8 @@ export class PromptBuilder {
     const allEntries = this.collectEntries(world, matchedEntries);
     return allEntries
       .filter((e) => e.position === "post_history")
-      .sort((a, b) => a.insertionOrder - b.insertionOrder)
-      .map((e) => this.interpolate(e.content, state));
+      .sort((a, b) => b.priority - a.priority)
+      .map((e) => this.interpolate(e.content, world, state));
   }
 
   buildMessageHistory(
@@ -173,14 +173,14 @@ export class PromptBuilder {
   ): string {
     const parts: string[] = [];
 
-    // Group entries by position, then sort by insertionOrder within each group
+    // Group entries by position, then sort by priority DESC within each group
     for (const position of POSITION_ORDER) {
       const slotEntries = entries
         .filter((e) => e.position === position)
-        .sort((a, b) => a.insertionOrder - b.insertionOrder);
+        .sort((a, b) => b.priority - a.priority);
 
       for (const entry of slotEntries) {
-        parts.push(this.interpolate(entry.content, state));
+        parts.push(this.interpolate(entry.content, world, state));
       }
     }
 
@@ -249,8 +249,15 @@ export class PromptBuilder {
     return parts.join("\n\n");
   }
 
-  private interpolate(template: string, state: GameState): string {
+  private interpolate(template: string, world: WorldDefinition, state: GameState): string {
+    // Derive {{char}} from first character entry name
+    const charEntry = world.entries.find((e) => e.role === "character" && e.enabled);
+    const charName = charEntry?.name ?? "Assistant";
+    const userName = world.settings?.playerName || "User";
+
     return template.replace(/\{\{(\w+)\}\}/g, (_match, varId: string) => {
+      if (varId === "char") return charName;
+      if (varId === "user") return userName;
       const value = state.variables[varId];
       return value !== undefined ? String(value) : `{{${varId}}}`;
     });

@@ -119,6 +119,7 @@ export const messages = pgTable("messages", {
   model: text("model"),
   tokenCount: integer("token_count"),
   generationTimeMs: integer("generation_time_ms"),
+  compacted: boolean("compacted").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -162,7 +163,7 @@ export const worldMemories = pgTable("world_memories", {
     .references(() => user.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   category: text("category", {
-    enum: ["event", "relationship", "fact", "decision"],
+    enum: ["event", "relationship", "fact", "decision", "item", "location", "agreement", "world_state"],
   }).notNull(),
   importance: integer("importance").notNull().default(5),
   sessionId: text("session_id"),

@@ -152,41 +152,43 @@ export function ComponentsSection() {
                 />
               </div>
 
-              {/* Variable binding */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  Bound Variable
-                </label>
-                {compatibleVars.length === 0 ? (
-                  <p className="text-xs text-muted-foreground/40 italic">
-                    No compatible variables found. This component needs a{" "}
-                    {COMPONENT_TYPE_META[selected.type].compatibleVariableTypes.join(
-                      " or "
-                    )}{" "}
-                    variable.
-                  </p>
-                ) : (
-                  <select
-                    value={selected.config.variableId}
-                    onChange={(e) =>
-                      updateComponent(selected.id, {
-                        config: {
-                          ...selected.config,
-                          variableId: e.target.value,
-                        },
-                      } as Partial<GameComponent>)
-                    }
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="">Select a variable...</option>
-                    {compatibleVars.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name} ({v.id})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+              {/* Variable binding (not applicable for form type) */}
+              {selected.type !== "form" && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">
+                    Bound Variable
+                  </label>
+                  {compatibleVars.length === 0 ? (
+                    <p className="text-xs text-muted-foreground/40 italic">
+                      No compatible variables found. This component needs a{" "}
+                      {COMPONENT_TYPE_META[selected.type].compatibleVariableTypes.join(
+                        " or "
+                      )}{" "}
+                      variable.
+                    </p>
+                  ) : (
+                    <select
+                      value={(selected.config as { variableId?: string }).variableId ?? ""}
+                      onChange={(e) =>
+                        updateComponent(selected.id, {
+                          config: {
+                            ...selected.config,
+                            variableId: e.target.value,
+                          },
+                        } as Partial<GameComponent>)
+                      }
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">Select a variable...</option>
+                      {compatibleVars.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name} ({v.id})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
 
               {/* Type-specific config */}
               <TypeSpecificConfig

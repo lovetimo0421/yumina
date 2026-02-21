@@ -2,6 +2,7 @@ import type {
   GameComponent,
   Variable,
   GameState,
+  FormFieldConfig,
 } from "../types/index.js";
 
 // ── Resolved component types (render-ready) ──
@@ -73,6 +74,17 @@ export interface ResolvedToggleSwitch {
   color?: string;
 }
 
+export interface ResolvedForm {
+  id: string;
+  type: "form";
+  name: string;
+  order: number;
+  fields: FormFieldConfig[];
+  submitLabel: string;
+  messageTemplate: string;
+  hideAfterSubmit: boolean;
+}
+
 export interface ResolvedError {
   id: string;
   type: "error";
@@ -88,6 +100,7 @@ export type ResolvedComponent =
   | ResolvedImagePanel
   | ResolvedInventoryGrid
   | ResolvedToggleSwitch
+  | ResolvedForm
   | ResolvedError;
 
 // ── Resolver ──
@@ -127,6 +140,8 @@ function resolveOne(
       return resolveInventoryGrid(component, state, varMap);
     case "toggle-switch":
       return resolveToggleSwitch(component, state, varMap);
+    case "form":
+      return resolveForm(component);
   }
 }
 
@@ -299,6 +314,21 @@ function resolveToggleSwitch(
     onLabel: c.config.onLabel ?? "On",
     offLabel: c.config.offLabel ?? "Off",
     color: c.config.color,
+  };
+}
+
+function resolveForm(
+  c: Extract<GameComponent, { type: "form" }>
+): ResolvedForm {
+  return {
+    id: c.id,
+    type: "form",
+    name: c.name,
+    order: c.order,
+    fields: c.config.fields ?? [],
+    submitLabel: c.config.submitLabel ?? "Submit",
+    messageTemplate: c.config.messageTemplate ?? "",
+    hideAfterSubmit: c.config.hideAfterSubmit ?? true,
   };
 }
 

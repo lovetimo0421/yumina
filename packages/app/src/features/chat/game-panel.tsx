@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatStore, type StateChange } from "@/stores/chat";
@@ -7,8 +7,16 @@ import { resolveComponents } from "@yumina/engine";
 import type { WorldDefinition, Variable, GameState } from "@yumina/engine";
 import { ComponentRenderer } from "./components";
 import { AudioControls } from "./audio-controls";
+import {
+  CustomComponentRenderer,
+  type YuminaAPI,
+} from "@/features/studio/lib/custom-component-renderer";
 
-export function GamePanel() {
+interface GamePanelProps {
+  layoutMode?: "split" | "game-focus" | "immersive";
+}
+
+export function GamePanel({ layoutMode = "split" }: GamePanelProps) {
   const [open, setOpen] = useState(true);
   const { session, gameState, recentStateChanges, clearRecentStateChanges } =
     useChatStore();
@@ -18,6 +26,7 @@ export function GamePanel() {
     | undefined;
   const variables = worldDef?.variables ?? [];
   const components = worldDef?.components ?? [];
+  const customComponents = worldDef?.customComponents ?? [];
   const audioTracks = useAudioStore((s) => s.tracks);
   const hasAudio = audioTracks.length > 0;
 
@@ -27,7 +36,27 @@ export function GamePanel() {
     return () => clearTimeout(timer);
   }, [recentStateChanges, clearRecentStateChanges]);
 
-  if (variables.length === 0 && components.length === 0 && !hasAudio) return null;
+  // Build the YuminaAPI for custom components (live mode)
+  const yuminaAPI = useMemo<YuminaAPI>(
+    () => ({
+      sendMessage: (text: string) => useChatStore.getState().sendMessage(text),
+      setVariable: (id: string, value: number | string | boolean) =>
+        useChatStore.getState().setVariableDirectly(id, value),
+      variables: gameState,
+      worldName: worldDef?.name ?? "",
+    }),
+    [gameState, worldDef?.name]
+  );
+
+  const hasCustomComponents = customComponents.filter((cc) => cc.visible).length > 0;
+
+  if (
+    variables.length === 0 &&
+    components.length === 0 &&
+    !hasCustomComponents &&
+    !hasAudio
+  )
+    return null;
 
   // If components are defined, use the component system
   const hasComponents = components.length > 0;
@@ -40,28 +69,61 @@ export function GamePanel() {
       } satisfies GameState, variables)
     : [];
 
+  // Immersive: bare full-screen container, no chrome
+  if (layoutMode === "immersive") {
+    const visibleCustom = customComponents
+      .filter((cc) => cc.visible)
+      .sort((a, b) => a.order - b.order);
+
+    return (
+      <div className="flex h-full w-full flex-col">
+        {hasComponents &&
+          resolvedComponents.map((rc) => (
+            <ComponentRenderer key={rc.id} component={rc} />
+          ))}
+        {visibleCustom.map((cc) => (
+          <div key={cc.id} className={visibleCustom.length === 1 ? "flex-1" : ""}>
+            <CustomComponentRenderer
+              code={cc.tsxCode}
+              variables={gameState}
+              worldName={worldDef?.name}
+              api={yuminaAPI}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Immersive and game-focus don't have a collapsible sidebar
+  const isExpanded = layoutMode === "game-focus";
+
   return (
     <div
       className={cn(
-        "flex shrink-0 flex-col border-l border-border bg-background transition-all duration-200",
-        open ? "w-72" : "w-10"
+        "flex flex-col bg-background transition-all duration-200",
+        isExpanded
+          ? "flex-1"
+          : cn("shrink-0 border-l border-border", open ? "w-72" : "w-10")
       )}
     >
-      <div className="flex h-12 items-center justify-center border-b border-border">
-        <button
-          onClick={() => setOpen(!open)}
-          className="hover-surface flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/40"
-        >
-          {open ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </button>
-      </div>
+      {!isExpanded && (
+        <div className="flex h-12 items-center justify-center border-b border-border">
+          <button
+            onClick={() => setOpen(!open)}
+            className="hover-surface flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/40"
+          >
+            {open ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+      )}
 
-      {open && (
-        <div className="flex-1 overflow-y-auto p-3">
+      {(open || isExpanded) && (
+        <div className={cn("flex-1 overflow-y-auto", isExpanded ? "p-6" : "p-3")}>
           {hasAudio && (
             <div className="mb-3">
               <AudioControls />
@@ -69,7 +131,7 @@ export function GamePanel() {
           )}
 
           <h3 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/40">
-            {hasComponents ? "Game" : "Game State"}
+            {hasComponents || hasCustomComponents ? "Game" : "Game State"}
           </h3>
 
           <div className="space-y-2">
@@ -77,7 +139,8 @@ export function GamePanel() {
               ? resolvedComponents.map((rc) => (
                   <ComponentRenderer key={rc.id} component={rc} />
                 ))
-              : variables.map((variable) => (
+              : !hasCustomComponents &&
+                variables.map((variable) => (
                   <VariableDisplay
                     key={variable.id}
                     variable={variable}
@@ -87,6 +150,20 @@ export function GamePanel() {
                     )}
                   />
                 ))}
+
+            {/* Custom components — rendered in both typed-component and legacy modes */}
+            {customComponents
+              .filter((cc) => cc.visible)
+              .sort((a, b) => a.order - b.order)
+              .map((cc) => (
+                <CustomComponentRenderer
+                  key={cc.id}
+                  code={cc.tsxCode}
+                  variables={gameState}
+                  worldName={worldDef?.name}
+                  api={yuminaAPI}
+                />
+              ))}
           </div>
 
           {recentStateChanges.length > 0 && (

@@ -1,11 +1,38 @@
-import React, { useMemo, Component } from "react";
+import React, { useMemo, useContext, createContext, Component } from "react";
 import { compileTSX } from "./tsx-compiler";
+
+/** API exposed to custom components via the useYumina() hook */
+export interface YuminaAPI {
+  sendMessage: (text: string) => void;
+  setVariable: (id: string, value: number | string | boolean) => void;
+  variables: Record<string, number | string | boolean>;
+  worldName: string;
+}
+
+const defaultAPI: YuminaAPI = {
+  sendMessage: () => {},
+  setVariable: () => {},
+  variables: {},
+  worldName: "",
+};
+
+const YuminaContext = createContext<YuminaAPI>(defaultAPI);
+
+/**
+ * The hook that compiled custom components call to interact with the game.
+ * Reads from YuminaContext at call time, so it always gets the latest API.
+ */
+function useYumina(): YuminaAPI {
+  return useContext(YuminaContext);
+}
 
 interface CustomComponentRendererProps {
   code: string;
   variables: Record<string, number | string | boolean>;
   metadata?: Record<string, unknown>;
   worldName?: string;
+  /** When provided, enables interactive features (sendMessage, setVariable) */
+  api?: YuminaAPI;
 }
 
 class ErrorBoundary extends Component<
@@ -40,9 +67,23 @@ export function CustomComponentRenderer({
   variables,
   metadata = {},
   worldName = "",
+  api,
 }: CustomComponentRendererProps) {
+  // The effective API merges caller-provided actions with live state
+  const effectiveAPI = useMemo<YuminaAPI>(
+    () => ({
+      sendMessage: api?.sendMessage ?? defaultAPI.sendMessage,
+      setVariable: api?.setVariable ?? defaultAPI.setVariable,
+      variables,
+      worldName,
+    }),
+    [api, variables, worldName]
+  );
+
+  // Compile once per code change. The useYumina hook reads from context,
+  // so it always gets the latest effectiveAPI via the Provider below.
   const { Component: CompiledComponent, error } = useMemo(
-    () => compileTSX(code),
+    () => compileTSX(code, useYumina),
     [code]
   );
 
@@ -55,12 +96,14 @@ export function CustomComponentRenderer({
   }
 
   return (
-    <ErrorBoundary fallback={(err) => <ErrorCard message={err} />}>
-      <CompiledComponent
-        variables={variables}
-        metadata={metadata}
-        worldName={worldName}
-      />
-    </ErrorBoundary>
+    <YuminaContext.Provider value={effectiveAPI}>
+      <ErrorBoundary fallback={(err) => <ErrorCard message={err} />}>
+        <CompiledComponent
+          variables={variables}
+          metadata={metadata}
+          worldName={worldName}
+        />
+      </ErrorBoundary>
+    </YuminaContext.Provider>
   );
 }

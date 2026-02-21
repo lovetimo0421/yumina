@@ -5,6 +5,7 @@ import { ChoiceListRenderer } from "./choice-list";
 import { ImagePanelRenderer } from "./image-panel";
 import { InventoryGridRenderer } from "./inventory-grid";
 import { ToggleSwitchRenderer } from "./toggle-switch";
+import { FormRenderer } from "./form";
 
 export function ComponentRenderer({ component }: { component: ResolvedComponent }) {
   switch (component.type) {
@@ -20,6 +21,8 @@ export function ComponentRenderer({ component }: { component: ResolvedComponent 
       return <InventoryGridRenderer data={component} />;
     case "toggle-switch":
       return <ToggleSwitchRenderer data={component} />;
+    case "form":
+      return <FormRenderer data={component} />;
     case "error":
       return (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">

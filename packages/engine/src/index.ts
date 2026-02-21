@@ -13,6 +13,7 @@ export type {
   LorebookEntry,
   WorldEntry,
   CustomComponent,
+  DisplayTransform,
 } from "./types/index.js";
 
 // Component types
@@ -25,12 +26,15 @@ export type {
   ImagePanelComponent,
   InventoryGridComponent,
   ToggleSwitchComponent,
+  FormComponent,
   StatBarConfig,
   TextDisplayConfig,
   ChoiceListConfig,
   ImagePanelConfig,
   InventoryGridConfig,
   ToggleSwitchConfig,
+  FormConfig,
+  FormFieldConfig,
   ComponentTypeMeta,
 } from "./types/index.js";
 
@@ -52,6 +56,7 @@ export {
   lorebookEntrySchema,
   worldEntrySchema,
   customComponentSchema,
+  displayTransformSchema,
 } from "./world/schema.js";
 
 // State
@@ -75,6 +80,7 @@ export type {
   ResolvedImagePanel,
   ResolvedInventoryGrid,
   ResolvedToggleSwitch,
+  ResolvedForm,
   ResolvedError,
 } from "./components/index.js";
 
@@ -95,3 +101,6 @@ export type {
 
 // Migration
 export { migrateWorldDefinition } from "./migration/migrate-v1-to-v2.js";
+
+// Import
+export { importSillyTavernCard } from "./import/st-card-importer.js";

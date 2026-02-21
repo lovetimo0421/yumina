@@ -7,5 +7,6 @@ export type {
   ResolvedImagePanel,
   ResolvedInventoryGrid,
   ResolvedToggleSwitch,
+  ResolvedForm,
   ResolvedError,
 } from "./component-resolver.js";

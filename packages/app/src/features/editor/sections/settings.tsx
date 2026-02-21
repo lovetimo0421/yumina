@@ -1,8 +1,14 @@
 import { useEditorStore } from "@/stores/editor";
 
 export function SettingsSection() {
-  const { worldDraft, setSettings } = useEditorStore();
-  const { settings } = worldDraft;
+  const {
+    worldDraft,
+    setSettings,
+    addDisplayTransform,
+    updateDisplayTransform,
+    removeDisplayTransform,
+  } = useEditorStore();
+  const { settings, displayTransforms } = worldDraft;
 
   return (
     <div className="space-y-6">
@@ -227,6 +233,32 @@ export function SettingsSection() {
           </p>
         </div>
 
+        {/* Layout Mode */}
+        <div className="border-t border-border pt-6">
+          <h3 className="text-sm font-semibold text-foreground mb-4">
+            Game Layout
+          </h3>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Layout Mode
+            </label>
+            <select
+              value={settings.layoutMode ?? "split"}
+              onChange={(e) =>
+                setSettings("layoutMode", e.target.value)
+              }
+              className="w-60 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring [&>option]:bg-popover"
+            >
+              <option value="split">Split (chat + sidebar)</option>
+              <option value="game-focus">Game Focus (50/50)</option>
+              <option value="immersive">Immersive (full-screen game)</option>
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground/40">
+              Controls how the game panel and chat area are laid out during gameplay
+            </p>
+          </div>
+        </div>
+
         {/* Entry Retrieval Settings */}
         <div className="border-t border-border pt-6">
           <h3 className="text-sm font-semibold text-foreground mb-4">
@@ -234,65 +266,6 @@ export function SettingsSection() {
           </h3>
 
           <div className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">
-                Budget:{" "}
-                <span className="text-primary">
-                  {settings.lorebookBudgetPercent ?? 100}%
-                </span>
-                {(settings.lorebookBudgetCap ?? 0) > 0 && (
-                  <span className="text-muted-foreground/60 ml-2">
-                    (cap: {settings.lorebookBudgetCap} tokens)
-                  </span>
-                )}
-              </label>
-              <input
-                type="range"
-                value={settings.lorebookBudgetPercent ?? 100}
-                onChange={(e) =>
-                  setSettings(
-                    "lorebookBudgetPercent",
-                    parseInt(e.target.value) || 100
-                  )
-                }
-                min={1}
-                max={100}
-                step={1}
-                className="w-full accent-primary"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground/40">
-                <span>1%</span>
-                <span>100% of context</span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground/40">
-                Percentage of context window allocated to triggered entries.
-                Always-send entries are not counted against this budget.
-              </p>
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">
-                Budget Cap (tokens)
-              </label>
-              <input
-                type="number"
-                value={settings.lorebookBudgetCap ?? 0}
-                onChange={(e) =>
-                  setSettings(
-                    "lorebookBudgetCap",
-                    parseInt(e.target.value) || 0
-                  )
-                }
-                min={0}
-                max={1000000}
-                step={256}
-                className="w-40 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              <p className="mt-1 text-xs text-muted-foreground/40">
-                Hard token cap for entry budget. 0 = no cap.
-              </p>
-            </div>
-
             <div>
               <label className="mb-1.5 block text-sm font-medium text-foreground">
                 Scan Depth
@@ -337,6 +310,138 @@ export function SettingsSection() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Display Transforms */}
+        <div className="border-t border-border pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                Display Transforms
+              </h3>
+              <p className="text-xs text-muted-foreground/40 mt-0.5">
+                Regex find-and-replace rules applied to message content before rendering
+              </p>
+            </div>
+            <button
+              onClick={addDisplayTransform}
+              className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              + Add Transform
+            </button>
+          </div>
+
+          {displayTransforms.length === 0 ? (
+            <p className="text-xs text-muted-foreground/40 italic">
+              No display transforms. Transforms let you convert patterns in AI
+              output into styled HTML elements.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {[...displayTransforms]
+                .sort((a, b) => a.order - b.order)
+                .map((t) => (
+                  <div
+                    key={t.id}
+                    className="rounded-lg border border-border bg-background p-3 space-y-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={t.enabled}
+                        onChange={(e) =>
+                          updateDisplayTransform(t.id, {
+                            enabled: e.target.checked,
+                          })
+                        }
+                        className="rounded"
+                      />
+                      <input
+                        type="text"
+                        value={t.name}
+                        onChange={(e) =>
+                          updateDisplayTransform(t.id, {
+                            name: e.target.value,
+                          })
+                        }
+                        className="flex-1 rounded border border-border bg-muted px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        placeholder="Transform name"
+                      />
+                      <input
+                        type="number"
+                        value={t.order}
+                        onChange={(e) =>
+                          updateDisplayTransform(t.id, {
+                            order: parseInt(e.target.value) || 0,
+                          })
+                        }
+                        className="w-16 rounded border border-border bg-muted px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        title="Order (lower runs first)"
+                      />
+                      <button
+                        onClick={() => removeDisplayTransform(t.id)}
+                        className="text-xs text-destructive hover:text-destructive/80"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-start">
+                      <div>
+                        <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">
+                          Pattern (regex)
+                        </label>
+                        <input
+                          type="text"
+                          value={t.pattern}
+                          onChange={(e) =>
+                            updateDisplayTransform(t.id, {
+                              pattern: e.target.value,
+                            })
+                          }
+                          className="w-full rounded border border-border bg-muted px-2 py-1 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          placeholder="\\[PEEP:(\\w+)\\]"
+                        />
+                      </div>
+                      <div className="pt-5 text-xs text-muted-foreground/40">
+                        →
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">
+                          Replacement (HTML ok)
+                        </label>
+                        <input
+                          type="text"
+                          value={t.replacement}
+                          onChange={(e) =>
+                            updateDisplayTransform(t.id, {
+                              replacement: e.target.value,
+                            })
+                          }
+                          className="w-full rounded border border-border bg-muted px-2 py-1 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          placeholder='<span class="highlight">$1</span>'
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">
+                        Flags
+                      </label>
+                      <input
+                        type="text"
+                        value={t.flags ?? "g"}
+                        onChange={(e) =>
+                          updateDisplayTransform(t.id, {
+                            flags: e.target.value || "g",
+                          })
+                        }
+                        className="w-20 rounded border border-border bg-muted px-2 py-1 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        placeholder="g"
+                      />
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

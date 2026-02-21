@@ -159,11 +159,11 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
   const useStructured = worldDef.settings?.structuredOutput === true;
   const snapshot = stateManager.getSnapshot();
 
-  // Load message history (post-compaction — old messages may have been pruned)
+  // Load non-compacted message history for AI prompt (compacted ones excluded)
   const historyRows = await db
     .select()
     .from(messages)
-    .where(eq(messages.sessionId, sessionId))
+    .where(and(eq(messages.sessionId, sessionId), eq(messages.compacted, false)))
     .orderBy(messages.createdAt);
 
   // Load session summary (from compaction) and persistent memories
@@ -526,11 +526,11 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
   const useStructured = worldDef.settings?.structuredOutput === true;
   const snapshot = stateManager.getSnapshot();
 
-  // Get messages up to (but not including) the one being regenerated
+  // Get non-compacted messages up to (but not including) the one being regenerated
   const historyRows = await db
     .select()
     .from(messages)
-    .where(eq(messages.sessionId, msg.sessionId))
+    .where(and(eq(messages.sessionId, msg.sessionId), eq(messages.compacted, false)))
     .orderBy(messages.createdAt);
 
   const msgIndex = historyRows.findIndex((m) => m.id === messageId);

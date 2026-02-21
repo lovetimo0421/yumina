@@ -93,7 +93,6 @@ export const worldEntrySchema = z.object({
   role: z.enum(["system", "character", "personality", "scenario", "lore", "plot", "style", "example", "greeting", "custom"]),
   position: z.enum(["top", "before_char", "character", "after_char", "persona", "bottom", "depth", "greeting", "post_history"]),
   depth: z.number().int().optional(),
-  insertionOrder: z.number().int().default(0),
   alwaysSend: z.boolean().default(false),
   keywords: z.array(z.string()).default([]),
   conditions: z.array(conditionSchema).default([]),
@@ -104,9 +103,18 @@ export const worldEntrySchema = z.object({
   useFuzzyMatch: z.boolean().optional().default(false),
   secondaryKeywords: z.array(z.string()).optional().default([]),
   secondaryKeywordLogic: z.enum(["AND_ANY", "AND_ALL", "NOT_ANY", "NOT_ALL"]).optional().default("AND_ANY"),
-  group: z.string().optional().default(""),
   preventRecursion: z.boolean().optional().default(false),
   excludeRecursion: z.boolean().optional().default(false),
+});
+
+export const displayTransformSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  pattern: z.string().min(1),
+  replacement: z.string(),
+  flags: z.string().optional().default("g"),
+  order: z.number().int().default(0),
+  enabled: z.boolean().default(true),
 });
 
 export const customComponentSchema = z.object({
@@ -137,6 +145,7 @@ export const worldSettingsSchema = z.object({
   lorebookBudgetCap: z.number().int().min(0).optional().default(0),
   lorebookScanDepth: z.number().int().positive().optional().default(2),
   lorebookRecursionDepth: z.number().int().min(0).max(10).optional().default(0),
+  layoutMode: z.enum(["split", "game-focus", "immersive"]).optional().default("split"),
 });
 
 export const worldDefinitionSchema = z.object({
@@ -154,6 +163,7 @@ export const worldDefinitionSchema = z.object({
   audioTracks: z.array(audioTrackSchema).default([]),
   lorebookEntries: z.array(lorebookEntrySchema).optional(),
   customComponents: z.array(customComponentSchema).default([]),
+  displayTransforms: z.array(displayTransformSchema).default([]),
   settings: worldSettingsSchema,
 });
 

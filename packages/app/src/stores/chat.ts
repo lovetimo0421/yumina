@@ -19,6 +19,7 @@ export interface Message {
   model?: string | null;
   tokenCount?: number | null;
   generationTimeMs?: number | null;
+  compacted?: boolean;
   createdAt: string;
 }
 
@@ -78,6 +79,9 @@ interface ChatState {
   clearRecentStateChanges: () => void;
   setPendingChoices: (choices: string[]) => void;
   clearPendingChoices: () => void;
+
+  // Direct variable update (from custom components)
+  setVariableDirectly: (id: string, value: number | string | boolean) => void;
 
   // Load session data from API
   loadSession: (sessionId: string) => Promise<void>;
@@ -361,4 +365,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setPendingChoices: (choices) => set({ pendingChoices: choices }),
   clearPendingChoices: () => set({ pendingChoices: [] }),
+
+  setVariableDirectly: (id, value) => {
+    const oldValue = get().gameState[id] ?? value;
+    set((s) => ({
+      gameState: { ...s.gameState, [id]: value },
+      recentStateChanges: [
+        ...s.recentStateChanges,
+        { variableId: id, oldValue, newValue: value },
+      ],
+    }));
+    // Persist to server (fire-and-forget)
+    const sessionId = get().session?.id;
+    if (sessionId) {
+      const newState = get().gameState;
+      fetch(`${apiBase}/api/sessions/${sessionId}/state`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ state: { variables: newState } }),
+      }).catch(() => {});
+    }
+  },
 }));

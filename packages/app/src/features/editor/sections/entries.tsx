@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, FileText, PackagePlus, ChevronDown } from "lucide-react";
+import { Plus, Trash2, FileText, PackagePlus, ChevronDown, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editor";
 import { ENTRY_PRESET_PACKS } from "@/lib/entry-presets";
@@ -42,6 +42,29 @@ const ROLE_FILTER_TABS = [
   ...ROLES,
 ];
 
+const ROLE_COLORS: Record<string, string> = {
+  system: "text-blue-400",
+  character: "text-emerald-400",
+  personality: "text-teal-400",
+  scenario: "text-amber-400",
+  lore: "text-purple-400",
+  plot: "text-rose-400",
+  style: "text-pink-400",
+  example: "text-cyan-400",
+  greeting: "text-yellow-400",
+  custom: "text-muted-foreground",
+};
+
+/** Position slots in prompt order (for the preview) */
+const SYSTEM_POSITIONS: WorldEntry["position"][] = [
+  "top",
+  "before_char",
+  "character",
+  "after_char",
+  "persona",
+  "bottom",
+];
+
 export function EntriesSection() {
   const { worldDraft, addEntry, updateEntry, removeEntry, importEntryPack } =
     useEditorStore();
@@ -50,6 +73,7 @@ export function EntriesSection() {
     worldDraft.entries[0]?.id ?? null
   );
   const [roleFilter, setRoleFilter] = useState<WorldEntry["role"] | "all">("all");
+  const [showPreview, setShowPreview] = useState(false);
 
   const filteredEntries =
     roleFilter === "all"
@@ -70,6 +94,20 @@ export function EntriesSection() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Prompt Preview Toggle */}
+          <button
+            onClick={() => setShowPreview(!showPreview)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-colors",
+              showPreview
+                ? "bg-primary/10 text-primary border-primary/30"
+                : "text-foreground hover:bg-accent"
+            )}
+          >
+            <Layers className="h-3.5 w-3.5" />
+            Preview
+          </button>
+
           {/* Import Pack */}
           <div className="relative">
             <button
@@ -128,6 +166,15 @@ export function EntriesSection() {
           </button>
         </div>
       </div>
+
+      {/* Prompt Structure Preview */}
+      {showPreview && (
+        <PromptPreview
+          entries={worldDraft.entries}
+          onSelectEntry={(id) => setSelectedId(id)}
+          selectedId={selectedId}
+        />
+      )}
 
       {/* Role filter tabs */}
       <div className="flex flex-wrap gap-1">
@@ -332,38 +379,24 @@ export function EntriesSection() {
                 />
               </div>
 
-              {/* Priority + Insertion Order */}
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="mb-1.5 block text-sm font-medium text-foreground">
-                    Priority
-                  </label>
-                  <input
-                    type="number"
-                    value={selected.priority}
-                    onChange={(e) =>
-                      updateEntry(selected.id, {
-                        priority: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="mb-1.5 block text-sm font-medium text-foreground">
-                    Insertion Order
-                  </label>
-                  <input
-                    type="number"
-                    value={selected.insertionOrder}
-                    onChange={(e) =>
-                      updateEntry(selected.id, {
-                        insertionOrder: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
+              {/* Priority */}
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  Priority
+                </label>
+                <input
+                  type="number"
+                  value={selected.priority}
+                  onChange={(e) =>
+                    updateEntry(selected.id, {
+                      priority: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  className="w-40 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <p className="mt-1 text-xs text-muted-foreground/40">
+                  Higher priority = placed earlier within position slot
+                </p>
               </div>
 
               {/* Toggles */}
@@ -476,25 +509,6 @@ export function EntriesSection() {
                     </div>
                   )}
 
-                  {/* Group */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-foreground">
-                      Group
-                    </label>
-                    <input
-                      type="text"
-                      value={selected.group ?? ""}
-                      onChange={(e) =>
-                        updateEntry(selected.id, { group: e.target.value })
-                      }
-                      placeholder="e.g. seasons, biomes"
-                      className="w-60 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                    <p className="mt-1 text-xs text-muted-foreground/40">
-                      Entries sharing a group compete — highest score wins
-                    </p>
-                  </div>
-
                   {/* Recursion toggles */}
                   <div className="flex gap-6">
                     <label className="flex items-center gap-2.5 text-sm font-medium text-foreground cursor-pointer">
@@ -548,6 +562,141 @@ export function EntriesSection() {
             </div>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** Visual prompt structure preview */
+function PromptPreview({
+  entries,
+  onSelectEntry,
+  selectedId,
+}: {
+  entries: WorldEntry[];
+  onSelectEntry: (id: string) => void;
+  selectedId: string | null;
+}) {
+  const enabledEntries = entries.filter((e) => e.enabled);
+
+  // Group by position for system prompt slots
+  const systemSlots = SYSTEM_POSITIONS.map((pos) => ({
+    position: pos,
+    label: POSITIONS.find((p) => p.value === pos)?.label ?? pos,
+    entries: enabledEntries
+      .filter((e) => e.position === pos)
+      .sort((a, b) => b.priority - a.priority),
+  }));
+
+  // Depth entries
+  const depthEntries = enabledEntries
+    .filter((e) => e.position === "depth")
+    .sort((a, b) => (b.depth ?? 0) - (a.depth ?? 0));
+
+  // Post-history entries
+  const postHistoryEntries = enabledEntries
+    .filter((e) => e.position === "post_history")
+    .sort((a, b) => b.priority - a.priority);
+
+  // Greeting entries
+  const greetingEntries = enabledEntries
+    .filter((e) => e.position === "greeting")
+    .sort((a, b) => b.priority - a.priority);
+
+  const entryNode = (entry: WorldEntry, extra?: string) => (
+    <button
+      key={entry.id}
+      onClick={() => onSelectEntry(entry.id)}
+      className={cn(
+        "flex items-center gap-2 rounded px-2 py-0.5 text-left text-xs transition-colors w-full",
+        selectedId === entry.id
+          ? "bg-primary/10 text-primary"
+          : "hover:bg-accent text-muted-foreground"
+      )}
+    >
+      <span className={cn("shrink-0", ROLE_COLORS[entry.role] ?? "text-muted-foreground")}>
+        {entry.alwaysSend ? "\u2502" : "\u2502"}
+      </span>
+      <span className="truncate flex-1">
+        {entry.name}
+        {extra && <span className="text-muted-foreground/40 ml-1">{extra}</span>}
+      </span>
+      <span className="shrink-0 text-[10px] text-muted-foreground/30">
+        p{entry.priority}
+      </span>
+      {entry.alwaysSend && (
+        <span className="shrink-0 text-[9px] text-primary/50">A</span>
+      )}
+    </button>
+  );
+
+  return (
+    <div className="rounded-lg border border-border bg-background/50 text-xs font-mono">
+      {/* System Prompt */}
+      <div className="border-b border-border px-3 py-1.5 text-muted-foreground/60 font-semibold">
+        System Prompt
+      </div>
+      <div className="px-2 py-1 space-y-0.5">
+        {systemSlots.map((slot) =>
+          slot.entries.length > 0 ? (
+            <div key={slot.position}>
+              <div className="px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground/30">
+                {slot.label}
+              </div>
+              {slot.entries.map((e) => entryNode(e))}
+            </div>
+          ) : null
+        )}
+        {systemSlots.every((s) => s.entries.length === 0) && (
+          <div className="px-2 py-1 text-muted-foreground/30 italic">
+            No system entries
+          </div>
+        )}
+      </div>
+
+      {/* Chat History */}
+      <div className="border-t border-border px-3 py-1.5 text-muted-foreground/60 font-semibold">
+        Chat History
+      </div>
+      <div className="px-2 py-1 space-y-0.5">
+        {depthEntries.length > 0 ? (
+          depthEntries.map((e) =>
+            entryNode(e, `depth ${e.depth ?? 0}`)
+          )
+        ) : (
+          <div className="px-2 py-0.5 text-muted-foreground/20 italic">
+            ... messages ...
+          </div>
+        )}
+        {depthEntries.length > 0 && (
+          <div className="px-2 py-0.5 text-muted-foreground/20 italic">
+            ... messages ...
+          </div>
+        )}
+      </div>
+
+      {/* Post-History */}
+      {postHistoryEntries.length > 0 && (
+        <>
+          <div className="border-t border-border px-3 py-1.5 text-muted-foreground/60 font-semibold">
+            Post-History
+          </div>
+          <div className="px-2 py-1 space-y-0.5">
+            {postHistoryEntries.map((e) => entryNode(e))}
+          </div>
+        </>
+      )}
+
+      {/* Greeting (separate) */}
+      {greetingEntries.length > 0 && (
+        <>
+          <div className="border-t border-border px-3 py-1.5 text-muted-foreground/60 font-semibold">
+            Greeting (first message)
+          </div>
+          <div className="px-2 py-1 space-y-0.5">
+            {greetingEntries.map((e) => entryNode(e))}
+          </div>
+        </>
       )}
     </div>
   );

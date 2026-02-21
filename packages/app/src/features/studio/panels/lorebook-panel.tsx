@@ -284,21 +284,6 @@ function EntriesTab({ roleFilter }: { roleFilter: WorldEntry["role"] | null }) {
                     className="w-full rounded bg-muted px-2 py-1 text-xs text-foreground focus:outline-none"
                   />
                 </div>
-                <div className="flex-1">
-                  <label className="text-[10px] text-muted-foreground">
-                    Order
-                  </label>
-                  <input
-                    type="number"
-                    value={entry.insertionOrder}
-                    onChange={(e) =>
-                      updateEntry(entry.id, {
-                        insertionOrder: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full rounded bg-muted px-2 py-1 text-xs text-foreground focus:outline-none"
-                  />
-                </div>
               </div>
 
               {/* Toggles */}
