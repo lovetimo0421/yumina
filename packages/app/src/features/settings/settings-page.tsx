@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useRouter } from "@tanstack/react-router";
+import { LogOut } from "lucide-react";
 import { toast } from "sonner";
-import { useSession } from "@/lib/auth-client";
+import { useSession, signOut } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,11 +12,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ApiKeysSettings } from "./api-keys";
-import { ModelSettings } from "./model-settings";
 
 export function SettingsPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [name, setName] = useState(session?.user?.name ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -38,6 +39,11 @@ export function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.navigate({ to: "/login" });
   };
 
   return (
@@ -91,9 +97,42 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
-        <ApiKeysSettings />
+        <Card className="rounded-xl">
+          <CardHeader>
+            <CardTitle>Language</CardTitle>
+            <CardDescription className="text-muted-foreground/50">
+              Interface language preference
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <select
+              disabled
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground opacity-50"
+            >
+              <option>English</option>
+            </select>
+            <p className="mt-2 text-xs text-muted-foreground/40">
+              More languages coming soon
+            </p>
+          </CardContent>
+        </Card>
 
-        <ModelSettings />
+        <Card className="rounded-xl border-destructive/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <LogOut className="h-5 w-5" />
+              Sign Out
+            </CardTitle>
+            <CardDescription className="text-muted-foreground/50">
+              Sign out of your account on this device
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="destructive" onClick={handleSignOut}>
+              Sign out
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

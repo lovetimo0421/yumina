@@ -65,6 +65,44 @@ pnpm db:seed      # Seed demo data (server)
 - **Editor**: 7 sections — Overview, Characters, Variables, Components, Rules, Settings, Preview
 - **Stores**: chat (messages, gameState, streaming, pendingChoices), editor (worldDraft, CRUD), worlds, models, ui
 
+## Deployment
+
+### Railway (Production)
+- **Single service** — Dockerfile builds everything, server serves API + static frontend
+- **Railway PostgreSQL** — production database, separate from dev
+- **Domain**: `yumina2-production.up.railway.app`
+- Railway auto-deploys on push to `main`
+- Server listens on `PORT` (Railway sets this automatically)
+
+### Database Architecture
+
+Two completely separate PostgreSQL databases:
+
+| | Dev (Neon) | Production (Railway) |
+|---|---|---|
+| **Used by** | `pnpm dev` locally | Deployed Railway app |
+| **Connection** | `DATABASE_URL` in `.env` | `DATABASE_URL` in Railway variables |
+| **Data** | Test/dev data | Real user data |
+
+They share the same schema but have independent data.
+
+### Workflow for Changes
+
+1. Make code changes locally
+2. Test with `pnpm dev` (uses Neon dev DB)
+3. Verify with `pnpm build && pnpm typecheck`
+4. Commit + push → Railway auto-deploys
+5. **If schema changed**: push to Railway DB from local machine:
+   ```bash
+   DATABASE_URL="postgresql://...@switchyard.proxy.rlwy.net:12458/railway" pnpm db:push
+   ```
+   Use Railway Postgres **public** URL (not `railway.internal`).
+
+### Key Files
+- `Dockerfile` — multi-stage build, copies app dist into `packages/server/public`
+- `railway.toml` — Railway config, healthcheck at `/health`
+- `packages/server/src/index.ts` — serves static frontend in production (`NODE_ENV=production`)
+
 ## Hard Requirements
 
 - Engine core MUST be framework-agnostic TypeScript

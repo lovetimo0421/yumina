@@ -193,11 +193,25 @@ worldRoutes.post("/:id/duplicate", async (c) => {
 
   const source = existing[0]!;
 
+  // Find next available conflict number: "Name (1)", "Name (2)", etc.
+  const baseName = source.name.replace(/\s*\(\d+\)$/, "");
+  const siblings = await db
+    .select({ name: worlds.name })
+    .from(worlds)
+    .where(and(eq(worlds.creatorId, currentUser.id), ilike(worlds.name, `${baseName}%`)));
+  const usedNumbers = siblings
+    .map((s) => {
+      const match = (s.name ?? "").match(/\((\d+)\)$/);
+      return match?.[1] ? parseInt(match[1]) : 0;
+    })
+    .filter((n) => n > 0);
+  const nextNum = usedNumbers.length > 0 ? Math.max(...usedNumbers) + 1 : 1;
+
   const [result] = await db
     .insert(worlds)
     .values({
       creatorId: currentUser.id,
-      name: `${source.name} (Copy)`,
+      name: `${baseName} (${nextNum})`,
       description: source.description,
       schema: source.schema,
       thumbnailUrl: source.thumbnailUrl,

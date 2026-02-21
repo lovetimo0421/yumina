@@ -119,6 +119,11 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
   const body = await c.req.json<{
     content: string;
     model?: string;
+    overrides?: {
+      maxTokens?: number;
+      maxContext?: number;
+      temperature?: number;
+    };
   }>();
 
   if (!body.content) {
@@ -186,8 +191,11 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
   );
 
   // Deterministic entry retrieval (engine-level matching)
+  // Clamp helper
+  const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
   const scanDepth = worldDef.settings?.lorebookScanDepth ?? 2;
-  const maxContext = worldDef.settings?.maxContext ?? 200000;
+  const maxContext = clamp(body.overrides?.maxContext ?? worldDef.settings?.maxContext ?? 200000, 4096, 2000000);
   const budgetPercent = worldDef.settings?.lorebookBudgetPercent ?? 100;
   const budgetCap = worldDef.settings?.lorebookBudgetCap ?? 0;
   let tokenBudget = Math.round((budgetPercent * maxContext) / 100);
@@ -271,8 +279,8 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
       for await (const chunk of provider.generateStream({
         model,
         messages: chatMessages,
-        maxTokens: worldDef.settings?.maxTokens ?? 4096,
-        temperature: worldDef.settings?.temperature ?? 1.0,
+        maxTokens: clamp(body.overrides?.maxTokens ?? worldDef.settings?.maxTokens ?? 4096, 256, 32768),
+        temperature: clamp(body.overrides?.temperature ?? worldDef.settings?.temperature ?? 1.0, 0, 2),
         topP: worldDef.settings?.topP,
         frequencyPenalty: worldDef.settings?.frequencyPenalty,
         presencePenalty: worldDef.settings?.presencePenalty,
@@ -490,7 +498,14 @@ messageRoutes.delete("/messages/:id", async (c) => {
 messageRoutes.post("/messages/:id/regenerate", async (c) => {
   const currentUser = c.get("user");
   const messageId = c.req.param("id");
-  const body = (await c.req.json().catch(() => ({}))) as { model?: string };
+  const body = (await c.req.json().catch(() => ({}))) as {
+    model?: string;
+    overrides?: {
+      maxTokens?: number;
+      maxContext?: number;
+      temperature?: number;
+    };
+  };
 
   const msgRows = await db
     .select()
@@ -544,8 +559,9 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
   const priorMessages = historyRows.slice(0, msgIndex);
 
   // Deterministic entry retrieval (engine-level matching)
+  const regenClamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
   const scanDepth = worldDef.settings?.lorebookScanDepth ?? 2;
-  const regenMaxContext = worldDef.settings?.maxContext ?? 200000;
+  const regenMaxContext = regenClamp(body.overrides?.maxContext ?? worldDef.settings?.maxContext ?? 200000, 4096, 2000000);
   const regenBudgetPercent = worldDef.settings?.lorebookBudgetPercent ?? 100;
   const regenBudgetCap = worldDef.settings?.lorebookBudgetCap ?? 0;
   let tokenBudget = Math.round((regenBudgetPercent * regenMaxContext) / 100);
@@ -585,8 +601,8 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
       for await (const chunk of regenProvider.generateStream({
         model,
         messages: chatMessages,
-        maxTokens: worldDef.settings?.maxTokens ?? 4096,
-        temperature: worldDef.settings?.temperature ?? 1.0,
+        maxTokens: regenClamp(body.overrides?.maxTokens ?? worldDef.settings?.maxTokens ?? 4096, 256, 32768),
+        temperature: regenClamp(body.overrides?.temperature ?? worldDef.settings?.temperature ?? 1.0, 0, 2),
         topP: worldDef.settings?.topP,
         frequencyPenalty: worldDef.settings?.frequencyPenalty,
         presencePenalty: worldDef.settings?.presencePenalty,
@@ -836,16 +852,9 @@ messageRoutes.post("/messages/:id/swipe", async (c) => {
 // ── Model listing with cache and categorization ──
 
 const CURATED_MODEL_IDS = new Set([
+  "google/gemini-3.1-pro",
   "anthropic/claude-sonnet-4",
-  "anthropic/claude-opus-4",
   "openai/gpt-4o",
-  "openai/gpt-4o-mini",
-  "openai/o3-mini",
-  "google/gemini-2.5-pro-preview",
-  "google/gemini-2.0-flash-001",
-  "meta-llama/llama-4-maverick",
-  "mistralai/mistral-large-latest",
-  "deepseek/deepseek-chat-v3-0324",
 ]);
 
 function getProvider(modelId: string): string {

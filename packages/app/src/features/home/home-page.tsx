@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "@/lib/auth-client";
 import { Link } from "@tanstack/react-router";
-import { Globe, Plus, Settings, BookOpen, ArrowRight } from "lucide-react";
+import { BookUser, Plus, SlidersHorizontal, BookOpen, ArrowRight } from "lucide-react";
 
 interface SessionEntry {
   id: string;
@@ -63,11 +63,11 @@ export function HomePage() {
         {/* Quick actions */}
         <div className="mb-8 flex flex-wrap gap-2">
           <Link
-            to="/app/worlds"
+            to="/app/portals"
             className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            <Globe className="h-4 w-4 text-primary" />
-            Browse Worlds
+            <BookUser className="h-4 w-4 text-primary" />
+            Portals
           </Link>
           <Link
             to="/app/worlds/create"
@@ -77,11 +77,11 @@ export function HomePage() {
             Create World
           </Link>
           <Link
-            to="/app/settings"
+            to="/app/configs"
             className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            <Settings className="h-4 w-4 text-primary" />
-            Settings
+            <SlidersHorizontal className="h-4 w-4 text-primary" />
+            Configs
           </Link>
         </div>
 
@@ -105,10 +105,10 @@ export function HomePage() {
                 Browse the world library and start playing
               </p>
               <Link
-                to="/app/worlds"
+                to="/app/portals"
                 className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
               >
-                Browse Worlds
+                My Portals
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

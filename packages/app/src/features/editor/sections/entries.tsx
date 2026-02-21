@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, FileText, PackagePlus, ChevronDown, Layers } from "lucide-react";
+import { Plus, Trash2, FileText, PackagePlus, ChevronDown, Layers, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editor";
 import { ENTRY_PRESET_PACKS } from "@/lib/entry-presets";
@@ -66,7 +66,7 @@ const SYSTEM_POSITIONS: WorldEntry["position"][] = [
 ];
 
 export function EntriesSection() {
-  const { worldDraft, addEntry, updateEntry, removeEntry, importEntryPack } =
+  const { worldDraft, addEntry, updateEntry, removeEntry, importEntryPack, setSettings } =
     useEditorStore();
   const [showPackMenu, setShowPackMenu] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -202,6 +202,78 @@ export function EntriesSection() {
           );
         })}
       </div>
+
+      {/* Entry Retrieval + Player Name — collapsible settings */}
+      <details className="group rounded-lg border border-border bg-background/50">
+        <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium text-muted-foreground/60 hover:text-foreground transition-colors">
+          <Settings2 className="h-3.5 w-3.5" />
+          <span>Entry Settings</span>
+          <ChevronDown className="ml-auto h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="space-y-4 border-t border-border px-4 pb-4 pt-3">
+          {/* Player Name */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Player Character Name
+            </label>
+            <input
+              type="text"
+              value={worldDraft.settings.playerName ?? "User"}
+              onChange={(e) =>
+                setSettings("playerName", e.target.value || "User")
+              }
+              placeholder="User"
+              className="w-60 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="mt-1 text-xs text-muted-foreground/40">
+              Resolves the {"{{user}}"} macro. Leave as "User" if the player defines their own name.
+            </p>
+          </div>
+
+          {/* Scan Depth */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Scan Depth
+            </label>
+            <input
+              type="number"
+              value={worldDraft.settings.lorebookScanDepth ?? 2}
+              onChange={(e) =>
+                setSettings("lorebookScanDepth", parseInt(e.target.value) || 2)
+              }
+              min={1}
+              max={50}
+              className="w-40 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="mt-1 text-xs text-muted-foreground/40">
+              Number of recent messages to scan for keyword matches (1 - 50)
+            </p>
+          </div>
+
+          {/* Recursion Depth */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Recursion Depth
+            </label>
+            <input
+              type="number"
+              value={worldDraft.settings.lorebookRecursionDepth ?? 0}
+              onChange={(e) =>
+                setSettings(
+                  "lorebookRecursionDepth",
+                  Math.min(Math.max(parseInt(e.target.value) || 0, 0), 10)
+                )
+              }
+              min={0}
+              max={10}
+              className="w-40 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="mt-1 text-xs text-muted-foreground/40">
+              Max depth for cascading entry triggers. 0 = disabled.
+            </p>
+          </div>
+        </div>
+      </details>
 
       {filteredEntries.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border py-12 text-center">

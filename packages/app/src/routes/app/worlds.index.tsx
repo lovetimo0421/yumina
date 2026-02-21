@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { WorldBrowser } from "@/features/worlds/world-browser";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/worlds/")({
-  component: WorldBrowser,
+  beforeLoad: () => {
+    throw redirect({ to: "/app/portals" });
+  },
 });

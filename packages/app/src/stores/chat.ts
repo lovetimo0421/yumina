@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { connectSSE } from "@/lib/sse";
 import { useAudioStore } from "./audio";
+import { useConfigStore } from "./config";
 
 export interface Message {
   id: string;
@@ -52,15 +53,11 @@ interface ChatState {
   // AI-provided choices
   pendingChoices: string[];
 
-  // Model selection
-  selectedModel: string;
-
   // Error state
   error: string | null;
 
   // Actions
   setSession: (session: SessionData | null) => void;
-  setSelectedModel: (model: string) => void;
   clearError: () => void;
   setMessages: (messages: Message[]) => void;
   setGameState: (state: Record<string, number | string | boolean>) => void;
@@ -91,11 +88,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamStartTime: null,
   abortController: null,
   pendingChoices: [],
-  selectedModel: "anthropic/claude-sonnet-4",
   error: null,
 
   setSession: (session) => set({ session }),
-  setSelectedModel: (model) => set({ selectedModel: model }),
   clearError: () => set({ error: null }),
   setMessages: (messages) => set({ messages }),
   setGameState: (gameState) => set({ gameState }),
@@ -155,9 +150,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   sendMessage: (content: string, model?: string) => {
-    const { session, isStreaming, selectedModel } = get();
+    const { session, isStreaming } = get();
     if (!session || isStreaming) return;
-    const useModel = model ?? selectedModel;
+    const config = useConfigStore.getState();
+    const useModel = model ?? config.selectedModel;
 
     // Add user message immediately so it appears in chat before AI responds
     const tempUserMsgId = `__pending_${Date.now()}`;
@@ -183,7 +179,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
       `${apiBase}/api/sessions/${session.id}/messages`,
       {
         method: "POST",
-        body: { content, model: useModel },
+        body: {
+          content,
+          model: useModel,
+          overrides: {
+            maxTokens: config.maxTokens,
+            maxContext: config.maxContext,
+            temperature: config.temperature,
+          },
+        },
         callbacks: {
           onText: (text) => {
             set((s) => ({ streamingContent: s.streamingContent + text }));
@@ -269,6 +273,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { session, isStreaming } = get();
     if (!session || isStreaming) return;
 
+    const config = useConfigStore.getState();
+
     set({
       isStreaming: true,
       streamingContent: "",
@@ -279,7 +285,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
       `${apiBase}/api/messages/${messageId}/regenerate`,
       {
         method: "POST",
-        body: { model },
+        body: {
+          model: model ?? config.selectedModel,
+          overrides: {
+            maxTokens: config.maxTokens,
+            maxContext: config.maxContext,
+            temperature: config.temperature,
+          },
+        },
         callbacks: {
           onText: (text) => {
             set((s) => ({ streamingContent: s.streamingContent + text }));

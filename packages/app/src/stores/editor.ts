@@ -64,13 +64,11 @@ function createEmptyWorld(): WorldDefinition {
 }
 
 export type EditorSection =
-  | "overview"
   | "entries"
   | "variables"
   | "components"
   | "audio"
   | "rules"
-  | "settings"
   | "preview";
 
 interface EditorState {
@@ -190,7 +188,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   worldDraft: createEmptyWorld(),
   serverWorldId: null,
   isDirty: false,
-  activeSection: "overview",
+  activeSection: "entries",
   saving: false,
 
   // History
@@ -241,7 +239,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       worldDraft: draft,
       serverWorldId: null,
       isDirty: false,
-      activeSection: "overview",
+      activeSection: "entries",
       _past: [],
       _future: [],
       canUndo: false,
@@ -303,7 +301,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         worldDraft: draft,
         serverWorldId: data.id,
         isDirty: false,
-        activeSection: "overview",
+        activeSection: "entries",
         _past: [],
         _future: [],
         canUndo: false,
@@ -699,7 +697,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       worldDraft: draft,
       serverWorldId: null,
       isDirty: true,
-      activeSection: "overview",
+      activeSection: "entries",
       _past: [],
       _future: [],
       canUndo: false,
@@ -713,7 +711,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       worldDraft: def,
       serverWorldId: null,
       isDirty: true,
-      activeSection: "overview",
+      activeSection: "entries",
       _past: [],
       _future: [],
       canUndo: false,

@@ -41,7 +41,6 @@ export function ModelBrowser({
   const { models, curated, recentlyUsed, loading, fetchModels } =
     useModelsStore();
   const [query, setQuery] = useState("");
-  const [providerFilter, setProviderFilter] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -49,29 +48,17 @@ export function ModelBrowser({
     }
   }, [open, fetchModels]);
 
-  // Unique providers
-  const providers = useMemo(() => {
-    const set = new Set(models.map((m) => m.provider));
-    return [...set].sort();
-  }, [models]);
-
-  // Filter models
+  // Filter models by search
   const filtered = useMemo(() => {
-    let result = models;
-    if (providerFilter) {
-      result = result.filter((m) => m.provider === providerFilter);
-    }
-    if (query) {
-      const q = query.toLowerCase();
-      result = result.filter(
-        (m) =>
-          m.id.toLowerCase().includes(q) ||
-          m.name.toLowerCase().includes(q) ||
-          m.provider.toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [models, query, providerFilter]);
+    if (!query) return models;
+    const q = query.toLowerCase();
+    return models.filter(
+      (m) =>
+        m.id.toLowerCase().includes(q) ||
+        m.name.toLowerCase().includes(q) ||
+        m.provider.toLowerCase().includes(q)
+    );
+  }, [models, query]);
 
   // Recently used models
   const recentModels = useMemo(
@@ -105,8 +92,8 @@ export function ModelBrowser({
           </button>
         </div>
 
-        {/* Search + Filters */}
-        <div className="border-b border-border px-4 py-3 space-y-3">
+        {/* Search */}
+        <div className="border-b border-border px-4 py-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/40" />
             <input
@@ -117,37 +104,6 @@ export function ModelBrowser({
               autoFocus
               className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-2 focus:ring-ring"
             />
-          </div>
-
-          {/* Provider filters */}
-          <div className="flex flex-wrap gap-1.5">
-            <button
-              onClick={() => setProviderFilter(null)}
-              className={cn(
-                "rounded-md px-2.5 py-1 text-xs transition-colors",
-                !providerFilter
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-accent text-muted-foreground hover-surface"
-              )}
-            >
-              All
-            </button>
-            {providers.map((p) => (
-              <button
-                key={p}
-                onClick={() =>
-                  setProviderFilter(providerFilter === p ? null : p)
-                }
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-xs transition-colors",
-                  providerFilter === p
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-accent text-muted-foreground hover-surface"
-                )}
-              >
-                {p}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -160,7 +116,7 @@ export function ModelBrowser({
           )}
 
           {/* Recently Used */}
-          {!query && !providerFilter && recentModels.length > 0 && (
+          {!query && recentModels.length > 0 && (
             <div className="mb-4">
               <div className="flex items-center gap-1.5 px-2 py-1.5">
                 <Clock className="h-3 w-3 text-muted-foreground/40" />
@@ -183,7 +139,7 @@ export function ModelBrowser({
           )}
 
           {/* Curated / Popular */}
-          {!query && !providerFilter && curated.length > 0 && (
+          {!query && curated.length > 0 && (
             <div className="mb-4">
               <div className="flex items-center gap-1.5 px-2 py-1.5">
                 <Star className="h-3 w-3 text-muted-foreground/40" />
@@ -207,7 +163,7 @@ export function ModelBrowser({
 
           {/* All models / search results */}
           <div>
-            {(query || providerFilter) && (
+            {query && (
               <div className="px-2 py-1.5">
                 <span className="text-xs font-medium text-muted-foreground/50">
                   {filtered.length} model{filtered.length !== 1 ? "s" : ""}{" "}
@@ -215,7 +171,7 @@ export function ModelBrowser({
                 </span>
               </div>
             )}
-            {!query && !providerFilter && (
+            {!query && (
               <div className="flex items-center gap-1.5 px-2 py-1.5">
                 <Layers className="h-3 w-3 text-muted-foreground/40" />
                 <span className="text-xs font-medium text-muted-foreground/50">

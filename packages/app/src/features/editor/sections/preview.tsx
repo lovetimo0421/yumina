@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Play, Loader2, MessageSquare } from "lucide-react";
 import { useEditorStore } from "@/stores/editor";
-import { useChatStore } from "@/stores/chat";
+import { useConfigStore } from "@/stores/config";
 
 export function PreviewSection() {
   const { worldDraft } = useEditorStore();
@@ -12,7 +12,7 @@ export function PreviewSection() {
   const [error, setError] = useState<string | null>(null);
 
   const apiBase = import.meta.env.VITE_API_URL || "";
-  const { selectedModel } = useChatStore();
+  const selectedModel = useConfigStore((s) => s.selectedModel);
 
   // Find greeting entry
   const greetingEntry = worldDraft.entries.find(

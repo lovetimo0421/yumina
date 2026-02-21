@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, LayoutGrid } from "lucide-react";
+import { Plus, Trash2, LayoutGrid, ChevronDown, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editor";
 import {
@@ -19,7 +19,12 @@ export function ComponentsSection() {
     addComponent,
     updateComponent,
     removeComponent,
+    setSettings,
+    addDisplayTransform,
+    updateDisplayTransform,
+    removeDisplayTransform,
   } = useEditorStore();
+  const { displayTransforms } = worldDraft;
   const [selectedId, setSelectedId] = useState<string | null>(
     worldDraft.components[0]?.id ?? null
   );
@@ -223,6 +228,153 @@ export function ComponentsSection() {
           )}
         </div>
       )}
+
+      {/* Display & Rendering Settings — collapsible */}
+      <details className="group rounded-lg border border-border bg-background/50">
+        <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium text-muted-foreground/60 hover:text-foreground transition-colors">
+          <Settings2 className="h-3.5 w-3.5" />
+          <span>Display & Rendering</span>
+          <ChevronDown className="ml-auto h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="space-y-6 border-t border-border px-4 pb-4 pt-3">
+          {/* Full-Screen Component Mode */}
+          <div>
+            <label className="flex items-center gap-2.5 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                checked={worldDraft.settings.fullScreenComponent ?? false}
+                onChange={(e) =>
+                  setSettings("fullScreenComponent", e.target.checked)
+                }
+                className="rounded"
+              />
+              Full-Screen Component Mode
+            </label>
+            <p className="mt-1.5 ml-6 text-xs text-muted-foreground/40">
+              Custom components take over the entire screen during play. Chat is embedded within the component.
+            </p>
+          </div>
+
+          {/* Display Transforms */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h4 className="text-sm font-medium text-foreground">
+                  Display Transforms
+                </h4>
+                <p className="text-xs text-muted-foreground/40 mt-0.5">
+                  Regex find-and-replace rules applied to message content before rendering
+                </p>
+              </div>
+              <button
+                onClick={addDisplayTransform}
+                className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                + Add Transform
+              </button>
+            </div>
+
+            {displayTransforms.length === 0 ? (
+              <p className="text-xs text-muted-foreground/40 italic">
+                No display transforms. Transforms let you convert patterns in AI output into styled HTML elements.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {[...displayTransforms]
+                  .sort((a, b) => a.order - b.order)
+                  .map((t) => (
+                    <div
+                      key={t.id}
+                      className="rounded-lg border border-border bg-background p-3 space-y-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={t.enabled}
+                          onChange={(e) =>
+                            updateDisplayTransform(t.id, { enabled: e.target.checked })
+                          }
+                          className="rounded"
+                        />
+                        <input
+                          type="text"
+                          value={t.name}
+                          onChange={(e) =>
+                            updateDisplayTransform(t.id, { name: e.target.value })
+                          }
+                          className="flex-1 rounded border border-border bg-muted px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          placeholder="Transform name"
+                        />
+                        <input
+                          type="number"
+                          value={t.order}
+                          onChange={(e) =>
+                            updateDisplayTransform(t.id, { order: parseInt(e.target.value) || 0 })
+                          }
+                          className="w-16 rounded border border-border bg-muted px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          title="Order (lower runs first)"
+                        />
+                        <button
+                          onClick={() => removeDisplayTransform(t.id)}
+                          className="text-xs text-destructive hover:text-destructive/80"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-start">
+                        <div>
+                          <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">
+                            Pattern (regex)
+                          </label>
+                          <input
+                            type="text"
+                            value={t.pattern}
+                            onChange={(e) =>
+                              updateDisplayTransform(t.id, { pattern: e.target.value })
+                            }
+                            className="w-full rounded border border-border bg-muted px-2 py-1 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            placeholder="\\[PEEP:(\\w+)\\]"
+                          />
+                        </div>
+                        <div className="pt-5 text-xs text-muted-foreground/40">
+                          →
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">
+                            Replacement (HTML ok)
+                          </label>
+                          <input
+                            type="text"
+                            value={t.replacement}
+                            onChange={(e) =>
+                              updateDisplayTransform(t.id, { replacement: e.target.value })
+                            }
+                            className="w-full rounded border border-border bg-muted px-2 py-1 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            placeholder='<span class="highlight">$1</span>'
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">
+                          Flags
+                        </label>
+                        <input
+                          type="text"
+                          value={t.flags ?? "g"}
+                          onChange={(e) =>
+                            updateDisplayTransform(t.id, { flags: e.target.value || "g" })
+                          }
+                          className="w-20 rounded border border-border bg-muted px-2 py-1 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          placeholder="g"
+                        />
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </details>
     </div>
   );
 }

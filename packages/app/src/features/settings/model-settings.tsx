@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, Layers } from "lucide-react";
-import { useChatStore } from "@/stores/chat";
+import { useConfigStore } from "@/stores/config";
 import { useModelsStore } from "@/stores/models";
 import { ModelBrowser } from "@/features/chat/model-browser";
 import {
@@ -12,21 +12,19 @@ import {
 } from "@/components/ui/card";
 
 const CURATED_MODELS = [
+  { id: "google/gemini-3.1-pro", name: "Gemini 3.1 Pro", desc: "Best overall" },
   { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4", desc: "Fast & smart" },
-  { id: "anthropic/claude-opus-4", name: "Claude Opus 4", desc: "Most capable" },
-  { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", desc: "Fast & cheap" },
   { id: "openai/gpt-4o", name: "GPT-4o", desc: "Balanced" },
-  { id: "google/gemini-2.5-pro-preview", name: "Gemini 2.5 Pro", desc: "Google's best" },
-  { id: "meta-llama/llama-4-maverick", name: "Llama 4 Maverick", desc: "Open source" },
 ];
 
 export function ModelSettings() {
   const [browserOpen, setBrowserOpen] = useState(false);
-  const { selectedModel, setSelectedModel } = useChatStore();
+  const selectedModel = useConfigStore((s) => s.selectedModel);
+  const setConfig = useConfigStore((s) => s.setConfig);
   const { addToRecent } = useModelsStore();
 
   const handleSelect = (modelId: string) => {
-    setSelectedModel(modelId);
+    setConfig("selectedModel", modelId);
     addToRecent(modelId);
   };
 

@@ -15,8 +15,11 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppWorldsRouteImport } from './routes/app/worlds'
+import { Route as AppWorldInfoRouteImport } from './routes/app/world-info'
 import { Route as AppSettingsRouteImport } from './routes/app/settings'
+import { Route as AppPortalsRouteImport } from './routes/app/portals'
 import { Route as AppHubRouteImport } from './routes/app/hub'
+import { Route as AppConfigsRouteImport } from './routes/app/configs'
 import { Route as AppWorldsIndexRouteImport } from './routes/app/worlds.index'
 import { Route as AppWorldsCreateRouteImport } from './routes/app/worlds.create'
 import { Route as AppStudioWorldIdRouteImport } from './routes/app/studio.$worldId'
@@ -54,14 +57,29 @@ const AppWorldsRoute = AppWorldsRouteImport.update({
   path: '/worlds',
   getParentRoute: () => AppRoute,
 } as any)
+const AppWorldInfoRoute = AppWorldInfoRouteImport.update({
+  id: '/world-info',
+  path: '/world-info',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPortalsRoute = AppPortalsRouteImport.update({
+  id: '/portals',
+  path: '/portals',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppHubRoute = AppHubRouteImport.update({
   id: '/hub',
   path: '/hub',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConfigsRoute = AppConfigsRouteImport.update({
+  id: '/configs',
+  path: '/configs',
   getParentRoute: () => AppRoute,
 } as any)
 const AppWorldsIndexRoute = AppWorldsIndexRouteImport.update({
@@ -100,8 +118,11 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/app/configs': typeof AppConfigsRoute
   '/app/hub': typeof AppHubRouteWithChildren
+  '/app/portals': typeof AppPortalsRoute
   '/app/settings': typeof AppSettingsRoute
+  '/app/world-info': typeof AppWorldInfoRoute
   '/app/worlds': typeof AppWorldsRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/app/chat/$sessionId': typeof AppChatSessionIdRoute
@@ -115,8 +136,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/app/configs': typeof AppConfigsRoute
   '/app/hub': typeof AppHubRouteWithChildren
+  '/app/portals': typeof AppPortalsRoute
   '/app/settings': typeof AppSettingsRoute
+  '/app/world-info': typeof AppWorldInfoRoute
   '/app': typeof AppIndexRoute
   '/app/chat/$sessionId': typeof AppChatSessionIdRoute
   '/app/hub/$worldId': typeof AppHubWorldIdRoute
@@ -131,8 +155,11 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/app/configs': typeof AppConfigsRoute
   '/app/hub': typeof AppHubRouteWithChildren
+  '/app/portals': typeof AppPortalsRoute
   '/app/settings': typeof AppSettingsRoute
+  '/app/world-info': typeof AppWorldInfoRoute
   '/app/worlds': typeof AppWorldsRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/app/chat/$sessionId': typeof AppChatSessionIdRoute
@@ -149,8 +176,11 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/register'
+    | '/app/configs'
     | '/app/hub'
+    | '/app/portals'
     | '/app/settings'
+    | '/app/world-info'
     | '/app/worlds'
     | '/app/'
     | '/app/chat/$sessionId'
@@ -164,8 +194,11 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/register'
+    | '/app/configs'
     | '/app/hub'
+    | '/app/portals'
     | '/app/settings'
+    | '/app/world-info'
     | '/app'
     | '/app/chat/$sessionId'
     | '/app/hub/$worldId'
@@ -179,8 +212,11 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/register'
+    | '/app/configs'
     | '/app/hub'
+    | '/app/portals'
     | '/app/settings'
+    | '/app/world-info'
     | '/app/worlds'
     | '/app/'
     | '/app/chat/$sessionId'
@@ -242,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWorldsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/world-info': {
+      id: '/app/world-info'
+      path: '/world-info'
+      fullPath: '/app/world-info'
+      preLoaderRoute: typeof AppWorldInfoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/settings': {
       id: '/app/settings'
       path: '/settings'
@@ -249,11 +292,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/portals': {
+      id: '/app/portals'
+      path: '/portals'
+      fullPath: '/app/portals'
+      preLoaderRoute: typeof AppPortalsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/hub': {
       id: '/app/hub'
       path: '/hub'
       fullPath: '/app/hub'
       preLoaderRoute: typeof AppHubRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/configs': {
+      id: '/app/configs'
+      path: '/configs'
+      fullPath: '/app/configs'
+      preLoaderRoute: typeof AppConfigsRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/worlds/': {
@@ -329,8 +386,11 @@ const AppWorldsRouteWithChildren = AppWorldsRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppConfigsRoute: typeof AppConfigsRoute
   AppHubRoute: typeof AppHubRouteWithChildren
+  AppPortalsRoute: typeof AppPortalsRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppWorldInfoRoute: typeof AppWorldInfoRoute
   AppWorldsRoute: typeof AppWorldsRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppChatSessionIdRoute: typeof AppChatSessionIdRoute
@@ -338,8 +398,11 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppConfigsRoute: AppConfigsRoute,
   AppHubRoute: AppHubRouteWithChildren,
+  AppPortalsRoute: AppPortalsRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppWorldInfoRoute: AppWorldInfoRoute,
   AppWorldsRoute: AppWorldsRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppChatSessionIdRoute: AppChatSessionIdRoute,

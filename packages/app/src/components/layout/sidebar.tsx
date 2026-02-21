@@ -1,33 +1,27 @@
-import { useState, useEffect, useMemo } from "react";
-import { Link, useRouter, useLocation } from "@tanstack/react-router";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { Link, useLocation } from "@tanstack/react-router";
 import {
-  Settings,
   PanelLeftClose,
   PanelLeftOpen,
-  LogOut,
-  Globe,
   Compass,
-  Trash2,
+  BookUser,
   BookOpen,
-  Search,
+  SlidersHorizontal,
+  Trash2,
+  Plus,
+  Pin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui";
-import { useSession, signOut } from "@/lib/auth-client";
+import { useSession } from "@/lib/auth-client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const navItems = [
-  { to: "/app/worlds" as const, label: "Worlds", icon: Globe },
-  { to: "/app/hub" as const, label: "Hub", icon: Compass },
-  { to: "/app/settings" as const, label: "Settings", icon: Settings },
+  { to: "/app/hub" as const, label: "Discover", icon: Compass },
+  { to: "/app/configs" as const, label: "Configs", icon: SlidersHorizontal },
+  { to: "/app/portals" as const, label: "Portals", icon: BookUser },
+  { to: "/app/world-info" as const, label: "World Info", icon: BookOpen },
 ];
 
 interface SessionEntry {
@@ -39,6 +33,20 @@ interface SessionEntry {
 }
 
 const apiBase = import.meta.env.VITE_API_URL || "";
+const PINNED_KEY = "yumina-pinned-sessions";
+
+function loadPinned(): Set<string> {
+  try {
+    const raw = localStorage.getItem(PINNED_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function savePinned(pins: Set<string>) {
+  localStorage.setItem(PINNED_KEY, JSON.stringify([...pins]));
+}
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -54,12 +62,11 @@ function timeAgo(dateStr: string): string {
 export function Sidebar() {
   const { sidebarOpen, toggleSidebar } = useUiStore();
   const { data: session } = useSession();
-  const router = useRouter();
   const location = useLocation();
   const [sessions, setSessions] = useState<SessionEntry[]>([]);
-  const [search, setSearch] = useState("");
+  const [pinned, setPinned] = useState<Set<string>>(loadPinned);
 
-  // Re-fetch sessions on route change (catches new session creation + navigation)
+  // Re-fetch sessions on route change
   useEffect(() => {
     const fetchSessions = async () => {
       try {
@@ -77,10 +84,23 @@ export function Sidebar() {
     fetchSessions();
   }, [location.pathname]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.navigate({ to: "/login" });
-  };
+  const togglePin = useCallback(
+    (e: React.MouseEvent, sessionId: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setPinned((prev) => {
+        const next = new Set(prev);
+        if (next.has(sessionId)) {
+          next.delete(sessionId);
+        } else {
+          next.add(sessionId);
+        }
+        savePinned(next);
+        return next;
+      });
+    },
+    []
+  );
 
   const handleDeleteSession = async (
     e: React.MouseEvent,
@@ -95,19 +115,28 @@ export function Sidebar() {
       });
       if (res.ok) {
         setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+        // Remove from pinned if present
+        setPinned((prev) => {
+          const next = new Set(prev);
+          if (next.delete(sessionId)) savePinned(next);
+          return next;
+        });
       }
     } catch {
       toast.error("Failed to delete session");
     }
   };
 
-  const filteredSessions = useMemo(() => {
-    if (!search.trim()) return sessions;
-    const q = search.toLowerCase();
-    return sessions.filter((s) =>
-      (s.worldName ?? "").toLowerCase().includes(q)
-    );
-  }, [sessions, search]);
+  const sortedSessions = useMemo(() => {
+    // Pinned first, then by updatedAt
+    return [...sessions].sort((a, b) => {
+      const aPin = pinned.has(a.id) ? 0 : 1;
+      const bPin = pinned.has(b.id) ? 0 : 1;
+      if (aPin !== bPin) return aPin - bPin;
+      return new Date(b.updatedAt ?? b.createdAt).getTime() -
+        new Date(a.updatedAt ?? a.createdAt).getTime();
+    });
+  }, [sessions, pinned]);
 
   const initials =
     session?.user?.name
@@ -119,7 +148,7 @@ export function Sidebar() {
 
   return (
     <aside className="flex h-screen flex-col overflow-hidden bg-sidebar">
-      {/* Logo + collapse — matching BT header */}
+      {/* Logo + collapse */}
       <div className="flex h-12 shrink-0 items-center gap-2 px-4">
         {sidebarOpen && (
           <span className="text-base font-bold text-primary">Yumina</span>
@@ -137,7 +166,21 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Navigation — flat list like BT */}
+      {/* Start New button */}
+      <div className="shrink-0 px-2 pb-1">
+        <Link
+          to="/app/worlds/create"
+          className={cn(
+            "flex items-center gap-3 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90",
+            !sidebarOpen && "justify-center px-2"
+          )}
+        >
+          <Plus className="h-4 w-4 shrink-0" />
+          {sidebarOpen && <span>Start New</span>}
+        </Link>
+      </div>
+
+      {/* Navigation */}
       <nav className="shrink-0 px-2 pb-1">
         {navItems.map((item) => (
           <Link
@@ -155,7 +198,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Recent worlds — scrollable list like BT sidebar */}
+      {/* Recent sessions — scrollable list */}
       {sidebarOpen && (
         <>
           <div className="mx-3 border-t border-border/30" />
@@ -163,47 +206,60 @@ export function Sidebar() {
             <p className="mb-2 px-3 text-[11px] font-medium text-muted-foreground/40">
               Recent Worlds
             </p>
-            <div className="relative mb-2 px-1">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/30" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-md border border-border/50 bg-transparent py-1.5 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground/30 focus:border-primary/50 focus:outline-none"
-              />
-            </div>
             <div className="space-y-0.5">
-              {filteredSessions.map((s) => (
-                <Link
-                  key={s.id}
-                  to="/app/chat/$sessionId"
-                  params={{ sessionId: s.id }}
-                  className="hover-surface group flex items-center gap-3 rounded-lg px-3 py-2 [&.active]:active-surface"
-                >
-                  {/* Circular avatar like BT */}
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs text-muted-foreground/60">
-                    <BookOpen className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <p className="truncate text-sm text-foreground/80">
-                      {s.worldName ?? "Session"}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground/40">
-                      {timeAgo(s.updatedAt ?? s.createdAt)}
-                    </p>
-                  </div>
-                  <button
-                    className="hidden shrink-0 rounded-md p-1 text-muted-foreground/20 hover:text-destructive group-hover:block"
-                    onClick={(e) => handleDeleteSession(e, s.id)}
+              {sortedSessions.map((s) => {
+                const isPinned = pinned.has(s.id);
+                return (
+                  <Link
+                    key={s.id}
+                    to="/app/chat/$sessionId"
+                    params={{ sessionId: s.id }}
+                    className="hover-surface group flex items-center gap-3 rounded-lg px-3 py-2 [&.active]:active-surface"
                   >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </Link>
-              ))}
-              {filteredSessions.length === 0 && (
+                    {/* Circular avatar */}
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs text-muted-foreground/60">
+                      <BookOpen className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <div className="flex items-center gap-1">
+                        <p className="truncate text-sm text-foreground/80">
+                          {s.worldName ?? "Session"}
+                        </p>
+                        {isPinned && (
+                          <Pin className="h-2.5 w-2.5 shrink-0 rotate-45 text-primary/60" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground/40">
+                        {timeAgo(s.updatedAt ?? s.createdAt)}
+                      </p>
+                    </div>
+                    <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
+                      <button
+                        className={cn(
+                          "rounded-md p-1",
+                          isPinned
+                            ? "text-primary/60 hover:text-primary"
+                            : "text-muted-foreground/20 hover:text-primary/60"
+                        )}
+                        onClick={(e) => togglePin(e, s.id)}
+                        title={isPinned ? "Unpin" : "Pin to top"}
+                      >
+                        <Pin className="h-3 w-3" />
+                      </button>
+                      <button
+                        className="rounded-md p-1 text-muted-foreground/20 hover:text-destructive"
+                        onClick={(e) => handleDeleteSession(e, s.id)}
+                        title="Delete session"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </Link>
+                );
+              })}
+              {sortedSessions.length === 0 && (
                 <p className="px-3 py-4 text-center text-xs text-muted-foreground/30">
-                  {search ? "No matches" : "No sessions yet"}
+                  No sessions yet
                 </p>
               )}
             </div>
@@ -213,51 +269,35 @@ export function Sidebar() {
 
       {!sidebarOpen && <div className="flex-1" />}
 
-      {/* User profile — matching BT bottom profile */}
+      {/* User profile — avatar click navigates to settings */}
       <div className="shrink-0 px-2 py-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className={cn(
-                "hover-surface flex w-full items-center gap-3 rounded-lg px-3 py-2",
-                !sidebarOpen && "justify-center px-0"
-              )}
-            >
-              <Avatar className="h-8 w-8 shrink-0">
-                <AvatarImage src={session?.user?.image ?? undefined} />
-                <AvatarFallback className="bg-accent text-xs text-muted-foreground/60">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              {sidebarOpen && (
-                <div className="flex-1 overflow-hidden text-left">
-                  <p className="truncate text-sm text-foreground/80">
-                    {session?.user?.name ?? "User"}
-                  </p>
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                    <span className="text-[11px] text-muted-foreground/40">
-                      Connected
-                    </span>
-                  </div>
-                </div>
-              )}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem asChild>
-              <Link to="/app/settings">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Link
+          to="/app/settings"
+          className={cn(
+            "hover-surface flex w-full items-center gap-3 rounded-lg px-3 py-2",
+            !sidebarOpen && "justify-center px-0"
+          )}
+        >
+          <Avatar className="h-8 w-8 shrink-0">
+            <AvatarImage src={session?.user?.image ?? undefined} />
+            <AvatarFallback className="bg-accent text-xs text-muted-foreground/60">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          {sidebarOpen && (
+            <div className="flex-1 overflow-hidden text-left">
+              <p className="truncate text-sm text-foreground/80">
+                {session?.user?.name ?? "User"}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                <span className="text-[11px] text-muted-foreground/40">
+                  Connected
+                </span>
+              </div>
+            </div>
+          )}
+        </Link>
       </div>
     </aside>
   );
