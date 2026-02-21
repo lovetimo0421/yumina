@@ -75,6 +75,7 @@ export const worlds = pgTable("worlds", {
   isPublished: boolean("is_published").default(false),
   downloadCount: integer("download_count").notNull().default(0),
   tags: jsonb("tags").$type<string[]>().notNull().default([]),
+  sourceWorldId: text("source_world_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -122,6 +123,8 @@ export const messages = pgTable("messages", {
   tokenCount: integer("token_count"),
   generationTimeMs: integer("generation_time_ms"),
   compacted: boolean("compacted").notNull().default(false),
+  stateSnapshot: jsonb("state_snapshot").$type<Record<string, unknown>>(),
+  attachments: jsonb("attachments").$type<Array<{ type: string; mimeType: string; name: string; url: string }>>(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -156,6 +159,20 @@ export const worldMemories = pgTable("world_memories", {
   }).notNull(),
   importance: integer("importance").notNull().default(5),
   sessionId: text("session_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const checkpoints = pgTable("checkpoints", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  sessionId: text("session_id")
+    .notNull()
+    .references(() => playSessions.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  messages: jsonb("messages").$type<Array<Record<string, unknown>>>().notNull(),
+  state: jsonb("state").$type<Record<string, unknown>>().notNull(),
+  summary: text("summary"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

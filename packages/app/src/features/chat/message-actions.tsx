@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, RefreshCw, Copy, Trash2, Check, X } from "lucide-react";
+import { Pencil, RefreshCw, Copy, Trash2, Check, X, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useChatStore, type Message } from "@/stores/chat";
@@ -15,8 +15,12 @@ export function MessageActions({ message }: MessageActionsProps) {
   const [editContent, setEditContent] = useState(message.content);
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmRevert, setConfirmRevert] = useState(false);
 
-  const { updateMessage, removeMessage, regenerateMessage } = useChatStore();
+  const { updateMessage, removeMessage, regenerateMessage, revertToMessage, messages } = useChatStore();
+
+  // Don't show revert if this is the last message (nothing to delete after it)
+  const isLastMessage = messages[messages.length - 1]?.id === message.id;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -58,6 +62,12 @@ export function MessageActions({ message }: MessageActionsProps) {
       toast.error("Failed to delete message");
     }
     setConfirmDelete(false);
+  };
+
+  const handleRevert = async () => {
+    setConfirmRevert(false);
+    await revertToMessage(message.id);
+    toast.success("Reverted to this message");
   };
 
   if (isEditing) {
@@ -109,6 +119,28 @@ export function MessageActions({ message }: MessageActionsProps) {
     );
   }
 
+  if (confirmRevert) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="text-[11px] text-muted-foreground">
+          Revert here? Messages below will be deleted.
+        </span>
+        <button
+          onClick={handleRevert}
+          className="h-6 rounded-md bg-destructive/15 px-2 text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/25"
+        >
+          Yes
+        </button>
+        <button
+          onClick={() => setConfirmRevert(false)}
+          className="hover-surface h-6 rounded-md px-2 text-[11px] text-muted-foreground"
+        >
+          No
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-0.5">
       <ActionBtn onClick={handleCopy} title="Copy">
@@ -129,6 +161,15 @@ export function MessageActions({ message }: MessageActionsProps) {
           title="Regenerate"
         >
           <RefreshCw className="h-3 w-3" />
+        </ActionBtn>
+      )}
+
+      {!isLastMessage && (
+        <ActionBtn
+          onClick={() => setConfirmRevert(true)}
+          title="Revert to here"
+        >
+          <Undo2 className="h-3 w-3" />
         </ActionBtn>
       )}
 

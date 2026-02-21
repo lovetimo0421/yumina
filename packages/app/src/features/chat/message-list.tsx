@@ -6,7 +6,7 @@ import { SwipeControls } from "./swipe-controls";
 import type { WorldDefinition, DisplayTransform } from "@yumina/engine";
 
 export function MessageList() {
-  const { messages, isStreaming, streamingContent, session, error, clearError } = useChatStore();
+  const { messages, isStreaming, isContinuing, streamingContent, session, error, clearError } = useChatStore();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [compactedExpanded, setCompactedExpanded] = useState(false);
 
@@ -54,16 +54,32 @@ export function MessageList() {
         </div>
       )}
 
-      {activeMessages.map((message) => (
-        <MessageBubble key={message.id} message={message} displayTransforms={displayTransforms}>
-          <MessageActions message={message} />
-          {message.role === "assistant" && (
-            <SwipeControls message={message} />
-          )}
-        </MessageBubble>
-      ))}
+      {activeMessages.map((message, idx) => {
+        // When continuing, the last assistant message shows with streaming appended
+        const isContinuingThis = isContinuing && isStreaming && message.role === "assistant" &&
+          idx === activeMessages.length - 1;
 
-      {isStreaming && streamingContent && (
+        return (
+          <MessageBubble
+            key={message.id}
+            message={message}
+            isStreaming={isContinuingThis}
+            streamingContent={isContinuingThis ? message.content + streamingContent : undefined}
+            displayTransforms={displayTransforms}
+          >
+            {!isContinuingThis && (
+              <>
+                <MessageActions message={message} />
+                {message.role === "assistant" && (
+                  <SwipeControls message={message} />
+                )}
+              </>
+            )}
+          </MessageBubble>
+        );
+      })}
+
+      {isStreaming && !isContinuing && streamingContent && (
         <MessageBubble
           message={{
             id: "__streaming__",

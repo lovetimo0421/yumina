@@ -12,6 +12,8 @@ import {
   Download,
   ChevronDown,
   MessageSquare,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useWorldsStore, type WorldItem } from "@/stores/worlds";
@@ -63,6 +65,11 @@ export function PortalsPage() {
     });
   }, [worlds, session?.user?.id, favorites, search]);
 
+  const publishedWorlds = useMemo(
+    () => myWorlds.filter((w) => w.isPublished),
+    [myWorlds]
+  );
+
   const toggleFavorite = useCallback((worldId: string) => {
     setFavorites((prev) => {
       const next = new Set(prev);
@@ -73,11 +80,33 @@ export function PortalsPage() {
     });
   }, []);
 
+  const handleTogglePublish = useCallback(async (world: WorldItem) => {
+    try {
+      const res = await fetch(`${apiBase}/api/worlds/${world.id}/publish`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        const { data } = await res.json();
+        toast.success(data.isPublished ? "Published to Hub!" : "Removed from Hub");
+        fetchWorlds();
+        // Update active world if it's the one being toggled
+        setActiveWorld((prev) =>
+          prev?.id === world.id ? { ...prev, isPublished: data.isPublished } : prev
+        );
+      } else {
+        toast.error("Failed to toggle publish");
+      }
+    } catch {
+      toast.error("Failed to toggle publish");
+    }
+  }, [fetchWorlds]);
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-2xl p-8">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground">Portals</h1>
+          <h1 className="text-2xl font-bold text-foreground">My Worlds</h1>
           <span className="text-xs text-muted-foreground/40">
             {myWorlds.length} world{myWorlds.length !== 1 ? "s" : ""}
           </span>
@@ -108,37 +137,78 @@ export function PortalsPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-1">
-            {myWorlds.map((world) => {
-              const isFav = favorites.has(world.id);
-              return (
-                <button
-                  key={world.id}
-                  onClick={() => setActiveWorld(world)}
-                  className="flex w-full items-center gap-4 rounded-xl border border-transparent px-4 py-3 text-left transition-colors hover:border-border hover:bg-card"
-                >
-                  {/* Avatar */}
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-lg font-bold text-primary/60">
-                    {(world.name || "W")[0]?.toUpperCase()}
-                  </div>
-                  {/* Info */}
-                  <div className="flex-1 overflow-hidden">
-                    <div className="flex items-center gap-1.5">
-                      <p className="truncate text-sm font-medium text-foreground">
+          <>
+            {/* Published on Hub section */}
+            {publishedWorlds.length > 0 && !search && (
+              <div className="mb-6">
+                <h2 className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground/60">
+                  <Eye className="h-3.5 w-3.5" />
+                  Published on Hub
+                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                    {publishedWorlds.length}
+                  </span>
+                </h2>
+                <div className="space-y-0.5">
+                  {publishedWorlds.map((world) => (
+                    <button
+                      key={`pub-${world.id}`}
+                      onClick={() => setActiveWorld(world)}
+                      className="flex w-full items-center gap-3 rounded-lg border border-primary/10 bg-primary/[0.02] px-3 py-2 text-left transition-colors hover:border-primary/20 hover:bg-primary/5"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary/60">
+                        {(world.name || "W")[0]?.toUpperCase()}
+                      </div>
+                      <span className="flex-1 truncate text-sm font-medium text-foreground">
                         {world.name || "Untitled"}
-                      </p>
-                      {isFav && (
-                        <Star className="h-3 w-3 shrink-0 fill-yellow-400 text-yellow-400" />
-                      )}
+                      </span>
+                      <div className="flex shrink-0 items-center gap-1 text-muted-foreground/40">
+                        <Download className="h-3 w-3" />
+                        <span className="text-[11px]">{world.downloadCount ?? 0}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* All worlds list */}
+            <div className="space-y-1">
+              {myWorlds.map((world) => {
+                const isFav = favorites.has(world.id);
+                return (
+                  <button
+                    key={world.id}
+                    onClick={() => setActiveWorld(world)}
+                    className="flex w-full items-center gap-4 rounded-xl border border-transparent px-4 py-3 text-left transition-colors hover:border-border hover:bg-card"
+                  >
+                    {/* Avatar */}
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-lg font-bold text-primary/60">
+                      {(world.name || "W")[0]?.toUpperCase()}
                     </div>
-                    <p className="truncate text-xs text-muted-foreground/50">
-                      {world.description || "No description"}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                    {/* Info */}
+                    <div className="flex-1 overflow-hidden">
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {world.name || "Untitled"}
+                        </p>
+                        {isFav && (
+                          <Star className="h-3 w-3 shrink-0 fill-yellow-400 text-yellow-400" />
+                        )}
+                        {world.isPublished && (
+                          <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
+                            Live
+                          </span>
+                        )}
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground/50">
+                        {world.description || "No description"}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
@@ -176,7 +246,6 @@ export function PortalsPage() {
             } catch { toast.error("Failed to duplicate"); }
           }}
           onExport={() => {
-            // Export as JSON
             const schema = activeWorld.schema;
             const blob = new Blob([JSON.stringify(schema, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
@@ -187,6 +256,7 @@ export function PortalsPage() {
             URL.revokeObjectURL(url);
             toast.success("Exported as JSON");
           }}
+          onTogglePublish={() => handleTogglePublish(activeWorld)}
           onDelete={async () => {
             try {
               const res = await fetch(`${apiBase}/api/worlds/${activeWorld.id}`, {
@@ -222,6 +292,7 @@ function ProfileCard({
   onEdit,
   onDuplicate,
   onExport,
+  onTogglePublish,
   onDelete,
 }: {
   world: WorldItem;
@@ -232,6 +303,7 @@ function ProfileCard({
   onEdit: () => void;
   onDuplicate: () => void;
   onExport: () => void;
+  onTogglePublish: () => void;
   onDelete: () => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -264,7 +336,6 @@ function ProfileCard({
         <div className="flex-1 overflow-y-auto">
           {/* Header — avatar + name */}
           <div className="flex flex-col items-center px-6 pt-8 pb-4">
-            {/* Avatar circle with border ring */}
             <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-primary/40 bg-gradient-to-br from-primary/20 to-primary/5 text-3xl font-bold text-primary/60">
               {(world.name || "W")[0]?.toUpperCase()}
             </div>
@@ -275,6 +346,14 @@ function ProfileCard({
             <p className="text-xs text-muted-foreground/50">
               by {(schema.author as string) || "Unknown"}
             </p>
+
+            {/* Download count for published worlds */}
+            {world.isPublished && (world.downloadCount ?? 0) > 0 && (
+              <div className="mt-1 flex items-center gap-1 text-muted-foreground/40">
+                <Download className="h-3 w-3" />
+                <span className="text-[11px]">{world.downloadCount} downloads</span>
+              </div>
+            )}
           </div>
 
           {/* Toolbar */}
@@ -305,6 +384,17 @@ function ProfileCard({
               <Download className="h-4 w-4" />
             </button>
             <button
+              onClick={onTogglePublish}
+              className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
+                world.isPublished
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground/40 hover:border-primary/30 hover:text-primary"
+              }`}
+              title={world.isPublished ? "Unpublish from Hub" : "Publish to Hub"}
+            >
+              {world.isPublished ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+            </button>
+            <button
               onClick={() => setConfirmDelete(true)}
               className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground/40 transition-colors hover:border-destructive/30 hover:text-destructive"
               title="Delete"
@@ -315,7 +405,7 @@ function ProfileCard({
 
           {/* Expandable sections */}
           <div className="space-y-1 px-4 pb-4">
-            {/* Description (for hub, not AI) */}
+            {/* Description */}
             <details className="group rounded-lg border border-border bg-background/50">
               <summary className="flex cursor-pointer items-center gap-2.5 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:text-primary">
                 <MessageSquare className="h-4 w-4 text-muted-foreground/40" />
@@ -358,7 +448,7 @@ function ProfileCard({
           </div>
         </div>
 
-        {/* Bottom action buttons — sticky */}
+        {/* Bottom action buttons */}
         <div className="flex gap-3 border-t border-border p-4">
           <button
             onClick={onPlay}

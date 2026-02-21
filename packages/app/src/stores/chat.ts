@@ -3,6 +3,13 @@ import { connectSSE } from "@/lib/sse";
 import { useAudioStore } from "./audio";
 import { useConfigStore } from "./config";
 
+export interface Attachment {
+  type: string;
+  mimeType: string;
+  name: string;
+  data: string; // base64
+}
+
 export interface Message {
   id: string;
   sessionId: string;
@@ -21,6 +28,14 @@ export interface Message {
   tokenCount?: number | null;
   generationTimeMs?: number | null;
   compacted?: boolean;
+  attachments?: Array<{ type: string; mimeType: string; name: string; url: string }> | null;
+  createdAt: string;
+}
+
+export interface Checkpoint {
+  id: string;
+  name: string;
+  messageCount: number;
   createdAt: string;
 }
 
@@ -46,6 +61,7 @@ interface ChatState {
 
   // Streaming state
   isStreaming: boolean;
+  isContinuing: boolean;
   streamingContent: string;
   streamStartTime: number | null;
   abortController: AbortController | null;
@@ -64,11 +80,26 @@ interface ChatState {
   addMessage: (message: Message) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
   removeMessage: (id: string) => void;
-  sendMessage: (content: string, model?: string) => void;
+  sendMessage: (content: string, model?: string, attachments?: Attachment[]) => void;
   regenerateMessage: (messageId: string, model?: string) => void;
   stopGeneration: () => void;
   setPendingChoices: (choices: string[]) => void;
   clearPendingChoices: () => void;
+
+  // Continue
+  continueLastMessage: (model?: string) => void;
+
+  // Revert & restart
+  revertLastExchange: () => Promise<void>;
+  revertToMessage: (messageId: string) => Promise<void>;
+  restartChat: () => Promise<void>;
+
+  // Checkpoints
+  checkpoints: Checkpoint[];
+  saveCheckpoint: () => Promise<void>;
+  loadCheckpoints: () => Promise<void>;
+  restoreCheckpoint: (checkpointId: string) => Promise<void>;
+  deleteCheckpoint: (checkpointId: string) => Promise<void>;
 
   // Direct variable update (from custom components)
   setVariableDirectly: (id: string, value: number | string | boolean) => void;
@@ -84,10 +115,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   gameState: {},
   isStreaming: false,
+  isContinuing: false,
   streamingContent: "",
   streamStartTime: null,
   abortController: null,
   pendingChoices: [],
+  checkpoints: [],
   error: null,
 
   setSession: (session) => set({ session }),
@@ -149,7 +182,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: (content: string, model?: string) => {
+  sendMessage: (content: string, model?: string, attachments?: Attachment[]) => {
     const { session, isStreaming } = get();
     if (!session || isStreaming) return;
     const config = useConfigStore.getState();
@@ -182,6 +215,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         body: {
           content,
           model: useModel,
+          ...(attachments && attachments.length > 0 && { attachments }),
           overrides: {
             maxTokens: config.maxTokens,
             maxContext: config.maxContext,
@@ -357,6 +391,96 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ abortController: controller });
   },
 
+  continueLastMessage: (model?: string) => {
+    const { session, isStreaming, messages: msgs } = get();
+    if (!session || isStreaming) return;
+
+    // Find last assistant message
+    let lastAssistantMsg: Message | null = null;
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i]!.role === "assistant") {
+        lastAssistantMsg = msgs[i]!;
+        break;
+      }
+    }
+    if (!lastAssistantMsg) return;
+
+    const config = useConfigStore.getState();
+    const targetId = lastAssistantMsg.id;
+
+    set({
+      isStreaming: true,
+      isContinuing: true,
+      streamingContent: "",
+      streamStartTime: Date.now(),
+      error: null,
+    });
+
+    const controller = connectSSE(
+      `${apiBase}/api/sessions/${session.id}/continue`,
+      {
+        method: "POST",
+        body: {
+          model: model ?? config.selectedModel,
+          overrides: {
+            maxTokens: config.maxTokens,
+            maxContext: config.maxContext,
+            temperature: config.temperature,
+          },
+        },
+        callbacks: {
+          onText: (text) => {
+            set((s) => ({ streamingContent: s.streamingContent + text }));
+          },
+          onDone: (data) => {
+            const state = get();
+            const finalContent = data.content as string;
+
+            set((s) => ({
+              messages: s.messages.map((m) =>
+                m.id === targetId
+                  ? { ...m, content: finalContent }
+                  : m
+              ),
+              isStreaming: false,
+              isContinuing: false,
+              streamingContent: "",
+              streamStartTime: null,
+              abortController: null,
+              gameState:
+                ((data.state as Record<string, unknown>)
+                  ?.variables as Record<string, number | string | boolean>) ??
+                state.gameState,
+            }));
+
+            const audioEffects = data.audioEffects as import("@yumina/engine").AudioEffect[] | undefined;
+            if (audioEffects && Array.isArray(audioEffects) && audioEffects.length > 0) {
+              useAudioStore.getState().processAudioEffects(audioEffects);
+            }
+          },
+          onError: (err) => {
+            console.error("Continue error:", err);
+            let errorMsg = err;
+            try {
+              const parsed = JSON.parse(err.replace(/^HTTP \d+: /, ""));
+              if (parsed.error) errorMsg = parsed.error;
+            } catch { /* use raw */ }
+            set({
+              isStreaming: false,
+              isContinuing: false,
+              streamingContent: "",
+              streamStartTime: null,
+              abortController: null,
+              error: errorMsg,
+            });
+          },
+        },
+      }
+    );
+
+    set({ abortController: controller });
+  },
+
   stopGeneration: () => {
     const { abortController } = get();
     if (abortController) {
@@ -372,6 +496,194 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setPendingChoices: (choices) => set({ pendingChoices: choices }),
   clearPendingChoices: () => set({ pendingChoices: [] }),
+
+  revertLastExchange: async () => {
+    const { session, isStreaming } = get();
+    if (!session || isStreaming) return;
+
+    try {
+      const res = await fetch(`${apiBase}/api/sessions/${session.id}/revert`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Revert failed" }));
+        set({ error: (err as { error: string }).error });
+        return;
+      }
+      const { data } = await res.json();
+      const newGameState = ((data.state as Record<string, unknown>)
+        ?.variables as Record<string, number | string | boolean>) ?? {};
+      set({
+        messages: data.messages ?? [],
+        gameState: newGameState,
+        pendingChoices: [],
+      });
+    } catch {
+      set({ error: "Failed to revert" });
+    }
+  },
+
+  revertToMessage: async (messageId: string) => {
+    const { session, isStreaming } = get();
+    if (!session || isStreaming) return;
+
+    try {
+      const res = await fetch(`${apiBase}/api/sessions/${session.id}/revert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ messageId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Revert failed" }));
+        set({ error: (err as { error: string }).error });
+        return;
+      }
+      const { data } = await res.json();
+      const newGameState = ((data.state as Record<string, unknown>)
+        ?.variables as Record<string, number | string | boolean>) ?? {};
+      set({
+        messages: data.messages ?? [],
+        gameState: newGameState,
+        pendingChoices: [],
+      });
+    } catch {
+      set({ error: "Failed to revert" });
+    }
+  },
+
+  restartChat: async () => {
+    const { session, isStreaming } = get();
+    if (!session || isStreaming) return;
+
+    try {
+      const res = await fetch(`${apiBase}/api/sessions/${session.id}/restart`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Restart failed" }));
+        set({ error: (err as { error: string }).error });
+        return;
+      }
+      const { data } = await res.json();
+      const newGameState = ((data.state as Record<string, unknown>)
+        ?.variables as Record<string, number | string | boolean>) ?? {};
+
+      // Stop all audio on restart
+      useAudioStore.getState().cleanup();
+
+      set({
+        messages: data.messages ?? [],
+        gameState: newGameState,
+        pendingChoices: [],
+        error: null,
+      });
+    } catch {
+      set({ error: "Failed to restart chat" });
+    }
+  },
+
+  saveCheckpoint: async () => {
+    const { session, isStreaming } = get();
+    if (!session || isStreaming) return;
+
+    try {
+      const res = await fetch(`${apiBase}/api/sessions/${session.id}/checkpoints`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Save failed" }));
+        set({ error: (err as { error: string }).error });
+        return;
+      }
+      const { data } = await res.json();
+      // Add to local checkpoints list
+      set((s) => ({
+        checkpoints: [
+          {
+            id: data.id,
+            name: data.name,
+            messageCount: data.messageCount,
+            createdAt: data.createdAt,
+          },
+          ...s.checkpoints,
+        ],
+      }));
+    } catch {
+      set({ error: "Failed to save checkpoint" });
+    }
+  },
+
+  loadCheckpoints: async () => {
+    const { session } = get();
+    if (!session) return;
+
+    try {
+      const res = await fetch(`${apiBase}/api/sessions/${session.id}/checkpoints`, {
+        credentials: "include",
+      });
+      if (!res.ok) return;
+      const { data } = await res.json();
+      set({ checkpoints: data ?? [] });
+    } catch {
+      // Silently fail
+    }
+  },
+
+  restoreCheckpoint: async (checkpointId: string) => {
+    const { session, isStreaming } = get();
+    if (!session || isStreaming) return;
+
+    try {
+      const res = await fetch(
+        `${apiBase}/api/sessions/${session.id}/checkpoints/${checkpointId}/restore`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Restore failed" }));
+        set({ error: (err as { error: string }).error });
+        return;
+      }
+      const { data } = await res.json();
+      const newGameState = ((data.state as Record<string, unknown>)
+        ?.variables as Record<string, number | string | boolean>) ?? {};
+      set({
+        messages: data.messages ?? [],
+        gameState: newGameState,
+        pendingChoices: [],
+      });
+    } catch {
+      set({ error: "Failed to restore checkpoint" });
+    }
+  },
+
+  deleteCheckpoint: async (checkpointId: string) => {
+    const { session } = get();
+    if (!session) return;
+
+    try {
+      const res = await fetch(
+        `${apiBase}/api/sessions/${session.id}/checkpoints/${checkpointId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+      if (!res.ok) return;
+      set((s) => ({
+        checkpoints: s.checkpoints.filter((cp) => cp.id !== checkpointId),
+      }));
+    } catch {
+      // Silently fail
+    }
+  },
 
   setVariableDirectly: (id, value) => {
     set((s) => ({

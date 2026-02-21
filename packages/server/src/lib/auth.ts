@@ -16,7 +16,9 @@ export const auth = betterAuth({
   }),
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
-  trustedOrigins: [env.APP_URL],
+  trustedOrigins: process.env.NODE_ENV !== "production"
+    ? async () => ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"]
+    : [env.APP_URL],
   emailAndPassword: {
     enabled: true,
   },

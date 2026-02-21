@@ -1,6 +1,14 @@
+/** A single content block — text or image */
+export type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+/** Message content can be a plain string or an array of content parts */
+export type MessageContent = string | ContentPart[];
+
 export interface GenerateParams {
   model: string;
-  messages: Array<{ role: "user" | "assistant" | "system"; content: string }>;
+  messages: Array<{ role: "user" | "assistant" | "system"; content: MessageContent }>;
   maxTokens?: number;
   temperature?: number;
   topP?: number;

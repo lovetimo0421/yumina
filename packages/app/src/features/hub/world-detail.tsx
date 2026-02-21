@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "@tanstack/react-router";
 import {
   ArrowLeft,
-  Download,
+  FolderPlus,
   Play,
   Loader2,
   BookOpen,
   Layers,
   Puzzle,
+  Download,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,17 +24,25 @@ export function WorldDetail({ worldId }: { worldId: string }) {
   const [actionLoading, setActionLoading] = useState<
     "play" | "add" | null
   >(null);
+  const [inPortal, setInPortal] = useState<boolean | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${apiBase}/api/worlds/hub`, {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const { data } = (await res.json()) as { data: HubWorld[] };
+        const [hubRes, copyRes] = await Promise.all([
+          fetch(`${apiBase}/api/worlds/hub`, { credentials: "include" }),
+          fetch(`${apiBase}/api/worlds/${worldId}/my-copy`, { credentials: "include" }),
+        ]);
+
+        if (hubRes.ok) {
+          const { data } = (await hubRes.json()) as { data: HubWorld[] };
           const found = data.find((w) => w.id === worldId);
           setWorld(found ?? null);
+        }
+
+        if (copyRes.ok) {
+          const { data } = await copyRes.json();
+          setInPortal(data.exists ?? false);
         }
       } catch {
         // fail silently
@@ -46,20 +56,19 @@ export function WorldDetail({ worldId }: { worldId: string }) {
     if (!world) return;
     setActionLoading("play");
     try {
-      const res = await fetch(`${apiBase}/api/sessions`, {
+      const res = await fetch(`${apiBase}/api/worlds/${world.id}/play-from-hub`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ worldId: world.id }),
       });
       if (!res.ok) {
         toast.error("Failed to start session");
         return;
       }
       const { data } = await res.json();
+      setInPortal(true);
       router.navigate({
         to: "/app/chat/$sessionId",
-        params: { sessionId: data.id },
+        params: { sessionId: data.session.id },
       });
     } catch {
       toast.error("Failed to start session");
@@ -68,7 +77,7 @@ export function WorldDetail({ worldId }: { worldId: string }) {
     }
   };
 
-  const handleAddToLibrary = async () => {
+  const handleAddToMyWorlds = async () => {
     if (!world) return;
     setActionLoading("add");
     try {
@@ -77,13 +86,14 @@ export function WorldDetail({ worldId }: { worldId: string }) {
         credentials: "include",
       });
       if (!res.ok) {
-        toast.error("Failed to add to library");
+        toast.error("Failed to add to My Worlds");
         return;
       }
-      toast.success("Added to your library!");
-      router.navigate({ to: "/app/worlds" });
+      setInPortal(true);
+      toast.success("Added to My Worlds!");
+      router.navigate({ to: "/app/portals" });
     } catch {
-      toast.error("Failed to add to library");
+      toast.error("Failed to add to My Worlds");
     } finally {
       setActionLoading(null);
     }
@@ -207,18 +217,29 @@ export function WorldDetail({ worldId }: { worldId: string }) {
             )}
             Play Now
           </button>
-          <button
-            onClick={handleAddToLibrary}
-            disabled={actionLoading !== null}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-border bg-card py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-40"
-          >
-            {actionLoading === "add" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            Add to Library
-          </button>
+
+          {inPortal ? (
+            <button
+              disabled
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/5 py-2.5 text-sm font-medium text-primary"
+            >
+              <Check className="h-4 w-4" />
+              In Your Worlds
+            </button>
+          ) : (
+            <button
+              onClick={handleAddToMyWorlds}
+              disabled={actionLoading !== null}
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-border bg-card py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-40"
+            >
+              {actionLoading === "add" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FolderPlus className="h-4 w-4" />
+              )}
+              Add to My Worlds
+            </button>
+          )}
         </div>
       </div>
     </div>

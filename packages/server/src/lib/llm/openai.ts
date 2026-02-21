@@ -21,7 +21,7 @@ export class OpenAIProvider implements LLMProvider {
       },
       body: JSON.stringify({
         model,
-        messages: params.messages,
+        messages: params.messages.map((m) => ({ role: m.role, content: m.content })),
         max_tokens: params.maxTokens,
         temperature: params.temperature,
         stream: true,

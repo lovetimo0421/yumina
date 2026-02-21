@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { lazy, Suspense, useState } from "react";
-import { MessageSquare, Globe, Sword, FileText, Loader2 } from "lucide-react";
+import { lazy, Suspense, useState, useRef, useCallback } from "react";
+import { MessageSquare, Globe, Sword, FileText, Loader2, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editor";
 import { WORLD_TEMPLATES, type WorldTemplate } from "@/lib/world-templates";
+import { parseImportedFile } from "@/lib/import-world";
+import { toast } from "sonner";
 
 const EditorShell = lazy(() =>
   import("@/features/editor/editor-shell").then((m) => ({
@@ -17,7 +19,13 @@ const ARCHETYPE_ICONS: Record<string, typeof MessageSquare> = {
   adventure: Sword,
 };
 
-function TemplatePicker({ onSelect }: { onSelect: (template: WorldTemplate | null) => void }) {
+function TemplatePicker({
+  onSelect,
+  onImport,
+}: {
+  onSelect: (template: WorldTemplate | null) => void;
+  onImport: () => void;
+}) {
   return (
     <div className="flex h-full items-center justify-center p-8">
       <div className="w-full max-w-2xl space-y-6">
@@ -76,6 +84,25 @@ function TemplatePicker({ onSelect }: { onSelect: (template: WorldTemplate | nul
               </button>
             );
           })}
+
+          {/* Import */}
+          <button
+            onClick={onImport}
+            className={cn(
+              "flex items-start gap-4 rounded-xl border border-dashed border-border p-4 text-left transition-colors",
+              "hover:border-primary/30 hover:bg-accent"
+            )}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent">
+              <Upload className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-foreground">Import</div>
+              <p className="mt-0.5 text-sm text-muted-foreground/60">
+                Load a Yumina world or SillyTavern character card (.json)
+              </p>
+            </div>
+          </button>
         </div>
       </div>
     </div>
@@ -83,8 +110,9 @@ function TemplatePicker({ onSelect }: { onSelect: (template: WorldTemplate | nul
 }
 
 function WorldCreatePage() {
-  const { createNew, loadTemplate } = useEditorStore();
+  const { createNew, loadTemplate, loadWorldDefinition } = useEditorStore();
   const [picked, setPicked] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSelect = (template: WorldTemplate | null) => {
     if (template) {
@@ -95,8 +123,39 @@ function WorldCreatePage() {
     setPicked(true);
   };
 
+  const handleFileImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+
+    try {
+      const worldDef = await parseImportedFile(file);
+      loadWorldDefinition(worldDef);
+      setPicked(true);
+      toast.success(`Imported "${worldDef.name || "world"}"`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Import failed");
+    }
+  }, [loadWorldDefinition]);
+
   if (!picked) {
-    return <TemplatePicker onSelect={handleSelect} />;
+    return (
+      <>
+        <TemplatePicker
+          onSelect={handleSelect}
+          onImport={() => fileInputRef.current?.click()}
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={handleFileImport}
+        />
+      </>
+    );
   }
 
   return (

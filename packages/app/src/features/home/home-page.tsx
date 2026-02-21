@@ -67,7 +67,7 @@ export function HomePage() {
             className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
             <BookUser className="h-4 w-4 text-primary" />
-            Portals
+            My Worlds
           </Link>
           <Link
             to="/app/worlds/create"
@@ -108,7 +108,7 @@ export function HomePage() {
                 to="/app/portals"
                 className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
               >
-                My Portals
+                My Worlds
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

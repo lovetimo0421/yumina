@@ -1,6 +1,24 @@
-import type { LLMProvider, GenerateParams, StreamChunk, Model } from "./types.js";
+import type { LLMProvider, GenerateParams, StreamChunk, Model, MessageContent } from "./types.js";
 
 const DEFAULT_OLLAMA_BASE = "http://localhost:11434";
+
+/** Convert message content to Ollama format (text + optional images array) */
+function toOllamaMessage(role: string, content: MessageContent): Record<string, unknown> {
+  if (typeof content === "string") return { role, content };
+
+  let text = "";
+  const images: string[] = [];
+
+  for (const part of content) {
+    if (part.type === "text") text += part.text;
+    if (part.type === "image_url") {
+      const match = part.image_url.url.match(/^data:[^;]+;base64,(.+)$/);
+      if (match) images.push(match[1]!);
+    }
+  }
+
+  return { role, content: text, ...(images.length > 0 && { images }) };
+}
 
 export class OllamaProvider implements LLMProvider {
   private baseUrl: string;
@@ -18,7 +36,7 @@ export class OllamaProvider implements LLMProvider {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        messages: params.messages,
+        messages: params.messages.map((m) => toOllamaMessage(m.role, m.content)),
         stream: true,
         options: {
           num_predict: params.maxTokens,

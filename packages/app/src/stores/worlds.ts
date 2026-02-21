@@ -9,6 +9,8 @@ export interface WorldItem {
   schema: Record<string, unknown>;
   thumbnailUrl: string | null;
   isPublished: boolean | null;
+  downloadCount: number;
+  sourceWorldId: string | null;
   createdAt: string;
   updatedAt: string;
 }

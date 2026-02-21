@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const navItems = [
   { to: "/app/hub" as const, label: "Discover", icon: Compass },
   { to: "/app/configs" as const, label: "Configs", icon: SlidersHorizontal },
-  { to: "/app/portals" as const, label: "Portals", icon: BookUser },
+  { to: "/app/portals" as const, label: "My Worlds", icon: BookUser },
   { to: "/app/world-info" as const, label: "World Info", icon: BookOpen },
 ];
 

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useChatStore } from "@/stores/chat";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, PanelRight, Download, FileText, FileJson } from "lucide-react";
+import { ArrowLeft, PanelRight, Download, FileText, FileJson, Undo2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +23,7 @@ export function SessionHeader({
   sidebarOpen,
   onToggleSidebar,
 }: SessionHeaderProps) {
-  const { session, messages, isStreaming, streamStartTime } = useChatStore();
+  const { session, messages, isStreaming, streamStartTime, revertLastExchange } = useChatStore();
 
   if (!session) return null;
 
@@ -54,6 +55,18 @@ export function SessionHeader({
       {isStreaming && streamStartTime && (
         <StreamingTimer startTime={streamStartTime} />
       )}
+
+      <button
+        onClick={async () => {
+          await revertLastExchange();
+          toast.success("Reverted last exchange");
+        }}
+        disabled={isStreaming || messages.length < 2}
+        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground disabled:opacity-20 disabled:pointer-events-none"
+        title="Revert last exchange"
+      >
+        <Undo2 className="h-4 w-4" />
+      </button>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

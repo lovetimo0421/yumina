@@ -16,6 +16,7 @@ import {
   migrateWorldDefinition,
 } from "@yumina/engine";
 import type { WorldDefinition, GameState, AudioEffect } from "@yumina/engine";
+import type { MessageContent, ContentPart } from "../lib/llm/types.js";
 import type { AppEnv } from "../lib/types.js";
 import { retrieveLorebookEntries } from "../lib/lorebook-retriever.js";
 import { compactSessionIfNeeded } from "../lib/session-compactor.js";
@@ -119,6 +120,7 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
   const body = await c.req.json<{
     content: string;
     model?: string;
+    attachments?: Array<{ type: string; data: string; mimeType: string; name: string }>;
     overrides?: {
       maxTokens?: number;
       maxContext?: number;
@@ -143,6 +145,14 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     return c.json({ error: "No API key configured for this provider. Add one in Settings." }, 400);
   }
 
+  // Build attachment metadata for storage (without the base64 data)
+  const attachmentMeta = body.attachments?.map((a) => ({
+    type: a.type,
+    mimeType: a.mimeType,
+    name: a.name,
+    url: `data:${a.mimeType};base64,${a.data.slice(0, 50)}...`, // thumbnail ref
+  }));
+
   // Save user message
   const userMsgResult = await db
     .insert(messages)
@@ -150,6 +160,7 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
       sessionId,
       role: "user",
       content: body.content,
+      ...(attachmentMeta && { attachments: attachmentMeta }),
     })
     .returning();
 
@@ -268,6 +279,30 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     maxContext
   );
 
+  // Convert to provider message format, injecting multimodal attachments into the last user message
+  const providerMessages: Array<{ role: "user" | "assistant" | "system"; content: MessageContent }> = chatMessages.map((m) => ({
+    role: m.role,
+    content: m.content as MessageContent,
+  }));
+
+  if (body.attachments && body.attachments.length > 0) {
+    // Find the last user message and convert it to multimodal
+    for (let i = providerMessages.length - 1; i >= 0; i--) {
+      if (providerMessages[i]!.role === "user") {
+        const textContent = providerMessages[i]!.content as string;
+        const parts: ContentPart[] = [
+          { type: "text", text: textContent },
+          ...body.attachments.map((a) => ({
+            type: "image_url" as const,
+            image_url: { url: `data:${a.mimeType};base64,${a.data}` },
+          })),
+        ];
+        providerMessages[i]!.content = parts;
+        break;
+      }
+    }
+  }
+
   // Stream response
   const provider = resolved.provider;
   const startTime = Date.now();
@@ -278,7 +313,7 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     try {
       for await (const chunk of provider.generateStream({
         model,
-        messages: chatMessages,
+        messages: providerMessages,
         maxTokens: clamp(body.overrides?.maxTokens ?? worldDef.settings?.maxTokens ?? 4096, 256, 32768),
         temperature: clamp(body.overrides?.temperature ?? worldDef.settings?.temperature ?? 1.0, 0, 2),
         topP: worldDef.settings?.topP,
@@ -353,7 +388,7 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
 
           const finalState = stateManager.getSnapshot();
 
-          // Save assistant message
+          // Save assistant message with state snapshot for revert support
           const assistantMsgResult = await db
             .insert(messages)
             .values({
@@ -364,6 +399,7 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
                 allChanges.length > 0
                   ? (allChanges as unknown as Record<string, unknown>)
                   : null,
+              stateSnapshot: finalState as unknown as Record<string, unknown>,
               model,
               tokenCount: chunk.usage?.totalTokens ?? null,
               generationTimeMs,
@@ -699,6 +735,7 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
                 allChanges.length > 0
                   ? (allChanges as unknown as Record<string, unknown>)
                   : null,
+              stateSnapshot: finalState as unknown as Record<string, unknown>,
               swipes: updatedSwipes,
               activeSwipeIndex: updatedSwipes.length - 1,
               model,
@@ -737,6 +774,276 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
         event: "error",
         data: JSON.stringify({
           error: err instanceof Error ? err.message : "Regeneration failed",
+        }),
+      });
+    }
+  });
+});
+
+// POST /api/sessions/:sessionId/continue — continue/extend the last assistant message
+messageRoutes.post("/sessions/:sessionId/continue", async (c) => {
+  const currentUser = c.get("user");
+  const sessionId = c.req.param("sessionId");
+  const body = (await c.req.json().catch(() => ({}))) as {
+    model?: string;
+    overrides?: {
+      maxTokens?: number;
+      maxContext?: number;
+      temperature?: number;
+    };
+  };
+
+  const context = await loadSessionContext(sessionId, currentUser.id);
+  if (!context) {
+    return c.json({ error: "Session not found" }, 404);
+  }
+
+  const { session: sessionData, worldDef, gameState } = context;
+  const model = body.model ?? "openai/gpt-4o-mini";
+
+  const resolved = await resolveProviderForModel(currentUser.id, model);
+  if (!resolved) {
+    return c.json({ error: "No API key configured for this provider. Add one in Settings." }, 400);
+  }
+
+  // Find the last assistant message
+  const allMessages = await db
+    .select()
+    .from(messages)
+    .where(eq(messages.sessionId, sessionId))
+    .orderBy(messages.createdAt);
+
+  let lastAssistantMsg = null;
+  for (let i = allMessages.length - 1; i >= 0; i--) {
+    if (allMessages[i]!.role === "assistant") {
+      lastAssistantMsg = allMessages[i]!;
+      break;
+    }
+  }
+
+  if (!lastAssistantMsg) {
+    return c.json({ error: "No assistant message to continue" }, 400);
+  }
+
+  // Build prompt with full history, but the last assistant message becomes a partial turn
+  const stateManager = new GameStateManager(worldDef, gameState);
+  const useStructured = worldDef.settings?.structuredOutput === true;
+  const snapshot = stateManager.getSnapshot();
+
+  const historyRows = await db
+    .select()
+    .from(messages)
+    .where(and(eq(messages.sessionId, sessionId), eq(messages.compacted, false)))
+    .orderBy(messages.createdAt);
+
+  // Load session summary + memories
+  const sessionRows = await db
+    .select()
+    .from(playSessions)
+    .where(eq(playSessions.id, sessionId));
+  const sessionSummary = sessionRows[0]?.summary;
+
+  const worldMemoriesList = await loadWorldMemories(
+    sessionData.worldId,
+    currentUser.id
+  );
+
+  // Entry retrieval
+  const contClamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+  const scanDepth = worldDef.settings?.lorebookScanDepth ?? 2;
+  const maxContext = contClamp(body.overrides?.maxContext ?? worldDef.settings?.maxContext ?? 200000, 4096, 2000000);
+  const budgetPercent = worldDef.settings?.lorebookBudgetPercent ?? 100;
+  const budgetCap = worldDef.settings?.lorebookBudgetCap ?? 0;
+  let tokenBudget = Math.round((budgetPercent * maxContext) / 100);
+  if (budgetCap > 0) tokenBudget = Math.min(tokenBudget, budgetCap);
+  const recentTexts = historyRows.slice(-scanDepth).map((m) => m.content);
+  const lorebookResult = retrieveLorebookEntries({
+    entries: worldDef.entries,
+    recentMessages: recentTexts,
+    state: snapshot,
+    tokenBudget,
+    settings: { lorebookRecursionDepth: worldDef.settings?.lorebookRecursionDepth },
+  });
+  const matchedEntries = [...lorebookResult.alwaysSend, ...lorebookResult.triggered];
+
+  const systemPrompt = useStructured
+    ? promptBuilder.buildStructuredSystemPrompt(worldDef, snapshot, matchedEntries)
+    : promptBuilder.buildSystemPrompt(worldDef, snapshot, matchedEntries);
+
+  // Build context messages — all history up to and including the last assistant message
+  const contextMessages: Array<{ role: "user" | "assistant" | "system"; content: string }> = [];
+  contextMessages.push({ role: "system", content: systemPrompt });
+
+  if (sessionSummary) {
+    contextMessages.push({
+      role: "system",
+      content: `Previous session context (summarized):\n${sessionSummary}`,
+    });
+  }
+
+  if (worldMemoriesList.length > 0) {
+    const memoryText = worldMemoriesList
+      .map((m) => `- [${m.category}] ${m.content}`)
+      .join("\n");
+    contextMessages.push({
+      role: "system",
+      content: `Memories from previous sessions:\n${memoryText}`,
+    });
+  }
+
+  // Include full history — the last assistant message stays as a partial turn
+  // so the AI will continue from where it left off
+  const depthEntries = promptBuilder.buildDepthEntries(worldDef, snapshot, matchedEntries);
+  const historyMessages = historyRows.map((m) => ({
+    role: m.role as "user" | "assistant" | "system",
+    content: m.content,
+  }));
+
+  for (const de of depthEntries) {
+    const insertIdx = Math.max(0, historyMessages.length - de.depth);
+    historyMessages.splice(insertIdx, 0, {
+      role: "system" as const,
+      content: de.content,
+    });
+  }
+
+  contextMessages.push(...historyMessages);
+
+  const postHistoryParts = promptBuilder.buildPostHistoryEntries(worldDef, snapshot, matchedEntries);
+  for (const part of postHistoryParts) {
+    contextMessages.push({ role: "system", content: part });
+  }
+
+  const chatMessages = promptBuilder.buildMessageHistory(contextMessages, maxContext);
+
+  // The last message in chatMessages should be the assistant's existing content.
+  // This signals the AI to continue from that point (partial assistant turn / prefill).
+
+  const provider = resolved.provider;
+  const startTime = Date.now();
+  const existingContent = lastAssistantMsg.content;
+
+  return streamSSE(c, async (stream) => {
+    let continuationContent = "";
+
+    try {
+      for await (const chunk of provider.generateStream({
+        model,
+        messages: chatMessages,
+        maxTokens: contClamp(body.overrides?.maxTokens ?? worldDef.settings?.maxTokens ?? 4096, 256, 32768),
+        temperature: contClamp(body.overrides?.temperature ?? worldDef.settings?.temperature ?? 1.0, 0, 2),
+        topP: worldDef.settings?.topP,
+        frequencyPenalty: worldDef.settings?.frequencyPenalty,
+        presencePenalty: worldDef.settings?.presencePenalty,
+        topK: worldDef.settings?.topK,
+        minP: worldDef.settings?.minP,
+        ...(useStructured && {
+          responseFormat: { type: "json_object" as const },
+        }),
+      })) {
+        if (chunk.type === "text") {
+          continuationContent += chunk.content;
+          await stream.writeSSE({
+            event: "text",
+            data: JSON.stringify({ content: chunk.content }),
+          });
+        }
+
+        if (chunk.type === "error") {
+          await stream.writeSSE({
+            event: "error",
+            data: JSON.stringify({ error: chunk.content }),
+          });
+          return;
+        }
+
+        if (chunk.type === "done") {
+          const generationTimeMs = Date.now() - startTime;
+
+          // Parse the continuation for any new state changes
+          let cleanContinuation: string;
+          let effects: import("@yumina/engine").Effect[];
+          let contAudioEffects: AudioEffect[] = [];
+
+          if (useStructured) {
+            const result = structuredParser.parse(continuationContent);
+            cleanContinuation = result.cleanText;
+            effects = result.effects;
+            contAudioEffects = result.audioEffects;
+            if (effects.length === 0 && result.cleanText === continuationContent) {
+              const regexResult = responseParser.parse(continuationContent);
+              cleanContinuation = regexResult.cleanText;
+              effects = regexResult.effects;
+              contAudioEffects = regexResult.audioEffects;
+            }
+          } else {
+            const result = responseParser.parse(continuationContent);
+            cleanContinuation = result.cleanText;
+            effects = result.effects;
+            contAudioEffects = result.audioEffects;
+          }
+
+          const changes = stateManager.applyEffects(effects);
+          const { effects: ruleEffects, audioEffects: ruleAudioEffects } = rulesEngine.evaluate(
+            stateManager.getSnapshot(),
+            worldDef.rules
+          );
+          const ruleChanges = stateManager.applyEffects(ruleEffects);
+          const allChanges = [...changes, ...ruleChanges];
+
+          const allAudioEffects = [...contAudioEffects, ...ruleAudioEffects];
+          if (allAudioEffects.length > 0) {
+            stateManager.setMetadata("activeAudio", allAudioEffects);
+          }
+
+          const finalState = stateManager.getSnapshot();
+
+          // The final content is existing clean text + clean continuation
+          const finalContent = existingContent + cleanContinuation;
+
+          // Update the existing assistant message (append, don't replace)
+          await db
+            .update(messages)
+            .set({
+              content: finalContent,
+              stateChanges:
+                allChanges.length > 0
+                  ? (allChanges as unknown as Record<string, unknown>)
+                  : lastAssistantMsg.stateChanges,
+              stateSnapshot: finalState as unknown as Record<string, unknown>,
+              tokenCount: (lastAssistantMsg.tokenCount ?? 0) + (chunk.usage?.totalTokens ?? 0),
+              generationTimeMs: (lastAssistantMsg.generationTimeMs ?? 0) + generationTimeMs,
+            })
+            .where(eq(messages.id, lastAssistantMsg.id));
+
+          // Update session state
+          await db
+            .update(playSessions)
+            .set({
+              state: finalState as unknown as Record<string, unknown>,
+              updatedAt: new Date(),
+            })
+            .where(eq(playSessions.id, sessionId));
+
+          await stream.writeSSE({
+            event: "done",
+            data: JSON.stringify({
+              messageId: lastAssistantMsg.id,
+              content: finalContent,
+              stateChanges: allChanges,
+              state: finalState,
+              tokenCount: chunk.usage?.totalTokens ?? null,
+              generationTimeMs,
+              audioEffects: allAudioEffects.length > 0 ? allAudioEffects : undefined,
+            }),
+          });
+        }
+      }
+    } catch (err) {
+      await stream.writeSSE({
+        event: "error",
+        data: JSON.stringify({
+          error: err instanceof Error ? err.message : "Continue failed",
         }),
       });
     }

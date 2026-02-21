@@ -63,6 +63,20 @@ export function MessageBubble({
           {isUser ? "You" : "Narrator"}
         </p>
 
+        {/* Attachment thumbnails */}
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {message.attachments.map((att, i) => (
+              <img
+                key={i}
+                src={att.url}
+                alt={att.name}
+                className="h-20 w-20 rounded-lg border border-border object-cover"
+              />
+            ))}
+          </div>
+        )}
+
         {/* Message content — reading-style, no bubble */}
         <div className={cn(
           "text-sm leading-relaxed text-foreground",

@@ -1,6 +1,32 @@
-import type { LLMProvider, GenerateParams, StreamChunk, Model } from "./types.js";
+import type { LLMProvider, GenerateParams, StreamChunk, Model, MessageContent } from "./types.js";
 
 const ANTHROPIC_BASE = "https://api.anthropic.com/v1";
+
+/** Convert OpenAI-format content to Anthropic content blocks */
+function toAnthropicContent(content: MessageContent): string | Array<Record<string, unknown>> {
+  if (typeof content === "string") return content;
+
+  return content.map((part) => {
+    if (part.type === "text") return { type: "text", text: part.text };
+    if (part.type === "image_url") {
+      const url = part.image_url.url;
+      // data:image/png;base64,... → extract media_type and data
+      const match = url.match(/^data:([^;]+);base64,(.+)$/);
+      if (match) {
+        return {
+          type: "image",
+          source: { type: "base64", media_type: match[1], data: match[2] },
+        };
+      }
+      // URL-based image
+      return {
+        type: "image",
+        source: { type: "url", url },
+      };
+    }
+    return { type: "text", text: "" };
+  });
+}
 
 export class AnthropicProvider implements LLMProvider {
   private apiKey: string;
@@ -16,12 +42,12 @@ export class AnthropicProvider implements LLMProvider {
     // Convert messages: Anthropic uses a single system param (concatenate all system messages)
     const systemParts = params.messages
       .filter((m) => m.role === "system")
-      .map((m) => m.content);
+      .map((m) => typeof m.content === "string" ? m.content : m.content.filter((p) => p.type === "text").map((p) => (p as { type: "text"; text: string }).text).join("\n"));
     const nonSystemMessages = params.messages.filter((m) => m.role !== "system");
 
     const body: Record<string, unknown> = {
       model,
-      messages: nonSystemMessages.map((m) => ({ role: m.role, content: m.content })),
+      messages: nonSystemMessages.map((m) => ({ role: m.role, content: toAnthropicContent(m.content) })),
       max_tokens: params.maxTokens ?? 4096,
       temperature: params.temperature,
       stream: true,

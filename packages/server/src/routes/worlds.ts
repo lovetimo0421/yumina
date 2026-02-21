@@ -1,7 +1,9 @@
 import { Hono } from "hono";
 import { eq, or, and, desc, ilike, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { worlds, user } from "../db/schema.js";
+import { worlds, user, playSessions, messages } from "../db/schema.js";
+import { GameStateManager, PromptBuilder, migrateWorldDefinition } from "@yumina/engine";
+import type { WorldDefinition } from "@yumina/engine";
 import { authMiddleware } from "../middleware/auth.js";
 import { createWorldSchema, updateWorldSchema } from "@yumina/shared";
 import type { AppEnv } from "../lib/types.js";
@@ -217,6 +219,7 @@ worldRoutes.post("/:id/duplicate", async (c) => {
       thumbnailUrl: source.thumbnailUrl,
       tags: source.tags,
       isPublished: false,
+      sourceWorldId: worldId,
     })
     .returning();
 
@@ -227,6 +230,123 @@ worldRoutes.post("/:id/duplicate", async (c) => {
     .where(eq(worlds.id, worldId));
 
   return c.json({ data: result }, 201);
+});
+
+// GET /api/worlds/:id/my-copy — check if user already has a copy of this hub world
+worldRoutes.get("/:id/my-copy", async (c) => {
+  const currentUser = c.get("user");
+  const worldId = c.req.param("id");
+
+  const copies = await db
+    .select({ id: worlds.id })
+    .from(worlds)
+    .where(and(eq(worlds.sourceWorldId, worldId), eq(worlds.creatorId, currentUser.id)))
+    .limit(1);
+
+  if (copies.length > 0) {
+    return c.json({ data: { exists: true, worldId: copies[0]!.id } });
+  }
+
+  // Also check if the user IS the creator of this world
+  const owned = await db
+    .select({ id: worlds.id })
+    .from(worlds)
+    .where(and(eq(worlds.id, worldId), eq(worlds.creatorId, currentUser.id)))
+    .limit(1);
+
+  if (owned.length > 0) {
+    return c.json({ data: { exists: true, worldId: owned[0]!.id } });
+  }
+
+  return c.json({ data: { exists: false } });
+});
+
+// POST /api/worlds/:id/play-from-hub — add to library + create session atomically
+worldRoutes.post("/:id/play-from-hub", async (c) => {
+  const currentUser = c.get("user");
+  const worldId = c.req.param("id");
+
+  // Check if user already has a copy
+  const existingCopy = await db
+    .select()
+    .from(worlds)
+    .where(and(eq(worlds.sourceWorldId, worldId), eq(worlds.creatorId, currentUser.id)))
+    .limit(1);
+
+  let targetWorldId: string;
+
+  if (existingCopy.length > 0) {
+    targetWorldId = existingCopy[0]!.id;
+  } else {
+    // Check if user IS the creator
+    const owned = await db
+      .select()
+      .from(worlds)
+      .where(and(eq(worlds.id, worldId), eq(worlds.creatorId, currentUser.id)))
+      .limit(1);
+
+    if (owned.length > 0) {
+      targetWorldId = owned[0]!.id;
+    } else {
+      // Duplicate the world (keep original name — no "(1)" suffix for hub imports)
+      const source = await db.select().from(worlds).where(eq(worlds.id, worldId));
+      if (source.length === 0) return c.json({ error: "World not found" }, 404);
+
+      const s = source[0]!;
+      const [newWorld] = await db
+        .insert(worlds)
+        .values({
+          creatorId: currentUser.id,
+          name: s.name,
+          description: s.description,
+          schema: s.schema,
+          thumbnailUrl: s.thumbnailUrl,
+          tags: s.tags,
+          isPublished: false,
+          sourceWorldId: worldId,
+        })
+        .returning();
+
+      // Increment download count on source
+      await db
+        .update(worlds)
+        .set({ downloadCount: sql`${worlds.downloadCount} + 1` })
+        .where(eq(worlds.id, worldId));
+
+      targetWorldId = newWorld!.id;
+    }
+  }
+
+  // Create session on the target world
+  const worldRows = await db.select().from(worlds).where(eq(worlds.id, targetWorldId));
+  if (worldRows.length === 0) return c.json({ error: "World not found" }, 404);
+
+  const rawWorldDef = worldRows[0]!.schema as unknown as WorldDefinition;
+  const worldDef = migrateWorldDefinition(rawWorldDef);
+  const stateManager = new GameStateManager(worldDef);
+  const initialState = stateManager.getSnapshot();
+
+  const [session] = await db
+    .insert(playSessions)
+    .values({
+      userId: currentUser.id,
+      worldId: targetWorldId,
+      state: initialState as unknown as Record<string, unknown>,
+    })
+    .returning();
+
+  // Insert greeting if applicable
+  const promptBuilder = new PromptBuilder();
+  const greeting = promptBuilder.buildGreeting(worldDef, initialState);
+  if (greeting) {
+    await db.insert(messages).values({
+      sessionId: session!.id,
+      role: "assistant",
+      content: greeting,
+    });
+  }
+
+  return c.json({ data: { worldId: targetWorldId, session: session! } }, 201);
 });
 
 export { worldRoutes };
