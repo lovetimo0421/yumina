@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useRouter, useLocation } from "@tanstack/react-router";
 import {
   Settings,
   PanelLeftClose,
@@ -51,8 +51,10 @@ export function Sidebar() {
   const { sidebarOpen, toggleSidebar } = useUiStore();
   const { data: session } = useSession();
   const router = useRouter();
+  const location = useLocation();
   const [sessions, setSessions] = useState<SessionEntry[]>([]);
 
+  // Re-fetch sessions on route change (catches new session creation + navigation)
   useEffect(() => {
     const fetchSessions = async () => {
       try {
@@ -68,7 +70,7 @@ export function Sidebar() {
       }
     };
     fetchSessions();
-  }, []);
+  }, [location.pathname]);
 
   const handleSignOut = async () => {
     await signOut();

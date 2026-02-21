@@ -158,6 +158,8 @@ const PEEP_IMAGES: Record<string, string> = {
   PaleStranger: "https://static.wikia.nocookie.net/no-i-am-not-a-human/images/c/c0/PaleVisitor.png/revision/latest?cb=20251028135209",
   CatLady: "https://static.wikia.nocookie.net/no-i-am-not-a-human/images/7/77/The_Nun_%28close_up%29.png/revision/latest?cb=20250916221341",
   Wilson: "https://static.wikia.nocookie.net/no-i-am-not-a-human/images/6/69/Fake_gasmask.png/revision/latest?cb=20241005204535",
+  Jefray: "https://github.com/Cpjjason/shabicpj/blob/main/a866527af9b530765f91c7ebc0ddaeb.jpg?raw=true",
+  Who: "https://github.com/Cpjjason/shabicpj/blob/main/Weixin%20Image_20260212192604.jpg?raw=true",
 };
 
 /** Build peephole HTML for a named character. Uses actual portrait if available, falls back to generic. */
@@ -252,6 +254,14 @@ Available directives:
 [room_living: set "empty"] — clear room
 (same for room_kitchen, room_bedroom, room_bathroom, room_office, room_storage)
 [known_traits: set "Excessively perfect teeth, eyes with dark sheen"] — update known traits list
+[coffee_remaining_days: subtract 1] — decrement coffee buff timer each day
+[coffee_remaining_days: set 4] — start coffee buff (4 days)
+[total_smokes: add 1] — track permanent smoking penalty
+[enerjeka_stock: subtract 1] — use EnerJeka drink
+[bober_stock: subtract 1] — use Bober Černý beer
+[cigarette_stock: add 1] — find cigarettes
+[coffee_stock: add 1] — find coffee
+[cat_food_stock: subtract 1] — use cat food
 [game_state: set "YAML state here"] — MUST update every turn
 
 ENERGY CAPACITY RULES:
@@ -438,13 +448,17 @@ VISITORS (7):
 14. Officer Wilson — "Police officer" or disguised as FEMA. Has a uniform/badge. But doesn't follow proper procedure. Body temperature runs cold. Assigned room: Office.
 15. Little Timmy — "Lost boy." 8, in a raincoat, claims mom sent him. Pitiable but unsettling. Eyes reflect light wrong. Cannot produce tears. Carries a stuffed animal. Assigned room: Bedroom.
 
-SPECIAL CHARACTERS (3):
-16. The Pale Stranger — Not human, not a normal Visitor. Appears as an unnaturally pale figure. If let inside, does NOT harm anyone but creates intense unease. Offers cryptic but truthful information about who is a Visitor. Disappears at dawn.
-17. Cat Lady (Mrs. Whiskers) — Elderly woman with a cat. She herself may be human or Visitor (GM decides). But her cat, Penny, is the key — if the player acquires the cat, Visitors cannot kill at night.
-18. FEMA Agents (Brooks/Chen/Davis) — Real government agents. Wear gas masks. Visit on Days 4, 5, 8, 10. May take away identified Visitors. Can provide FEMA Notices.
+ADDITIONAL HUMANS (1):
+16. Jefray Ding — Human. 20s, college student. Nervous but genuine. Wears a hoodie with university logo. Carries a backpack with textbooks and snacks. Speaks with slight accent. Fixed: appears Night 1 as 3rd knocker.
+
+SPECIAL CHARACTERS (4):
+17. The Pale Stranger — Not human, not a normal Visitor. Appears as an unnaturally pale figure. If let inside, does NOT harm anyone but creates intense unease. Offers cryptic but truthful information about who is a Visitor. Disappears at dawn.
+18. Cat Lady (Mrs. Whiskers) — Elderly woman with a cat. She herself may be human or Visitor (GM decides). But her cat, Penny, is the key — if the player acquires the cat, Visitors cannot kill at night.
+19. FEMA Agents (Brooks/Chen/Davis) — Real government agents. Wear gas masks. Visit on Days 4, 5, 8, 10. May take away identified Visitors. Can provide FEMA Notices.
+20. Who (???) — Mysterious entity. Neither human nor Visitor. Appears on fixed nights (3, 5, 8). Leaves supplies at the door: Night 3 = coffee, Night 5 = EnerJeka, Night 8 = camera (enables Aura Photo checks). Does not enter the house. Vanishes if the player opens the door.
 
 VISIT SCHEDULE GUIDE (GM should adapt as needed):
-- Night 1: Sarah (H), then Jake (V) — ease player in
+- Night 1: Sarah (H), Jefray Ding (H), then Jake (V) — ease player in
 - Night 2: Marcus (H), Lily (V) — child Visitor to test sympathy
 - Night 3: Elena (H), Thomas (V) — CRITICAL NIGHT, must shelter
 - Night 4: Smith (H), FEMA visit during day, Robert (V) at night
@@ -759,6 +773,8 @@ When the player looks through the peephole, output the tag using the character's
 [PEEP:James] — for James Miller
 [PEEP:Rosa] — for Rosa Hernandez
 [PEEP:OldManChen] — for Old Man Chen
+[PEEP:Jefray] — for Jefray Ding (also accepts [PEEP:Jefray Ding])
+[PEEP:Who] — for the mysterious ??? entity
 
 The display system renders a night-vision peephole portrait with the character's image.
 After the tag, describe what the player sees through the narrow peephole: face, clothes, posture, expression, anything they're carrying, and background details.`,
@@ -861,6 +877,13 @@ E. Other — type anything you want to do
     { id: "room_office", name: "Office", type: "string", defaultValue: "empty", description: "Office occupant" },
     { id: "room_storage", name: "Storage", type: "string", defaultValue: "empty", description: "Storage room occupant" },
     { id: "known_traits", name: "Known Traits", type: "string", defaultValue: "Excessively perfect teeth", description: "Known Visitor identifying traits" },
+    { id: "coffee_remaining_days", name: "Coffee Buff Days", type: "number", defaultValue: 0, description: "Days remaining for coffee energy capacity buff", min: 0 },
+    { id: "total_smokes", name: "Total Smokes", type: "number", defaultValue: 0, description: "Cumulative cigarette uses (permanent capacity reduction)", min: 0 },
+    { id: "enerjeka_stock", name: "EnerJeka Stock", type: "number", defaultValue: 1, description: "EnerJeka energy drink inventory", min: 0 },
+    { id: "bober_stock", name: "Bober Stock", type: "number", defaultValue: 1, description: "Bober Černý dark beer inventory", min: 0 },
+    { id: "cigarette_stock", name: "Cigarette Stock", type: "number", defaultValue: 0, description: "Cigarette inventory", min: 0 },
+    { id: "coffee_stock", name: "Coffee Stock", type: "number", defaultValue: 0, description: "Coffee inventory", min: 0 },
+    { id: "cat_food_stock", name: "Cat Food Stock", type: "number", defaultValue: 0, description: "Cat food inventory", min: 0 },
     { id: "game_state", name: "Game State", type: "string", defaultValue: INITIAL_GAME_STATE, description: "Full YAML game state maintained by AI" },
   ],
 
@@ -912,10 +935,10 @@ E. Other — type anything you want to do
       enabled: true,
     },
     {
-      id: "dt-strip-sum",
-      name: "Strip sum",
-      pattern: "&lt;sum&gt;[\\s\\S]*?&lt;/sum&gt;",
-      replacement: "",
+      id: "dt-game-log",
+      name: "Game log",
+      pattern: "&lt;sum&gt;\\s*([\\s\\S]*?)\\s*&lt;/sum&gt;",
+      replacement: '<div style="background:linear-gradient(135deg,#06100c,#0a1a14);border:1px solid rgba(45,180,120,0.1);border-left:3px solid rgba(45,180,120,0.35);border-radius:0 4px 4px 0;padding:14px 20px;margin:18px 0;box-shadow:0 3px 18px rgba(0,0,0,0.45)"><div style="font-size:10px;letter-spacing:4px;color:rgba(45,180,120,0.5);margin-bottom:8px;text-transform:uppercase">SYSTEM LOG</div><div style="color:rgba(155,200,168,0.8);font-size:13px;line-height:1.7">$1</div></div>',
       flags: "g",
       order: 5,
       enabled: true,
@@ -923,7 +946,7 @@ E. Other — type anything you want to do
     {
       id: "dt-strip-directives",
       name: "Strip variable directives",
-      pattern: "\\[(?:energy|energy_max|hp|day|phase|armed|fema_notices|has_cat|room_\\w+|known_traits|game_state):[^\\]]+\\]",
+      pattern: "\\[(?:energy|energy_max|hp|day|phase|armed|fema_notices|has_cat|room_\\w+|known_traits|game_state|coffee_remaining_days|total_smokes|enerjeka_stock|bober_stock|cigarette_stock|coffee_stock|cat_food_stock):[^\\]]+\\]",
       replacement: "",
       flags: "g",
       order: 6,
@@ -953,11 +976,22 @@ E. Other — type anything you want to do
     // ── Character-specific peepholes (with actual portrait images) ──
     ...buildPeepholeTransforms(),
 
+    // ── Special peephole for multi-word names ──────────────────────
+    {
+      id: "dt-peep-jefray-ding",
+      name: "Peephole: Jefray Ding",
+      pattern: "\\[PEEP:Jefray Ding\\]",
+      replacement: peepholeHtml("Jefray Ding", PEEP_IMAGES.Jefray!),
+      flags: "g",
+      order: 38,
+      enabled: true,
+    },
+
     // ── Fallback peephole for unknown characters ───────────────────
     {
       id: "dt-peephole-fallback",
       name: "Peephole fallback",
-      pattern: "\\[PEEP:(\\w+)\\]",
+      pattern: "\\[PEEP:([\\w ]+)\\]",
       replacement: '<div style="text-align:center;margin:12px 0"><div style="display:inline-block;width:140px;height:140px;border-radius:50%;border:6px solid #1a1a1a;background:radial-gradient(circle,#1f2937 60%,#000 100%);box-shadow:inset 0 0 40px rgba(0,0,0,0.9),0 0 20px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center"><span style="font-size:40px;filter:hue-rotate(80deg) saturate(3)">👁️</span></div><div style="margin-top:4px;font-size:10px;letter-spacing:2px;color:#4ade80;text-transform:uppercase">Peephole — $1</div></div>',
       flags: "g",
       order: 39,
@@ -1037,6 +1071,17 @@ E. Other — type anything you want to do
       replacement: '<div style="padding:3px 10px;border-radius:4px;background:#1c1917;border:1px solid #292524;color:#a8a29e;font-size:12px">🏠 $1</div>',
       flags: "g",
       order: 55,
+      enabled: true,
+    },
+
+    // ── Statistics ────────────────────────────────────────────────
+    {
+      id: "dt-statistics",
+      name: "Statistics HUD",
+      pattern: "📊 <strong>([^<]+)</strong> (.+)",
+      replacement: '<div style="padding:3px 10px;border-radius:4px;background:#0e1218;border:1px solid rgba(90,110,160,0.1);color:#9baac3;font-size:12px">📊 <strong>$1</strong> $2</div>',
+      flags: "g",
+      order: 56,
       enabled: true,
     },
 
