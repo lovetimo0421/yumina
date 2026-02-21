@@ -951,7 +951,7 @@ E. Other — type anything you want to do
     {
       id: "dt-strip-gamestate",
       name: "Strip game_state directive",
-      pattern: "\\[game_state: set \"[\\s\\S]*?\"\\]",
+      pattern: "\\[game_state: set &quot;[\\s\\S]*?&quot;\\]",
       replacement: "",
       flags: "g",
       order: 7,
@@ -962,16 +962,16 @@ E. Other — type anything you want to do
     {
       id: "dt-night-header",
       name: "Night header",
-      pattern: "🌑 <strong>NIGHT (\\d+)</strong>",
+      pattern: "🌑\\s*<strong>\\s*NIGHT\\s+(\\d+)\\s*</strong>",
       replacement: '<div style="text-align:center;padding:16px 0 10px;font-size:20px;font-weight:bold;letter-spacing:6px;color:#4ade80;text-shadow:0 0 20px rgba(74,222,128,0.4),0 0 40px rgba(74,222,128,0.2);text-transform:uppercase">🌑 N I G H T &nbsp; $1</div>',
-      flags: "g",
+      flags: "gi",
       order: 10,
       enabled: true,
     },
     {
       id: "dt-day-header",
       name: "Day header",
-      pattern: "☀️ <strong>DAY (\\d+)</strong>",
+      pattern: "☀️\\s*<strong>\\s*DAY\\s+(\\d+)\\s*</strong>",
       replacement: '<div style="text-align:center;padding:16px 0 10px;font-size:20px;font-weight:bold;letter-spacing:6px;color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,0.4),0 0 40px rgba(251,191,36,0.2);text-transform:uppercase">☀️ D A Y &nbsp; $1</div>',
       flags: "g",
       order: 11,
