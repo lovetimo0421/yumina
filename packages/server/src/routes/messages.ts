@@ -42,12 +42,19 @@ async function getUserApiKey(userId: string, provider = "openrouter") {
   return decryptApiKey(row.encryptedKey, row.keyIv, row.keyTag);
 }
 
-// Helper: resolve provider and API key for a model
+// Helper: resolve provider and API key for a model (falls back to OpenRouter)
 async function resolveProviderForModel(userId: string, modelId: string) {
   const providerName = inferProvider(modelId);
   const apiKey = await getUserApiKey(userId, providerName);
-  if (!apiKey) return null;
-  return { provider: createProvider(providerName, apiKey), providerName };
+  if (apiKey) return { provider: createProvider(providerName, apiKey), providerName };
+
+  // Fallback: try OpenRouter (supports all models via prefix/model IDs)
+  if (providerName !== "openrouter") {
+    const orKey = await getUserApiKey(userId, "openrouter");
+    if (orKey) return { provider: createProvider("openrouter", orKey), providerName: "openrouter" as ProviderName };
+  }
+
+  return null;
 }
 
 // Helper: load session with world definition (applies migration)

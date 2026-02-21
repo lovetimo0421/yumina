@@ -26,9 +26,14 @@ export function compileTSX(
       production: true,
     });
 
+    // Strip ES module export syntax (not supported by new Function())
+    let strippedCode = result.code;
+    strippedCode = strippedCode.replace(/export\s+default\s+/g, "");
+    strippedCode = strippedCode.replace(/export\s*\{[^}]*\}\s*;?/g, "");
+
     // Wrap in a function that returns the default export
     const wrappedCode = `
-      ${result.code}
+      ${strippedCode}
       return typeof exports !== 'undefined' && exports.default
         ? exports.default
         : typeof module !== 'undefined' && module.exports && module.exports.default

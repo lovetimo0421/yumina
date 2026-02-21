@@ -32,6 +32,7 @@
     "posthog-js": "^1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "sonner": "^2.0.7",
     "sucrase": "^3.35.1",
     "tailwind-merge": "^3",
     "zustand": "^5"

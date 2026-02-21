@@ -183,7 +183,7 @@ function buildPeepholeTransforms(): WorldDefinition["displayTransforms"] {
 // ── World Definition ─────────────────────────────────────────────────
 export const NIAH_WORLD_DEFINITION: WorldDefinition = {
   id: "niah-visitors",
-  version: "4.0.0",
+  version: "5.0.0",
   name: "No, I'm Not a Human",
   description:
     "A horror survival game. Visitors knock on your door each night — some are human, some are monsters in disguise. You have 14 nights to survive. Identify the Visitors before they get inside.",
@@ -1144,7 +1144,5 @@ E. Other — type anything you want to do
     structuredOutput: false,
     lorebookScanDepth: 4,
     lorebookRecursionDepth: 0,
-    layoutMode: "split",
-    uiMode: "per-reply",
   },
 };

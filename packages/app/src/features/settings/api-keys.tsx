@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2, CheckCircle, XCircle, Loader2, Key } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -80,9 +81,11 @@ export function ApiKeysSettings() {
         setNewKey("");
         setNewLabel("Default");
         await fetchKeys();
+      } else {
+        toast.error("Failed to add API key");
       }
     } catch {
-      // Silently fail
+      toast.error("Failed to add API key");
     } finally {
       setAdding(false);
     }
@@ -91,9 +94,13 @@ export function ApiKeysSettings() {
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`${apiBase}/api/keys/${id}`, { method: "DELETE", credentials: "include" });
-      if (res.ok) setKeys((prev) => prev.filter((k) => k.id !== id));
+      if (res.ok) {
+        setKeys((prev) => prev.filter((k) => k.id !== id));
+      } else {
+        toast.error("Failed to remove API key");
+      }
     } catch {
-      // Silently fail
+      toast.error("Failed to remove API key");
     }
   };
 

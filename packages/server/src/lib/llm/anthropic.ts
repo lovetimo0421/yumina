@@ -13,8 +13,10 @@ export class AnthropicProvider implements LLMProvider {
     // Strip anthropic/ prefix from model ID
     const model = params.model.replace(/^anthropic\//, "");
 
-    // Convert messages: Anthropic uses separate system param
-    const systemMsg = params.messages.find((m) => m.role === "system");
+    // Convert messages: Anthropic uses a single system param (concatenate all system messages)
+    const systemParts = params.messages
+      .filter((m) => m.role === "system")
+      .map((m) => m.content);
     const nonSystemMessages = params.messages.filter((m) => m.role !== "system");
 
     const body: Record<string, unknown> = {
@@ -27,8 +29,8 @@ export class AnthropicProvider implements LLMProvider {
       ...(params.topK !== undefined && params.topK > 0 && { top_k: params.topK }),
     };
 
-    if (systemMsg) {
-      body.system = systemMsg.content;
+    if (systemParts.length > 0) {
+      body.system = systemParts.join("\n\n");
     }
 
     const response = await fetch(`${ANTHROPIC_BASE}/messages`, {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Pencil, RefreshCw, Copy, Trash2, Check, X } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useChatStore, type Message } from "@/stores/chat";
 
@@ -34,9 +35,11 @@ export function MessageActions({ message }: MessageActionsProps) {
       if (res.ok) {
         updateMessage(message.id, { content: editContent });
         setIsEditing(false);
+      } else {
+        toast.error("Failed to edit message");
       }
     } catch {
-      // Silently fail
+      toast.error("Failed to edit message");
     }
   };
 
@@ -48,9 +51,11 @@ export function MessageActions({ message }: MessageActionsProps) {
       });
       if (res.ok) {
         removeMessage(message.id);
+      } else {
+        toast.error("Failed to delete message");
       }
     } catch {
-      // Silently fail
+      toast.error("Failed to delete message");
     }
     setConfirmDelete(false);
   };

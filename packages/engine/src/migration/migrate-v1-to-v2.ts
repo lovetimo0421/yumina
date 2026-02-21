@@ -1,10 +1,11 @@
 import type { WorldDefinition, WorldEntry } from "../types/index.js";
 
 /**
- * Migrates a v1 WorldDefinition through all versions up to v4.
+ * Migrates a v1 WorldDefinition through all versions up to v5.
  * v1→v2: characters[], lorebookEntries[], settings.systemPrompt/greeting → entries[]
  * v2→v3: remove insertionOrder/group, merge into priority
  * v3→v4: layoutMode → uiMode
+ * v4→v5: uiMode "persistent" → fullScreenComponent: true, deprecate uiMode
  * Idempotent — returns the input unchanged if already at current version.
  */
 export function migrateWorldDefinition(raw: WorldDefinition): WorldDefinition {
@@ -16,6 +17,9 @@ export function migrateWorldDefinition(raw: WorldDefinition): WorldDefinition {
 
   // Step 3: v3 → v4 migration (layoutMode → uiMode)
   migrated = migrateV3ToV4(migrated);
+
+  // Step 4: v4 → v5 migration (uiMode → fullScreenComponent)
+  migrated = migrateV4ToV5(migrated);
 
   return migrated;
 }
@@ -197,7 +201,7 @@ function migrateV2ToV3(raw: WorldDefinition): WorldDefinition {
  * - Everything else → uiMode "chat"
  */
 function migrateV3ToV4(raw: WorldDefinition): WorldDefinition {
-  if (raw.version === "4.0.0") {
+  if (raw.version === "4.0.0" || raw.version === "5.0.0") {
     return raw;
   }
 
@@ -215,6 +219,29 @@ function migrateV3ToV4(raw: WorldDefinition): WorldDefinition {
   return {
     ...raw,
     version: "4.0.0",
+    settings,
+  };
+}
+
+/**
+ * v4 → v5: Deprecate uiMode, add fullScreenComponent.
+ * - uiMode "persistent" → fullScreenComponent: true
+ * - All other uiModes → fullScreenComponent: false (default)
+ */
+function migrateV4ToV5(raw: WorldDefinition): WorldDefinition {
+  if (raw.version === "5.0.0") {
+    return raw;
+  }
+
+  const settings = { ...raw.settings };
+
+  if (settings.uiMode === "persistent") {
+    settings.fullScreenComponent = true;
+  }
+
+  return {
+    ...raw,
+    version: "5.0.0",
     settings,
   };
 }

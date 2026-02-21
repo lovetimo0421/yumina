@@ -1,5 +1,7 @@
+import fs from "node:fs";
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { env } from "./lib/env.js";
 import { corsMiddleware } from "./middleware/cors.js";
 import { health } from "./routes/health.js";
@@ -26,10 +28,23 @@ app.route("/api/sessions", sessionRoutes);
 app.route("/api", messageRoutes);
 app.route("/api/studio", studioRoutes);
 
-// Root
-app.get("/", (c) => {
-  return c.json({ name: "Yumina API", version: "0.0.1" });
-});
+// Serve static frontend in production
+if (process.env.NODE_ENV === "production") {
+  const indexHtml = fs.existsSync("./public/index.html")
+    ? fs.readFileSync("./public/index.html", "utf-8")
+    : null;
+
+  app.use("/*", serveStatic({ root: "./public" }));
+
+  // SPA fallback — serve index.html for non-API, non-health routes
+  if (indexHtml) {
+    app.get("*", (c) => c.html(indexHtml));
+  }
+} else {
+  app.get("/", (c) => {
+    return c.json({ name: "Yumina API", version: "0.0.1" });
+  });
+}
 
 // Start server
 serve(

@@ -233,39 +233,28 @@ export function SettingsSection() {
           </p>
         </div>
 
-        {/* UI Mode */}
+        {/* Advanced */}
         <div className="border-t border-border pt-6">
           <h3 className="text-sm font-semibold text-foreground mb-4">
-            UI Mode
+            Advanced
           </h3>
-          <div className="space-y-2">
-            {([
-              { value: "chat", label: "Chat", desc: "Pure conversation. No game mechanics or custom UI." },
-              { value: "per-reply", label: "Per-Reply", desc: "Game UI embedded in each AI message via display transforms. Each message renders its own HUD, portraits, and choices. (Like NIAH)" },
-              { value: "persistent", label: "Persistent", desc: "Full-screen custom React component. Chat is within the game. (Like Shelter)" },
-            ] as const).map((opt) => (
-              <label
-                key={opt.value}
-                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
-                  (settings.uiMode ?? "chat") === opt.value
-                    ? "border-primary/60 bg-primary/5"
-                    : "border-border hover:border-border/80"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="uiMode"
-                  value={opt.value}
-                  checked={(settings.uiMode ?? "chat") === opt.value}
-                  onChange={() => setSettings("uiMode", opt.value)}
-                  className="mt-0.5 accent-primary"
-                />
-                <div>
-                  <span className="text-sm font-medium text-foreground">{opt.label}</span>
-                  <p className="mt-0.5 text-xs text-muted-foreground/50">{opt.desc}</p>
-                </div>
-              </label>
-            ))}
+          <div>
+            <label className="flex items-center gap-2.5 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                checked={settings.fullScreenComponent ?? false}
+                onChange={(e) =>
+                  setSettings("fullScreenComponent", e.target.checked)
+                }
+                className="rounded"
+              />
+              Full-Screen Component Mode
+            </label>
+            <p className="mt-1.5 ml-6 text-xs text-muted-foreground/40">
+              When enabled, custom components take over the entire screen during
+              play. Chat is embedded within the component. Use this for fully
+              custom game UIs like Dungeon Delver.
+            </p>
           </div>
         </div>
 

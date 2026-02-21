@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { eq, or, and } from "drizzle-orm";
+import { eq, or, and, desc, ilike, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { worlds } from "../db/schema.js";
+import { worlds, user } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { createWorldSchema, updateWorldSchema } from "@yumina/shared";
 import type { AppEnv } from "../lib/types.js";
@@ -19,6 +19,54 @@ worldRoutes.get("/", async (c) => {
     .where(
       or(eq(worlds.creatorId, currentUser.id), eq(worlds.isPublished, true))
     );
+
+  return c.json({ data: result });
+});
+
+// GET /api/worlds/hub — browse published worlds
+worldRoutes.get("/hub", async (c) => {
+  const q = c.req.query("q")?.trim();
+  const tag = c.req.query("tag");
+  const sort = c.req.query("sort") === "popular" ? "popular" : "newest";
+
+  const conditions = [eq(worlds.isPublished, true)];
+
+  if (q) {
+    conditions.push(
+      or(ilike(worlds.name, `%${q}%`), ilike(worlds.description, `%${q}%`))!
+    );
+  }
+
+  if (tag) {
+    conditions.push(sql`${worlds.tags} @> ${JSON.stringify([tag])}::jsonb`);
+  }
+
+  const orderBy =
+    sort === "popular"
+      ? desc(worlds.downloadCount)
+      : desc(worlds.createdAt);
+
+  const result = await db
+    .select({
+      id: worlds.id,
+      creatorId: worlds.creatorId,
+      name: worlds.name,
+      description: worlds.description,
+      schema: worlds.schema,
+      thumbnailUrl: worlds.thumbnailUrl,
+      isPublished: worlds.isPublished,
+      downloadCount: worlds.downloadCount,
+      tags: worlds.tags,
+      createdAt: worlds.createdAt,
+      updatedAt: worlds.updatedAt,
+      creatorName: user.name,
+      creatorImage: user.image,
+    })
+    .from(worlds)
+    .leftJoin(user, eq(worlds.creatorId, user.id))
+    .where(and(...conditions))
+    .orderBy(orderBy)
+    .limit(50);
 
   return c.json({ data: result });
 });
@@ -145,7 +193,7 @@ worldRoutes.post("/:id/duplicate", async (c) => {
 
   const source = existing[0]!;
 
-  const result = await db
+  const [result] = await db
     .insert(worlds)
     .values({
       creatorId: currentUser.id,
@@ -153,11 +201,18 @@ worldRoutes.post("/:id/duplicate", async (c) => {
       description: source.description,
       schema: source.schema,
       thumbnailUrl: source.thumbnailUrl,
+      tags: source.tags,
       isPublished: false,
     })
     .returning();
 
-  return c.json({ data: result[0] }, 201);
+  // Increment download count on source world
+  await db
+    .update(worlds)
+    .set({ downloadCount: sql`${worlds.downloadCount} + 1` })
+    .where(eq(worlds.id, worldId));
+
+  return c.json({ data: result }, 201);
 });
 
 export { worldRoutes };

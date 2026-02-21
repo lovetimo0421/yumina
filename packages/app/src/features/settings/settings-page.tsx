@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,17 +11,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ApiKeysSettings } from "./api-keys";
+import { ModelSettings } from "./model-settings";
 
 export function SettingsPage() {
   const { data: session } = useSession();
   const [name, setName] = useState(session?.user?.name ?? "");
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setMessage("");
     try {
       const res = await fetch("/api/users/me", {
         method: "PATCH",
@@ -29,13 +29,12 @@ export function SettingsPage() {
         body: JSON.stringify({ name }),
       });
       if (res.ok) {
-        setMessage("Profile updated successfully");
+        toast.success("Profile updated");
       } else {
-        const data = await res.json();
-        setMessage(data.error ?? "Failed to update profile");
+        toast.error("Failed to update profile");
       }
     } catch {
-      setMessage("An unexpected error occurred");
+      toast.error("Failed to update profile");
     } finally {
       setSaving(false);
     }
@@ -85,18 +84,6 @@ export function SettingsPage() {
                 />
               </div>
 
-              {message && (
-                <p
-                  className={`text-sm ${
-                    message.includes("success")
-                      ? "text-primary"
-                      : "text-destructive"
-                  }`}
-                >
-                  {message}
-                </p>
-              )}
-
               <Button type="submit" disabled={saving}>
                 {saving ? "Saving..." : "Save changes"}
               </Button>
@@ -105,6 +92,8 @@ export function SettingsPage() {
         </Card>
 
         <ApiKeysSettings />
+
+        <ModelSettings />
       </div>
     </div>
   );

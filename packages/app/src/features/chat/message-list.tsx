@@ -6,7 +6,7 @@ import { SwipeControls } from "./swipe-controls";
 import type { WorldDefinition, DisplayTransform } from "@yumina/engine";
 
 export function MessageList() {
-  const { messages, isStreaming, streamingContent, session } = useChatStore();
+  const { messages, isStreaming, streamingContent, session, error, clearError } = useChatStore();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [compactedExpanded, setCompactedExpanded] = useState(false);
 
@@ -76,6 +76,15 @@ export function MessageList() {
           streamingContent={streamingContent}
           displayTransforms={displayTransforms}
         />
+      )}
+
+      {error && (
+        <div className="mx-4 mb-2 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2">
+          <p className="flex-1 text-xs text-destructive">{error}</p>
+          <button onClick={clearError} className="shrink-0 text-xs text-destructive/50 hover:text-destructive">
+            Dismiss
+          </button>
+        </div>
       )}
 
       <div ref={bottomRef} className="h-4" />

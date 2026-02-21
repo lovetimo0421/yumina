@@ -1,10 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { MessageSquare, Globe, Sword, FileText } from "lucide-react";
+import { lazy, Suspense, useState } from "react";
+import { MessageSquare, Globe, Sword, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { EditorShell } from "@/features/editor/editor-shell";
 import { useEditorStore } from "@/stores/editor";
 import { WORLD_TEMPLATES, type WorldTemplate } from "@/lib/world-templates";
+
+const EditorShell = lazy(() =>
+  import("@/features/editor/editor-shell").then((m) => ({
+    default: m.EditorShell,
+  }))
+);
 
 const ARCHETYPE_ICONS: Record<string, typeof MessageSquare> = {
   chat: MessageSquare,
@@ -94,9 +99,21 @@ function WorldCreatePage() {
     return <TemplatePicker onSelect={handleSelect} />;
   }
 
-  return <EditorShell />;
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <EditorShell />
+    </Suspense>
+  );
 }
 
 export const Route = createFileRoute("/app/worlds/create")({
   component: WorldCreatePage,
 });
+
+function LoadingSpinner() {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40" />
+    </div>
+  );
+}

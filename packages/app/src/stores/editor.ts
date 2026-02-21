@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { toast } from "sonner";
 import type {
   WorldDefinition,
   Variable,
@@ -22,7 +23,7 @@ const MAX_HISTORY = 50;
 function createEmptyWorld(): WorldDefinition {
   return {
     id: crypto.randomUUID(),
-    version: "4.0.0",
+    version: "5.0.0",
     name: "",
     description: "",
     author: "",
@@ -292,6 +293,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           lorebookRecursionDepth: schema.settings?.lorebookRecursionDepth ?? 0,
           layoutMode: schema.settings?.layoutMode,
           uiMode: schema.settings?.uiMode,
+          fullScreenComponent: schema.settings?.fullScreenComponent ?? false,
         },
       };
 
@@ -308,7 +310,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         canRedo: false,
       });
     } catch {
-      // fail silently
+      toast.error("Failed to load world");
     }
   },
 
@@ -741,6 +743,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         if (res.ok) {
           set({ isDirty: false });
           localStorage.removeItem(DRAFT_KEY);
+          toast.success("Saved!");
+        } else {
+          toast.error("Failed to save");
         }
       } else {
         const res = await fetch(`${apiBase}/api/worlds`, {
@@ -753,10 +758,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           const { data } = await res.json();
           set({ serverWorldId: data.id, isDirty: false });
           localStorage.removeItem(DRAFT_KEY);
+          toast.success("Saved!");
+        } else {
+          toast.error("Failed to save");
         }
       }
     } catch {
-      // fail silently
+      toast.error("Failed to save");
     } finally {
       set({ saving: false });
     }

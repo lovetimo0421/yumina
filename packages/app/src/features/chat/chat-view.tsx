@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { useChatStore } from "@/stores/chat";
 import { SessionHeader } from "./session-header";
@@ -17,17 +17,28 @@ interface ChatViewProps {
 export function ChatView({ sessionId }: ChatViewProps) {
   const { loadSession, session, gameState } = useChatStore();
   const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     loadSession(sessionId);
   }, [sessionId, loadSession]);
 
   const worldDef = session?.world?.schema as unknown as WorldDefinition | undefined;
-  const uiMode = worldDef?.settings?.uiMode ?? "chat";
+  const fullScreenComponent = worldDef?.settings?.fullScreenComponent ?? false;
 
-  // Esc key exits persistent mode back to worlds list
+  const visibleCustomComponents = useMemo(
+    () =>
+      (worldDef?.customComponents ?? [])
+        .filter((cc) => cc.visible)
+        .sort((a, b) => a.order - b.order),
+    [worldDef?.customComponents]
+  );
+
+  const hasVisibleCustomComponents = visibleCustomComponents.length > 0;
+
+  // Esc key exits full-screen mode back to worlds list
   useEffect(() => {
-    if (uiMode !== "persistent") return;
+    if (!fullScreenComponent || !hasVisibleCustomComponents) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         router.navigate({ to: "/app/worlds" });
@@ -35,9 +46,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [uiMode, router]);
+  }, [fullScreenComponent, hasVisibleCustomComponents, router]);
 
-  // Build YuminaAPI for persistent mode custom components
+  // Build YuminaAPI for custom components
   const yuminaAPI = useMemo<YuminaAPI>(
     () => ({
       sendMessage: (text: string) => useChatStore.getState().sendMessage(text),
@@ -60,17 +71,12 @@ export function ChatView({ sessionId }: ChatViewProps) {
     );
   }
 
-  // Persistent: full-screen custom components, no chat chrome
-  if (uiMode === "persistent") {
-    const customComponents = worldDef?.customComponents ?? [];
-    const visibleCustom = customComponents
-      .filter((cc) => cc.visible)
-      .sort((a, b) => a.order - b.order);
-
+  // Full-screen: custom components take over, no chat chrome
+  if (fullScreenComponent && hasVisibleCustomComponents) {
     return (
       <div className="flex h-full w-full flex-col">
-        {visibleCustom.map((cc) => (
-          <div key={cc.id} className={visibleCustom.length === 1 ? "flex-1" : ""}>
+        {visibleCustomComponents.map((cc) => (
+          <div key={cc.id} className={visibleCustomComponents.length === 1 ? "flex-1" : ""}>
             <CustomComponentRenderer
               code={cc.tsxCode}
               variables={gameState}
@@ -83,14 +89,34 @@ export function ChatView({ sessionId }: ChatViewProps) {
     );
   }
 
-  // Chat and per-reply: standard chat layout (no game panel)
+  // Standard chat layout with optional component sidebar
   return (
     <div className="flex h-full">
       <div className="flex flex-1 flex-col overflow-hidden">
-        <SessionHeader />
+        <SessionHeader
+          showSidebarToggle={hasVisibleCustomComponents}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        />
         <MessageList />
         <MessageInput />
       </div>
+
+      {/* Component sidebar */}
+      {hasVisibleCustomComponents && sidebarOpen && (
+        <div className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-border bg-background">
+          {visibleCustomComponents.map((cc) => (
+            <div key={cc.id} className="border-b border-border last:border-b-0">
+              <CustomComponentRenderer
+                code={cc.tsxCode}
+                variables={gameState}
+                worldName={worldDef?.name}
+                api={yuminaAPI}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

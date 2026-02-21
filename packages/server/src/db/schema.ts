@@ -73,6 +73,8 @@ export const worlds = pgTable("worlds", {
   schema: jsonb("schema").notNull().$type<Record<string, unknown>>().default({}),
   thumbnailUrl: text("thumbnail_url"),
   isPublished: boolean("is_published").default(false),
+  downloadCount: integer("download_count").notNull().default(0),
+  tags: jsonb("tags").$type<string[]>().notNull().default([]),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -135,19 +137,6 @@ export const assets = pgTable("assets", {
   url: text("url").notNull(),
   sizeBytes: integer("size_bytes"),
   mimeType: text("mime_type"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const lorebookEmbeddings = pgTable("lorebook_embeddings", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  worldId: text("world_id")
-    .notNull()
-    .references(() => worlds.id, { onDelete: "cascade" }),
-  entryId: text("entry_id").notNull(),
-  embedding: jsonb("embedding").notNull().$type<number[]>(),
-  contentHash: text("content_hash").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

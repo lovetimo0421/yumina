@@ -1,18 +1,34 @@
 import { useState, useEffect } from "react";
 import { useChatStore } from "@/stores/chat";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PanelRight, Download, FileText, FileJson } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { exportAsMarkdown, exportAsJson } from "./export-chat";
 import type { WorldDefinition } from "@yumina/engine";
 
-export function SessionHeader() {
-  const { session, isStreaming, streamStartTime } = useChatStore();
+interface SessionHeaderProps {
+  showSidebarToggle?: boolean;
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
+}
+
+export function SessionHeader({
+  showSidebarToggle,
+  sidebarOpen,
+  onToggleSidebar,
+}: SessionHeaderProps) {
+  const { session, messages, isStreaming, streamStartTime } = useChatStore();
 
   if (!session) return null;
 
   const worldDef = session.world?.schema as unknown as
     | WorldDefinition
     | undefined;
-  // Find character name from entries (first entry with role="character")
   const characterEntry = worldDef?.entries?.find((e) => e.role === "character");
   const characterName = characterEntry?.name ?? worldDef?.characters?.[0]?.name ?? "AI";
   const worldName = session.world?.name ?? "Unknown World";
@@ -37,6 +53,41 @@ export function SessionHeader() {
 
       {isStreaming && streamStartTime && (
         <StreamingTimer startTime={streamStartTime} />
+      )}
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+            title="Export chat"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => exportAsMarkdown(session, messages)}>
+            <FileText className="mr-2 h-4 w-4" />
+            Export Markdown
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => exportAsJson(session, messages)}>
+            <FileJson className="mr-2 h-4 w-4" />
+            Export JSON
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {showSidebarToggle && (
+        <button
+          onClick={onToggleSidebar}
+          className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+            sidebarOpen
+              ? "bg-muted text-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+          title={sidebarOpen ? "Hide components" : "Show components"}
+        >
+          <PanelRight className="h-4 w-4" />
+        </button>
       )}
     </div>
   );

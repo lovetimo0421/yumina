@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Sidebar } from "./sidebar";
+import { Toaster } from "@/components/ui/sonner";
 import { useUiStore } from "@/stores/ui";
 
 interface AppShellProps {
@@ -18,6 +19,7 @@ export function AppShell({ children }: AppShellProps) {
     >
       <Sidebar />
       <main className="overflow-hidden">{children}</main>
+      <Toaster />
     </div>
   );
 }

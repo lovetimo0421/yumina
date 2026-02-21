@@ -2,7 +2,6 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Send, Square, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chat";
-import { ModelSelector } from "./model-selector";
 
 export function MessageInput() {
   const [content, setContent] = useState("");
@@ -96,7 +95,7 @@ export function MessageInput() {
             className="block w-full resize-none bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-30"
           />
 
-          {/* Bottom row: + button (left) | model selector + send (right) */}
+          {/* Bottom row: + button (left) | send (right) */}
           <div className="flex items-center justify-between px-3 pb-2.5">
             {/* Left: plus/menu button */}
             <button
@@ -106,10 +105,8 @@ export function MessageInput() {
               <Plus className="h-4 w-4" />
             </button>
 
-            {/* Right: model selector + send/stop */}
+            {/* Right: send/stop */}
             <div className="flex items-center gap-2">
-              <ModelSelector />
-
               {isStreaming ? (
                 <button
                   onClick={stopGeneration}

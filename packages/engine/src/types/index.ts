@@ -214,8 +214,10 @@ export interface WorldSettings {
   lorebookRecursionDepth?: number;
   /** @deprecated Use uiMode instead */
   layoutMode?: "split" | "game-focus" | "immersive";
-  /** UI paradigm — "chat" (pure conversation), "per-reply" (display transforms in messages), "persistent" (full-screen custom component) */
+  /** @deprecated No longer used — layout is automatic based on world content */
   uiMode?: "chat" | "per-reply" | "persistent";
+  /** When true, custom components take over the entire screen during play (e.g. Dungeon Delver) */
+  fullScreenComponent?: boolean;
 }
 
 /** Runtime game state during a play session */

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { toast } from "sonner";
 
 export interface WorldItem {
   id: string;
@@ -33,12 +34,14 @@ export const useWorldsStore = create<WorldsState>((set) => ({
         credentials: "include",
       });
       if (!res.ok) {
+        toast.error("Failed to load worlds");
         set({ error: "Failed to fetch worlds", loading: false });
         return;
       }
       const { data } = await res.json();
       set({ worlds: data, loading: false });
     } catch {
+      toast.error("Failed to load worlds");
       set({ error: "Network error", loading: false });
     }
   },

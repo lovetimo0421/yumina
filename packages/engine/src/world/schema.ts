@@ -147,6 +147,7 @@ export const worldSettingsSchema = z.object({
   lorebookRecursionDepth: z.number().int().min(0).max(10).optional().default(0),
   layoutMode: z.enum(["split", "game-focus", "immersive"]).optional().default("split"),
   uiMode: z.enum(["chat", "per-reply", "persistent"]).optional().default("chat"),
+  fullScreenComponent: z.boolean().optional().default(false),
 });
 
 export const worldDefinitionSchema = z.object({

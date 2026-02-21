@@ -16,9 +16,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppWorldsRouteImport } from './routes/app/worlds'
 import { Route as AppSettingsRouteImport } from './routes/app/settings'
+import { Route as AppHubRouteImport } from './routes/app/hub'
 import { Route as AppWorldsIndexRouteImport } from './routes/app/worlds.index'
 import { Route as AppWorldsCreateRouteImport } from './routes/app/worlds.create'
 import { Route as AppStudioWorldIdRouteImport } from './routes/app/studio.$worldId'
+import { Route as AppHubWorldIdRouteImport } from './routes/app/hub.$worldId'
 import { Route as AppChatSessionIdRouteImport } from './routes/app/chat.$sessionId'
 import { Route as AppWorldsWorldIdEditRouteImport } from './routes/app/worlds.$worldId.edit'
 
@@ -57,6 +59,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppHubRoute = AppHubRouteImport.update({
+  id: '/hub',
+  path: '/hub',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppWorldsIndexRoute = AppWorldsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -71,6 +78,11 @@ const AppStudioWorldIdRoute = AppStudioWorldIdRouteImport.update({
   id: '/studio/$worldId',
   path: '/studio/$worldId',
   getParentRoute: () => AppRoute,
+} as any)
+const AppHubWorldIdRoute = AppHubWorldIdRouteImport.update({
+  id: '/$worldId',
+  path: '/$worldId',
+  getParentRoute: () => AppHubRoute,
 } as any)
 const AppChatSessionIdRoute = AppChatSessionIdRouteImport.update({
   id: '/chat/$sessionId',
@@ -88,10 +100,12 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/app/hub': typeof AppHubRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/worlds': typeof AppWorldsRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/app/chat/$sessionId': typeof AppChatSessionIdRoute
+  '/app/hub/$worldId': typeof AppHubWorldIdRoute
   '/app/studio/$worldId': typeof AppStudioWorldIdRoute
   '/app/worlds/create': typeof AppWorldsCreateRoute
   '/app/worlds/': typeof AppWorldsIndexRoute
@@ -101,9 +115,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/app/hub': typeof AppHubRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app': typeof AppIndexRoute
   '/app/chat/$sessionId': typeof AppChatSessionIdRoute
+  '/app/hub/$worldId': typeof AppHubWorldIdRoute
   '/app/studio/$worldId': typeof AppStudioWorldIdRoute
   '/app/worlds/create': typeof AppWorldsCreateRoute
   '/app/worlds': typeof AppWorldsIndexRoute
@@ -115,10 +131,12 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/app/hub': typeof AppHubRouteWithChildren
   '/app/settings': typeof AppSettingsRoute
   '/app/worlds': typeof AppWorldsRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/app/chat/$sessionId': typeof AppChatSessionIdRoute
+  '/app/hub/$worldId': typeof AppHubWorldIdRoute
   '/app/studio/$worldId': typeof AppStudioWorldIdRoute
   '/app/worlds/create': typeof AppWorldsCreateRoute
   '/app/worlds/': typeof AppWorldsIndexRoute
@@ -131,10 +149,12 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/register'
+    | '/app/hub'
     | '/app/settings'
     | '/app/worlds'
     | '/app/'
     | '/app/chat/$sessionId'
+    | '/app/hub/$worldId'
     | '/app/studio/$worldId'
     | '/app/worlds/create'
     | '/app/worlds/'
@@ -144,9 +164,11 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/register'
+    | '/app/hub'
     | '/app/settings'
     | '/app'
     | '/app/chat/$sessionId'
+    | '/app/hub/$worldId'
     | '/app/studio/$worldId'
     | '/app/worlds/create'
     | '/app/worlds'
@@ -157,10 +179,12 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/register'
+    | '/app/hub'
     | '/app/settings'
     | '/app/worlds'
     | '/app/'
     | '/app/chat/$sessionId'
+    | '/app/hub/$worldId'
     | '/app/studio/$worldId'
     | '/app/worlds/create'
     | '/app/worlds/'
@@ -225,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/hub': {
+      id: '/app/hub'
+      path: '/hub'
+      fullPath: '/app/hub'
+      preLoaderRoute: typeof AppHubRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/worlds/': {
       id: '/app/worlds/'
       path: '/'
@@ -246,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStudioWorldIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/hub/$worldId': {
+      id: '/app/hub/$worldId'
+      path: '/$worldId'
+      fullPath: '/app/hub/$worldId'
+      preLoaderRoute: typeof AppHubWorldIdRouteImport
+      parentRoute: typeof AppHubRoute
+    }
     '/app/chat/$sessionId': {
       id: '/app/chat/$sessionId'
       path: '/chat/$sessionId'
@@ -262,6 +300,17 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AppHubRouteChildren {
+  AppHubWorldIdRoute: typeof AppHubWorldIdRoute
+}
+
+const AppHubRouteChildren: AppHubRouteChildren = {
+  AppHubWorldIdRoute: AppHubWorldIdRoute,
+}
+
+const AppHubRouteWithChildren =
+  AppHubRoute._addFileChildren(AppHubRouteChildren)
 
 interface AppWorldsRouteChildren {
   AppWorldsCreateRoute: typeof AppWorldsCreateRoute
@@ -280,6 +329,7 @@ const AppWorldsRouteWithChildren = AppWorldsRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppHubRoute: typeof AppHubRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRoute
   AppWorldsRoute: typeof AppWorldsRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
@@ -288,6 +338,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppHubRoute: AppHubRouteWithChildren,
   AppSettingsRoute: AppSettingsRoute,
   AppWorldsRoute: AppWorldsRouteWithChildren,
   AppIndexRoute: AppIndexRoute,

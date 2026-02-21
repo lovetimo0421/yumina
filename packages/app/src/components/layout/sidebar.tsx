@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useRouter, useLocation } from "@tanstack/react-router";
 import {
   Settings,
@@ -6,9 +6,12 @@ import {
   PanelLeftOpen,
   LogOut,
   Globe,
+  Compass,
   Trash2,
   BookOpen,
+  Search,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui";
 import { useSession, signOut } from "@/lib/auth-client";
@@ -23,6 +26,7 @@ import {
 
 const navItems = [
   { to: "/app/worlds" as const, label: "Worlds", icon: Globe },
+  { to: "/app/hub" as const, label: "Hub", icon: Compass },
   { to: "/app/settings" as const, label: "Settings", icon: Settings },
 ];
 
@@ -53,6 +57,7 @@ export function Sidebar() {
   const router = useRouter();
   const location = useLocation();
   const [sessions, setSessions] = useState<SessionEntry[]>([]);
+  const [search, setSearch] = useState("");
 
   // Re-fetch sessions on route change (catches new session creation + navigation)
   useEffect(() => {
@@ -63,7 +68,7 @@ export function Sidebar() {
         });
         if (res.ok) {
           const { data } = await res.json();
-          setSessions(data.slice(0, 15));
+          setSessions(data.slice(0, 30));
         }
       } catch {
         // Silently fail
@@ -92,9 +97,17 @@ export function Sidebar() {
         setSessions((prev) => prev.filter((s) => s.id !== sessionId));
       }
     } catch {
-      // Silently fail
+      toast.error("Failed to delete session");
     }
   };
+
+  const filteredSessions = useMemo(() => {
+    if (!search.trim()) return sessions;
+    const q = search.toLowerCase();
+    return sessions.filter((s) =>
+      (s.worldName ?? "").toLowerCase().includes(q)
+    );
+  }, [sessions, search]);
 
   const initials =
     session?.user?.name
@@ -150,8 +163,18 @@ export function Sidebar() {
             <p className="mb-2 px-3 text-[11px] font-medium text-muted-foreground/40">
               Recent Worlds
             </p>
+            <div className="relative mb-2 px-1">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/30" />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-md border border-border/50 bg-transparent py-1.5 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground/30 focus:border-primary/50 focus:outline-none"
+              />
+            </div>
             <div className="space-y-0.5">
-              {sessions.map((s) => (
+              {filteredSessions.map((s) => (
                 <Link
                   key={s.id}
                   to="/app/chat/$sessionId"
@@ -178,9 +201,9 @@ export function Sidebar() {
                   </button>
                 </Link>
               ))}
-              {sessions.length === 0 && (
+              {filteredSessions.length === 0 && (
                 <p className="px-3 py-4 text-center text-xs text-muted-foreground/30">
-                  No sessions yet
+                  {search ? "No matches" : "No sessions yet"}
                 </p>
               )}
             </div>
