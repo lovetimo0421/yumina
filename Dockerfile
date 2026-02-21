@@ -48,4 +48,4 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # Start the server
-CMD ["node", "packages/server/dist/index.mjs"]
+CMD ["node", "packages/server/dist/index.js"]
