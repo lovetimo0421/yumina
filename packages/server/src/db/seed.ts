@@ -15,7 +15,7 @@ const db = drizzle(pool);
 
 const DEMO_WORLD_DEFINITION: WorldDefinition = {
   id: "demo-tavern",
-  version: "3.0.0",
+  version: "4.0.0",
   name: "The Tavern",
   description:
     "A cozy fantasy tavern where adventurers gather. Chat with the tavern keeper, manage your resources, and see how your reputation grows.",
@@ -234,6 +234,7 @@ A stout woman with auburn hair tied back in a braid looks up from behind the bar
     playerName: "User",
     structuredOutput: false,
     lorebookScanDepth: 2,
+    uiMode: "chat",
   },
 };
 
@@ -478,7 +479,7 @@ const DUNGEON_DELVER_TSX = [
 
 const DUNGEON_DELVER_DEFINITION: WorldDefinition = {
   id: "demo-dungeon-delver",
-  version: "3.0.0",
+  version: "4.0.0",
   name: "Dungeon Delver",
   description:
     "An immersive dungeon-crawling experience with a full game HUD. Showcases custom components, Lucide icons, inventory management, and immersive layout mode.",
@@ -630,6 +631,7 @@ What do you do?`,
     structuredOutput: false,
     lorebookScanDepth: 2,
     layoutMode: "immersive",
+    uiMode: "persistent",
   },
 };
 

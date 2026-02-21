@@ -22,7 +22,7 @@ const MAX_HISTORY = 50;
 function createEmptyWorld(): WorldDefinition {
   return {
     id: crypto.randomUUID(),
-    version: "3.0.0",
+    version: "4.0.0",
     name: "",
     description: "",
     author: "",

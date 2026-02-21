@@ -1,10 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { useChatStore } from "@/stores/chat";
 import { SessionHeader } from "./session-header";
 import { MessageList } from "./message-list";
 import { MessageInput } from "./message-input";
-import { GamePanel } from "./game-panel";
+import {
+  CustomComponentRenderer,
+  type YuminaAPI,
+} from "@/features/studio/lib/custom-component-renderer";
 import type { WorldDefinition } from "@yumina/engine";
 
 interface ChatViewProps {
@@ -12,12 +15,39 @@ interface ChatViewProps {
 }
 
 export function ChatView({ sessionId }: ChatViewProps) {
-  const { loadSession, session } = useChatStore();
+  const { loadSession, session, gameState } = useChatStore();
   const router = useRouter();
 
   useEffect(() => {
     loadSession(sessionId);
   }, [sessionId, loadSession]);
+
+  const worldDef = session?.world?.schema as unknown as WorldDefinition | undefined;
+  const uiMode = worldDef?.settings?.uiMode ?? "chat";
+
+  // Esc key exits persistent mode back to worlds list
+  useEffect(() => {
+    if (uiMode !== "persistent") return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        router.navigate({ to: "/app/worlds" });
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [uiMode, router]);
+
+  // Build YuminaAPI for persistent mode custom components
+  const yuminaAPI = useMemo<YuminaAPI>(
+    () => ({
+      sendMessage: (text: string) => useChatStore.getState().sendMessage(text),
+      setVariable: (id: string, value: number | string | boolean) =>
+        useChatStore.getState().setVariableDirectly(id, value),
+      variables: gameState,
+      worldName: worldDef?.name ?? "",
+    }),
+    [gameState, worldDef?.name]
+  );
 
   if (!session) {
     return (
@@ -30,43 +60,30 @@ export function ChatView({ sessionId }: ChatViewProps) {
     );
   }
 
-  const worldDef = session.world?.schema as unknown as WorldDefinition | undefined;
-  const layoutMode = worldDef?.settings?.layoutMode ?? "split";
+  // Persistent: full-screen custom components, no chat chrome
+  if (uiMode === "persistent") {
+    const customComponents = worldDef?.customComponents ?? [];
+    const visibleCustom = customComponents
+      .filter((cc) => cc.visible)
+      .sort((a, b) => a.order - b.order);
 
-  // Esc key exits immersive mode back to worlds list
-  useEffect(() => {
-    if (layoutMode !== "immersive") return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        router.navigate({ to: "/app/worlds" });
-      }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [layoutMode, router]);
-
-  // Immersive: only the creator's custom components, no Yumina chrome
-  if (layoutMode === "immersive") {
-    return <GamePanel layoutMode="immersive" />;
-  }
-
-  // Game-focus: 50/50 split
-  if (layoutMode === "game-focus") {
     return (
-      <div className="flex h-full">
-        <div className="flex w-1/2 flex-col overflow-hidden border-r border-border">
-          <SessionHeader />
-          <MessageList />
-          <MessageInput />
-        </div>
-        <div className="w-1/2">
-          <GamePanel layoutMode="game-focus" />
-        </div>
+      <div className="flex h-full w-full flex-col">
+        {visibleCustom.map((cc) => (
+          <div key={cc.id} className={visibleCustom.length === 1 ? "flex-1" : ""}>
+            <CustomComponentRenderer
+              code={cc.tsxCode}
+              variables={gameState}
+              worldName={worldDef?.name}
+              api={yuminaAPI}
+            />
+          </div>
+        ))}
       </div>
     );
   }
 
-  // Default split layout
+  // Chat and per-reply: standard chat layout (no game panel)
   return (
     <div className="flex h-full">
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -74,7 +91,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
         <MessageList />
         <MessageInput />
       </div>
-      <GamePanel layoutMode="split" />
     </div>
   );
 }

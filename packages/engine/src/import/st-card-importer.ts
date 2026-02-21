@@ -359,7 +359,7 @@ export function importSillyTavernCard(json: unknown): WorldDefinition {
 
   return {
     id: uuid(),
-    version: "3.0.0",
+    version: "4.0.0",
     name: cardName,
     description: charBook?.description || data.scenario || "",
     author: "",

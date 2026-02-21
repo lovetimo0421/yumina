@@ -212,8 +212,10 @@ export interface WorldSettings {
   lorebookScanDepth?: number;
   /** Max recursion depth for cascading entry triggers. 0 = disabled (default 0). Range 0-10. */
   lorebookRecursionDepth?: number;
-  /** Game panel layout mode (default "split") */
+  /** @deprecated Use uiMode instead */
   layoutMode?: "split" | "game-focus" | "immersive";
+  /** UI paradigm — "chat" (pure conversation), "per-reply" (display transforms in messages), "persistent" (full-screen custom component) */
+  uiMode?: "chat" | "per-reply" | "persistent";
 }
 
 /** Runtime game state during a play session */

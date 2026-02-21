@@ -37,12 +37,6 @@ export interface SessionData {
   } | null;
 }
 
-export interface StateChange {
-  variableId: string;
-  oldValue: number | string | boolean;
-  newValue: number | string | boolean;
-}
-
 interface ChatState {
   // Current session
   session: SessionData | null;
@@ -55,18 +49,19 @@ interface ChatState {
   streamStartTime: number | null;
   abortController: AbortController | null;
 
-  // Recent state changes for notifications
-  recentStateChanges: StateChange[];
-
   // AI-provided choices
   pendingChoices: string[];
 
   // Model selection
   selectedModel: string;
 
+  // Error state
+  error: string | null;
+
   // Actions
   setSession: (session: SessionData | null) => void;
   setSelectedModel: (model: string) => void;
+  clearError: () => void;
   setMessages: (messages: Message[]) => void;
   setGameState: (state: Record<string, number | string | boolean>) => void;
   addMessage: (message: Message) => void;
@@ -75,8 +70,6 @@ interface ChatState {
   sendMessage: (content: string, model?: string) => void;
   regenerateMessage: (messageId: string, model?: string) => void;
   stopGeneration: () => void;
-  addRecentStateChange: (change: StateChange) => void;
-  clearRecentStateChanges: () => void;
   setPendingChoices: (choices: string[]) => void;
   clearPendingChoices: () => void;
 
@@ -97,12 +90,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamingContent: "",
   streamStartTime: null,
   abortController: null,
-  recentStateChanges: [],
   pendingChoices: [],
   selectedModel: "anthropic/claude-sonnet-4",
+  error: null,
 
   setSession: (session) => set({ session }),
   setSelectedModel: (model) => set({ selectedModel: model }),
+  clearError: () => set({ error: null }),
   setMessages: (messages) => set({ messages }),
   setGameState: (gameState) => set({ gameState }),
 
@@ -165,12 +159,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!session || isStreaming) return;
     const useModel = model ?? selectedModel;
 
-    set({
+    // Add user message immediately so it appears in chat before AI responds
+    const tempUserMsgId = `__pending_${Date.now()}`;
+    set((s) => ({
       isStreaming: true,
       streamingContent: "",
       streamStartTime: Date.now(),
       pendingChoices: [],
-    });
+      error: null,
+      messages: [
+        ...s.messages,
+        {
+          id: tempUserMsgId,
+          sessionId: session.id,
+          role: "user" as const,
+          content,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    }));
 
     const controller = connectSSE(
       `${apiBase}/api/sessions/${session.id}/messages`,
@@ -183,23 +190,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
           },
           onDone: (data) => {
             const state = get();
-            // Add user message
-            if (data.userMessageId) {
-              set((s) => ({
-                messages: [
-                  ...s.messages,
-                  {
-                    id: data.userMessageId as string,
-                    sessionId: session.id,
-                    role: "user" as const,
-                    content,
-                    createdAt: new Date().toISOString(),
-                  },
-                ],
-              }));
-            }
 
-            // Add assistant message
+            // Update temp user message with server-assigned ID
+            const serverUserId = data.userMessageId as string | undefined;
+
+            // Build assistant message
             const assistantMsg: Message = {
               id: (data.messageId as string) ?? crypto.randomUUID(),
               sessionId: session.id,
@@ -218,14 +213,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 ?.variables as Record<string, number | string | boolean>
             ) ?? state.gameState;
 
-            // Process state changes for notifications
-            const changes = data.stateChanges as StateChange[] | undefined;
-            if (changes && Array.isArray(changes)) {
-              for (const change of changes) {
-                get().addRecentStateChange(change);
-              }
-            }
-
             // Extract AI-provided choices
             const choices = data.choices as string[] | undefined;
             if (choices && Array.isArray(choices) && choices.length > 0) {
@@ -239,7 +226,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
             }
 
             set((s) => ({
-              messages: [...s.messages, assistantMsg],
+              messages: [
+                // Replace temp user msg ID with server ID, then append assistant
+                ...s.messages.map((m) =>
+                  m.id === tempUserMsgId && serverUserId
+                    ? { ...m, id: serverUserId }
+                    : m
+                ),
+                assistantMsg,
+              ],
               isStreaming: false,
               streamingContent: "",
               streamStartTime: null,
@@ -247,13 +242,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
               gameState: newGameState,
             }));
           },
-          onError: (error) => {
-            console.error("SSE error:", error);
+          onError: (err) => {
+            console.error("SSE error:", err);
+            // Parse error message from server JSON if possible
+            let errorMsg = err;
+            try {
+              const parsed = JSON.parse(err.replace(/^HTTP \d+: /, ""));
+              if (parsed.error) errorMsg = parsed.error;
+            } catch { /* use raw */ }
             set({
               isStreaming: false,
               streamingContent: "",
               streamStartTime: null,
               abortController: null,
+              error: errorMsg,
             });
           },
         },
@@ -309,13 +311,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 state.gameState,
             }));
 
-            const changes = data.stateChanges as StateChange[] | undefined;
-            if (changes && Array.isArray(changes)) {
-              for (const change of changes) {
-                get().addRecentStateChange(change);
-              }
-            }
-
             const choices = data.choices as string[] | undefined;
             if (choices && Array.isArray(choices) && choices.length > 0) {
               get().setPendingChoices(choices);
@@ -327,13 +322,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
               useAudioStore.getState().processAudioEffects(regenAudioEffects);
             }
           },
-          onError: (error) => {
-            console.error("Regeneration error:", error);
+          onError: (err) => {
+            console.error("Regeneration error:", err);
+            let errorMsg = err;
+            try {
+              const parsed = JSON.parse(err.replace(/^HTTP \d+: /, ""));
+              if (parsed.error) errorMsg = parsed.error;
+            } catch { /* use raw */ }
             set({
               isStreaming: false,
               streamingContent: "",
               streamStartTime: null,
               abortController: null,
+              error: errorMsg,
             });
           },
         },
@@ -356,24 +357,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  addRecentStateChange: (change) =>
-    set((s) => ({
-      recentStateChanges: [...s.recentStateChanges, change],
-    })),
-
-  clearRecentStateChanges: () => set({ recentStateChanges: [] }),
-
   setPendingChoices: (choices) => set({ pendingChoices: choices }),
   clearPendingChoices: () => set({ pendingChoices: [] }),
 
   setVariableDirectly: (id, value) => {
-    const oldValue = get().gameState[id] ?? value;
     set((s) => ({
       gameState: { ...s.gameState, [id]: value },
-      recentStateChanges: [
-        ...s.recentStateChanges,
-        { variableId: id, oldValue, newValue: value },
-      ],
     }));
     // Persist to server (fire-and-forget)
     const sessionId = get().session?.id;

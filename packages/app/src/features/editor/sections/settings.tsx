@@ -233,29 +233,39 @@ export function SettingsSection() {
           </p>
         </div>
 
-        {/* Layout Mode */}
+        {/* UI Mode */}
         <div className="border-t border-border pt-6">
           <h3 className="text-sm font-semibold text-foreground mb-4">
-            Game Layout
+            UI Mode
           </h3>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-foreground">
-              Layout Mode
-            </label>
-            <select
-              value={settings.layoutMode ?? "split"}
-              onChange={(e) =>
-                setSettings("layoutMode", e.target.value)
-              }
-              className="w-60 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring [&>option]:bg-popover"
-            >
-              <option value="split">Split (chat + sidebar)</option>
-              <option value="game-focus">Game Focus (50/50)</option>
-              <option value="immersive">Immersive (full-screen game)</option>
-            </select>
-            <p className="mt-1 text-xs text-muted-foreground/40">
-              Controls how the game panel and chat area are laid out during gameplay
-            </p>
+          <div className="space-y-2">
+            {([
+              { value: "chat", label: "Chat", desc: "Pure conversation. No game mechanics or custom UI." },
+              { value: "per-reply", label: "Per-Reply", desc: "Game UI embedded in each AI message via display transforms. Each message renders its own HUD, portraits, and choices. (Like NIAH)" },
+              { value: "persistent", label: "Persistent", desc: "Full-screen custom React component. Chat is within the game. (Like Shelter)" },
+            ] as const).map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                  (settings.uiMode ?? "chat") === opt.value
+                    ? "border-primary/60 bg-primary/5"
+                    : "border-border hover:border-border/80"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="uiMode"
+                  value={opt.value}
+                  checked={(settings.uiMode ?? "chat") === opt.value}
+                  onChange={() => setSettings("uiMode", opt.value)}
+                  className="mt-0.5 accent-primary"
+                />
+                <div>
+                  <span className="text-sm font-medium text-foreground">{opt.label}</span>
+                  <p className="mt-0.5 text-xs text-muted-foreground/50">{opt.desc}</p>
+                </div>
+              </label>
+            ))}
           </div>
         </div>
 

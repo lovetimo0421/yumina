@@ -1,9 +1,11 @@
 import type { WorldDefinition, WorldEntry } from "../types/index.js";
 
 /**
- * Migrates a v1 WorldDefinition (characters[], lorebookEntries[], settings.systemPrompt/greeting)
- * to v2 format (entries[]), then v2→v3 (remove insertionOrder/group, merge into priority).
- * Idempotent — returns the input unchanged if already v3.
+ * Migrates a v1 WorldDefinition through all versions up to v4.
+ * v1→v2: characters[], lorebookEntries[], settings.systemPrompt/greeting → entries[]
+ * v2→v3: remove insertionOrder/group, merge into priority
+ * v3→v4: layoutMode → uiMode
+ * Idempotent — returns the input unchanged if already at current version.
  */
 export function migrateWorldDefinition(raw: WorldDefinition): WorldDefinition {
   // Step 1: v1 → v2 migration (legacy characters/lorebook → entries)
@@ -11,6 +13,9 @@ export function migrateWorldDefinition(raw: WorldDefinition): WorldDefinition {
 
   // Step 2: v2 → v3 migration (remove insertionOrder/group, merge into priority)
   migrated = migrateV2ToV3(migrated);
+
+  // Step 3: v3 → v4 migration (layoutMode → uiMode)
+  migrated = migrateV3ToV4(migrated);
 
   return migrated;
 }
@@ -182,5 +187,34 @@ function migrateV2ToV3(raw: WorldDefinition): WorldDefinition {
     ...raw,
     version: "3.0.0",
     entries,
+  };
+}
+
+/**
+ * v3 → v4: Migrate layoutMode to uiMode.
+ * - layoutMode "immersive" → uiMode "persistent"
+ * - Worlds with displayTransforms → uiMode "per-reply"
+ * - Everything else → uiMode "chat"
+ */
+function migrateV3ToV4(raw: WorldDefinition): WorldDefinition {
+  if (raw.version === "4.0.0") {
+    return raw;
+  }
+
+  const settings = { ...raw.settings };
+  const layoutMode = settings.layoutMode;
+
+  if (layoutMode === "immersive") {
+    settings.uiMode = "persistent";
+  } else if (raw.displayTransforms && raw.displayTransforms.length > 0) {
+    settings.uiMode = "per-reply";
+  } else {
+    settings.uiMode = "chat";
+  }
+
+  return {
+    ...raw,
+    version: "4.0.0",
+    settings,
   };
 }

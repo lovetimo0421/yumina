@@ -1,139 +1,122 @@
+import { useMemo } from "react";
 import type { IDockviewPanelProps } from "dockview-react";
-import { resolveComponents } from "@yumina/engine";
-import type { GameState } from "@yumina/engine";
 import { useEditorStore } from "@/stores/editor";
-import { useStudioStore } from "@/stores/studio";
-import { ComponentRenderer } from "@/features/chat/components";
 import { CustomComponentRenderer } from "../lib/custom-component-renderer";
-import { Bot, Trash2 } from "lucide-react";
+import { renderMessage } from "@/lib/markdown";
+import { MessageSquare, Monitor, Smartphone } from "lucide-react";
 
 export function CanvasPanel(_props: IDockviewPanelProps) {
   const { worldDraft } = useEditorStore();
-  const { selectedElementId, setSelectedElement } = useStudioStore();
+  const uiMode = worldDraft.settings.uiMode ?? "chat";
 
-  // Build a preview state from defaults
-  const previewState: GameState = {
-    worldId: worldDraft.id,
-    variables: Object.fromEntries(
-      worldDraft.variables.map((v) => [v.id, v.defaultValue])
-    ),
-    turnCount: 0,
-    metadata: {},
-  };
+  // Find greeting entry content
+  const greetingEntry = worldDraft.entries.find(
+    (e) => e.role === "greeting" && e.enabled
+  );
+  const greetingText = greetingEntry?.content ?? "";
 
-  // Resolve typed components
-  const resolved = resolveComponents(
-    worldDraft.components,
-    previewState,
-    worldDraft.variables
+  // Build preview variables from defaults
+  const previewVars = useMemo(
+    () =>
+      Object.fromEntries(
+        worldDraft.variables.map((v) => [v.id, v.defaultValue])
+      ),
+    [worldDraft.variables]
   );
 
-  const hasComponents = resolved.length > 0 || worldDraft.customComponents.length > 0;
+  if (uiMode === "per-reply") {
+    return (
+      <div className="flex h-full items-center justify-center bg-muted/30 p-6">
+        <PhoneMockup>
+          {greetingText ? (
+            <div
+              className="text-sm leading-relaxed text-zinc-200"
+              dangerouslySetInnerHTML={{
+                __html: renderMessage(greetingText, worldDraft.displayTransforms),
+              }}
+            />
+          ) : (
+            <EmptyState icon={<Smartphone className="h-6 w-6" />} text="Add a greeting entry to preview the first message with display transforms." />
+          )}
+        </PhoneMockup>
+      </div>
+    );
+  }
 
-  return (
-    <div className="h-full overflow-y-auto bg-background p-4">
-      {!hasComponents && (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground/50 gap-2">
-          <Bot className="h-8 w-8" />
-          <p className="text-xs text-center">
-            No components yet.
-            <br />
-            Ask the AI: "Create a health bar component"
-          </p>
-        </div>
-      )}
+  if (uiMode === "persistent") {
+    const visibleCustom = worldDraft.customComponents
+      .filter((cc) => cc.visible)
+      .sort((a, b) => a.order - b.order);
 
-      <div className="space-y-3 max-w-lg mx-auto">
-        {/* Typed components */}
-        {resolved.map((comp) => (
-          <SelectableWrapper
-            key={comp.id}
-            id={comp.id}
-            type="component"
-            isSelected={selectedElementId === comp.id}
-            onSelect={() =>
-              setSelectedElement(
-                selectedElementId === comp.id ? null : comp.id,
-                "component"
-              )
-            }
-          >
-            <ComponentRenderer component={comp} />
-          </SelectableWrapper>
-        ))}
-
-        {/* Custom components */}
-        {worldDraft.customComponents
-          .filter((cc) => cc.visible)
-          .sort((a, b) => a.order - b.order)
-          .map((cc) => (
-            <SelectableWrapper
-              key={cc.id}
-              id={cc.id}
-              type="customComponent"
-              isSelected={selectedElementId === cc.id}
-              onSelect={() =>
-                setSelectedElement(
-                  selectedElementId === cc.id ? null : cc.id,
-                  "customComponent"
-                )
-              }
-            >
+    return (
+      <div className="flex h-full items-center justify-center bg-muted/30 p-6">
+        <PhoneMockup>
+          {visibleCustom.length > 0 ? (
+            visibleCustom.map((cc) => (
               <CustomComponentRenderer
+                key={cc.id}
                 code={cc.tsxCode}
-                variables={previewState.variables}
+                variables={previewVars}
                 worldName={worldDraft.name}
               />
-            </SelectableWrapper>
-          ))}
+            ))
+          ) : (
+            <EmptyState icon={<Monitor className="h-6 w-6" />} text="Add a custom component for the persistent game UI." />
+          )}
+        </PhoneMockup>
+      </div>
+    );
+  }
+
+  // Chat mode: simple greeting preview
+  return (
+    <div className="flex h-full items-center justify-center bg-muted/30 p-6">
+      <PhoneMockup>
+        {greetingText ? (
+          <div className="space-y-3">
+            <p className="text-xs font-medium text-primary">Narrator</p>
+            <div
+              className="text-sm leading-relaxed text-zinc-200"
+              dangerouslySetInnerHTML={{
+                __html: renderMessage(greetingText),
+              }}
+            />
+          </div>
+        ) : (
+          <EmptyState icon={<MessageSquare className="h-6 w-6" />} text="Add a greeting entry to preview the opening message." />
+        )}
+      </PhoneMockup>
+    </div>
+  );
+}
+
+function PhoneMockup({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border-2 border-zinc-700 bg-zinc-950 shadow-2xl">
+      {/* Status bar */}
+      <div className="flex items-center justify-between px-4 py-1.5 text-[10px] text-zinc-500">
+        <span>9:41</span>
+        <div className="flex items-center gap-1">
+          <span>Yumina</span>
+        </div>
+      </div>
+      {/* Content */}
+      <div className="max-h-[500px] flex-1 overflow-y-auto p-4">
+        {children}
+      </div>
+      {/* Home indicator */}
+      <div className="flex justify-center pb-2 pt-1">
+        <div className="h-1 w-24 rounded-full bg-zinc-700" />
       </div>
     </div>
   );
 }
 
-function SelectableWrapper({
-  id,
-  type,
-  isSelected,
-  onSelect,
-  children,
-}: {
-  id: string;
-  type: string;
-  isSelected: boolean;
-  onSelect: () => void;
-  children: React.ReactNode;
-}) {
-  const { removeComponent, removeCustomComponent } = useEditorStore();
-
+function EmptyState({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <div
-      onClick={onSelect}
-      className={`relative cursor-pointer rounded-lg border p-2 transition-colors ${
-        isSelected
-          ? "border-primary/60 bg-primary/5"
-          : "border-transparent hover:border-border"
-      }`}
-    >
-      {children}
-
-      {isSelected && (
-        <div className="absolute -top-2 right-2 flex items-center gap-1">
-          <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-            {id}
-          </span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (type === "component") removeComponent(id);
-              else if (type === "customComponent") removeCustomComponent(id);
-            }}
-            className="rounded bg-destructive/20 p-0.5 text-destructive hover:bg-destructive/30"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
-      )}
+    <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-zinc-500">
+      {icon}
+      <p className="text-xs">{text}</p>
     </div>
   );
 }

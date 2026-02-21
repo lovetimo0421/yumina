@@ -37,7 +37,7 @@ function rule(r: Omit<Rule, "id">): Rule {
 function buildCharacterChat(): WorldDefinition {
   return {
     id: crypto.randomUUID(),
-    version: "3.0.0",
+    version: "4.0.0",
     name: "Character Chat",
     description: "One-on-one character roleplay",
     author: "",
@@ -110,7 +110,7 @@ function buildCharacterChat(): WorldDefinition {
 function buildWorldSimulation(): WorldDefinition {
   return {
     id: crypto.randomUUID(),
-    version: "3.0.0",
+    version: "4.0.0",
     name: "World Simulation",
     description: "Resource management and survival simulation",
     author: "",
@@ -212,7 +212,7 @@ Example: [health: subtract 10] [gold: add 5] [location: set "marketplace"]`,
 function buildProgressiveAdventure(): WorldDefinition {
   return {
     id: crypto.randomUUID(),
-    version: "3.0.0",
+    version: "4.0.0",
     name: "Progressive Adventure",
     description: "Level-based adventure with progression system",
     author: "",
