@@ -410,7 +410,7 @@ OUTPUT FORMAT:
 - Phase headers: 🌑 **NIGHT X** or ☀️ **DAY X**
 - Knock descriptions with [PEEP:Name] for peephole portraits
 - Choices at the end: **Suggested Choices:** then A. B. C. D. E.
-- HUD at phase transitions: ⚡ **Energy: X/X** | ❤️ **HP: X** | 🔫 Armed/Unarmed | etc.
+- HUD in EVERY response between --- separators: ⚡ **Energy: X/X** | ❤️ **HP: X** | 🔫 Armed | 📋 FEMA Notice: X etc.
 - System notes in <sum> tags (hidden from player)
 - Variable directives at the very end (hidden from player)`,
       role: "lore",
@@ -723,13 +723,12 @@ C. Third option
 D. Fourth option
 E. Other — type anything you want to do
 
-HUD (show at phase transitions and after significant state changes):
-⚡ **Energy: X/X**
-❤️ **HP: X**
-🔫 Armed (or Unarmed)
-📋 FEMA Notice: X
+HUD (MUST include in EVERY response, between --- separators):
+---
+⚡ **Energy: X/X** | ❤️ **HP: X** | 🔫 Armed | 📋 FEMA Notice: X
 📰 **Known Visitor Traits:** comma-separated list
-🏠 Room summary
+🏠 **Room summary**
+---
 
 ATMOSPHERE: Use *"quoted italics"* for ambient sounds and quotes:
 *"The wind howls through the cracks in the boards..."*
@@ -943,10 +942,19 @@ E. Other — type anything you want to do
     {
       id: "dt-strip-directives",
       name: "Strip variable directives",
-      pattern: "\\[(?:energy|energy_max|hp|day|phase|armed|fema_notices|has_cat|room_\\w+|known_traits|game_state|coffee_remaining_days|total_smokes|enerjeka_stock|bober_stock|cigarette_stock|coffee_stock|cat_food_stock):[^\\]]+\\]",
+      pattern: "\\[(?:energy|energy_max|hp|day|phase|armed|fema_notices|has_cat|room_\\w+|known_traits|coffee_remaining_days|total_smokes|enerjeka_stock|bober_stock|cigarette_stock|coffee_stock|cat_food_stock):[^\\]]+\\]",
       replacement: "",
       flags: "g",
       order: 6,
+      enabled: true,
+    },
+    {
+      id: "dt-strip-gamestate",
+      name: "Strip game_state directive",
+      pattern: "\\[game_state: set \"[\\s\\S]*?\"\\]",
+      replacement: "",
+      flags: "g",
+      order: 7,
       enabled: true,
     },
 
