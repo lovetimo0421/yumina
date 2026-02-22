@@ -1,10 +1,6 @@
 import type { WorldEntry, Condition, GameState, WorldSettings } from "../types/index.js";
 import { keywordMatches } from "./keyword-matcher.js";
-
-/** Rough token estimate: 1 token ~ 4 characters */
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
-}
+import { estimateTokens } from "../prompts/token-utils.js";
 
 export interface LorebookMatchResult {
   /** Entries that always inject (alwaysSend=true), not subject to token budget */

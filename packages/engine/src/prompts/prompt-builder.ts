@@ -5,6 +5,8 @@ import type {
   Variable,
   VariableCategory,
 } from "../types/index.js";
+import { expandMacros } from "./macros.js";
+import { estimateTokens } from "./token-utils.js";
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -256,17 +258,7 @@ export class PromptBuilder {
   }
 
   private interpolate(template: string, world: WorldDefinition, state: GameState): string {
-    // Derive {{char}} from first character entry name
-    const charEntry = world.entries.find((e) => e.role === "character" && e.enabled);
-    const charName = charEntry?.name ?? "Assistant";
-    const userName = world.settings?.playerName || "User";
-
-    return template.replace(/\{\{(\w+)\}\}/g, (_match, varId: string) => {
-      if (varId === "char") return charName;
-      if (varId === "user") return userName;
-      const value = state.variables[varId];
-      return value !== undefined ? String(value) : `{{${varId}}}`;
-    });
+    return expandMacros(template, world, state);
   }
 
   private buildVariableSummary(
@@ -330,4 +322,145 @@ export class PromptBuilder {
     const suffix = hints.length > 0 ? ` (${hints.join(". ")})` : "";
     return `- ${v.name}: ${value}${suffix}`;
   }
+
+  /**
+   * Build a static cost breakdown of the world's prompt.
+   * Only includes always-send + enabled entries (no matched entries —
+   * this is a design-time analysis, not a runtime one).
+   */
+  buildPromptCostBreakdown(
+    world: WorldDefinition,
+    state: GameState,
+    structured = false
+  ): PromptCostBreakdown {
+    const blocks: PromptCostBlock[] = [];
+
+    // Entries grouped by position
+    const alwaysSendEntries = world.entries.filter(
+      (e) => e.enabled && e.alwaysSend && e.position !== "greeting"
+    );
+
+    for (const position of POSITION_ORDER) {
+      const slotEntries = alwaysSendEntries
+        .filter((e) => e.position === position)
+        .sort((a, b) => b.priority - a.priority);
+
+      for (const entry of slotEntries) {
+        const text = this.interpolate(entry.content, world, state);
+        blocks.push({
+          label: entry.name || `Entry (${position})`,
+          category: "entry",
+          tokens: estimateTokens(text),
+          chars: text.length,
+        });
+      }
+    }
+
+    // Depth entries
+    const depthEntries = alwaysSendEntries
+      .filter((e) => e.position === "depth")
+      .sort((a, b) => b.priority - a.priority);
+
+    for (const entry of depthEntries) {
+      const text = this.interpolate(entry.content, world, state);
+      blocks.push({
+        label: entry.name || "Depth Entry",
+        category: "entry",
+        tokens: estimateTokens(text),
+        chars: text.length,
+      });
+    }
+
+    // Post-history entries
+    const postHistoryEntries = alwaysSendEntries
+      .filter((e) => e.position === "post_history")
+      .sort((a, b) => b.priority - a.priority);
+
+    for (const entry of postHistoryEntries) {
+      const text = this.interpolate(entry.content, world, state);
+      blocks.push({
+        label: entry.name || "Post-History",
+        category: "entry",
+        tokens: estimateTokens(text),
+        chars: text.length,
+      });
+    }
+
+    // Variable summary
+    const varSummary = this.buildVariableSummary(world, state);
+    if (varSummary) {
+      const fullText = `Current game state:\n${varSummary}`;
+      blocks.push({
+        label: "Variable Summary",
+        category: "variable-summary",
+        tokens: estimateTokens(fullText),
+        chars: fullText.length,
+      });
+    }
+
+    // Format instructions
+    const formatText = structured
+      ? 'You MUST respond with a JSON object in this exact format:\n' +
+        '{\n  "narrative": "...",\n  "stateChanges": [...],\n  "choices": [...]\n}\n\n' +
+        'Rules:\n- "narrative" is REQUIRED\n- "stateChanges" is optional\n- "choices" is optional\n- Respond ONLY with the JSON object'
+      : "When you want to change game variables, use this format in your response: [variableId: operation value]\n" +
+        'Examples: [health: -10], [gold: +50], [location: set "forest"], [hasKey: toggle]';
+
+    blocks.push({
+      label: structured ? "JSON Format Instructions" : "Directive Format Instructions",
+      category: "format-instructions",
+      tokens: estimateTokens(formatText),
+      chars: formatText.length,
+    });
+
+    // Variable list (structured mode only)
+    if (structured && world.variables.length > 0) {
+      const varList = world.variables
+        .map((v) => {
+          const desc = v.description || v.name;
+          const hint = v.updateHints ? ` — ${v.updateHints}` : "";
+          return `  - ${v.id} (${v.type}): ${desc}${hint}`;
+        })
+        .join("\n");
+      const varListText = `Available variables you can modify:\n${varList}`;
+      blocks.push({
+        label: "Variable Definitions",
+        category: "format-instructions",
+        tokens: estimateTokens(varListText),
+        chars: varListText.length,
+      });
+    }
+
+    // Audio instructions
+    if (world.audioTracks && world.audioTracks.length > 0) {
+      const trackList = world.audioTracks
+        .map((t) => `  - ${t.id} (${t.type}): ${t.name}`)
+        .join("\n");
+      const audioText = `Available audio tracks:\n${trackList}`;
+      blocks.push({
+        label: "Audio Instructions",
+        category: "audio-instructions",
+        tokens: estimateTokens(audioText),
+        chars: audioText.length,
+      });
+    }
+
+    const totalTokens = blocks.reduce((sum, b) => sum + b.tokens, 0);
+    const totalChars = blocks.reduce((sum, b) => sum + b.chars, 0);
+
+    return { blocks, totalTokens, totalChars };
+  }
+}
+
+export interface PromptCostBlock {
+  label: string;
+  category: "entry" | "variable-summary" | "format-instructions" | "audio-instructions";
+  tokens: number;
+  chars: number;
+}
+
+export interface PromptCostBreakdown {
+  blocks: PromptCostBlock[];
+  totalTokens: number;
+  totalChars: number;
 }

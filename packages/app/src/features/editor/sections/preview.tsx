@@ -1,7 +1,27 @@
-import { useState } from "react";
-import { Play, Loader2, MessageSquare } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Play, Loader2, MessageSquare, BarChart3 } from "lucide-react";
 import { useEditorStore } from "@/stores/editor";
 import { useConfigStore } from "@/stores/config";
+import {
+  expandMacros,
+  PromptBuilder,
+  type GameState,
+  type PromptCostBreakdown,
+} from "@yumina/engine";
+
+const CATEGORY_COLORS: Record<string, string> = {
+  entry: "bg-blue-500",
+  "variable-summary": "bg-emerald-500",
+  "format-instructions": "bg-amber-500",
+  "audio-instructions": "bg-purple-500",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  entry: "Entry",
+  "variable-summary": "Variables",
+  "format-instructions": "Format",
+  "audio-instructions": "Audio",
+};
 
 export function PreviewSection() {
   const { worldDraft } = useEditorStore();
@@ -14,19 +34,46 @@ export function PreviewSection() {
   const apiBase = import.meta.env.VITE_API_URL || "";
   const selectedModel = useConfigStore((s) => s.selectedModel);
 
-  // Find greeting entry
+  // Build sample state for macro expansion + cost breakdown
+  const sampleState = useMemo<GameState>(() => {
+    const variables: Record<string, string | number | boolean> = {};
+    for (const v of worldDraft.variables) {
+      variables[v.id] = v.defaultValue;
+    }
+    return {
+      worldId: "",
+      variables,
+      turnCount: 0,
+      metadata: {
+        lastUserMessageAt: new Date().toISOString(),
+        lastMessage: "(sample message)",
+        lastUserMessage: "(sample user message)",
+        lastCharMessage: "(sample character message)",
+        model: selectedModel,
+      },
+    };
+  }, [worldDraft.variables, selectedModel]);
+
+  // Find greeting entry and expand macros
   const greetingEntry = worldDraft.entries.find(
     (e) => e.position === "greeting" && e.enabled
   );
-  const renderedGreeting = greetingEntry
-    ? greetingEntry.content.replace(
-        /\{\{(\w+)\}\}/g,
-        (_, varId) => {
-          const v = worldDraft.variables.find((v) => v.id === varId);
-          return v ? String(v.defaultValue) : `{{${varId}}}`;
-        }
-      )
-    : "";
+  const renderedGreeting = useMemo(() => {
+    if (!greetingEntry) return "";
+    return expandMacros(greetingEntry.content, worldDraft, sampleState);
+  }, [greetingEntry, worldDraft, sampleState]);
+
+  // Token cost breakdown
+  const costBreakdown = useMemo<PromptCostBreakdown>(() => {
+    const builder = new PromptBuilder();
+    const structured = worldDraft.settings?.structuredOutput === true;
+    return builder.buildPromptCostBreakdown(worldDraft, sampleState, structured);
+  }, [worldDraft, sampleState]);
+
+  const maxContext = worldDraft.settings?.maxContext ?? 200000;
+  const costPercent = maxContext > 0
+    ? ((costBreakdown.totalTokens / maxContext) * 100).toFixed(1)
+    : "0";
 
   const handleTestPlay = async () => {
     const { saveDraft } = useEditorStore.getState();
@@ -144,6 +191,62 @@ export function PreviewSection() {
           Test your world before publishing
         </p>
       </div>
+
+      {/* Token Cost Breakdown */}
+      {costBreakdown.blocks.length > 0 && (
+        <div>
+          <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <BarChart3 className="h-4 w-4" />
+            Token Cost Breakdown
+          </h3>
+          <div className="rounded-lg border border-border bg-card p-3 space-y-2">
+            {costBreakdown.blocks.map((block, i) => {
+              const pct = costBreakdown.totalTokens > 0
+                ? (block.tokens / costBreakdown.totalTokens) * 100
+                : 0;
+              return (
+                <div key={i} className="space-y-0.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      <span
+                        className={`mr-1.5 inline-block h-2 w-2 rounded-full ${CATEGORY_COLORS[block.category] ?? "bg-gray-500"}`}
+                      />
+                      {block.label}
+                      <span className="ml-1 text-muted-foreground/40">
+                        ({CATEGORY_LABELS[block.category] ?? block.category})
+                      </span>
+                    </span>
+                    <span className="font-mono text-foreground">
+                      ~{block.tokens.toLocaleString()} tok
+                    </span>
+                  </div>
+                  <div className="h-1 w-full rounded-full bg-muted">
+                    <div
+                      className={`h-1 rounded-full ${CATEGORY_COLORS[block.category] ?? "bg-gray-500"}`}
+                      style={{ width: `${Math.max(pct, 1)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+
+            <div className="mt-3 flex items-center justify-between border-t border-border pt-2">
+              <span className="text-xs font-medium text-foreground">
+                Total baseline
+              </span>
+              <span className="font-mono text-xs text-foreground">
+                ~{costBreakdown.totalTokens.toLocaleString()} tok
+                <span className="ml-1 text-muted-foreground/50">
+                  ({costPercent}% of {(maxContext / 1000).toFixed(0)}K context)
+                </span>
+              </span>
+            </div>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground/40">
+            Estimates based on always-send entries only. Triggered entries add cost at runtime.
+          </p>
+        </div>
+      )}
 
       {/* Greeting Preview */}
       <div>

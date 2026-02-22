@@ -58,6 +58,41 @@ async function resolveProviderForModel(userId: string, modelId: string) {
   return null;
 }
 
+// Helper: populate macro context metadata on the state manager
+function populateMacroContext(
+  stateManager: GameStateManager,
+  historyRows: Array<{ role: string; content: string; createdAt: Date | string | null }>,
+  model: string
+): void {
+  let lastMessage: string | undefined;
+  let lastUserMessage: string | undefined;
+  let lastCharMessage: string | undefined;
+  let lastUserMessageAt: string | undefined;
+
+  for (let i = historyRows.length - 1; i >= 0; i--) {
+    const row = historyRows[i]!;
+    if (!lastMessage) lastMessage = row.content;
+    if (!lastUserMessage && row.role === "user") {
+      lastUserMessage = row.content;
+      if (row.createdAt) {
+        lastUserMessageAt = row.createdAt instanceof Date
+          ? row.createdAt.toISOString()
+          : row.createdAt;
+      }
+    }
+    if (!lastCharMessage && row.role === "assistant") {
+      lastCharMessage = row.content;
+    }
+    if (lastMessage && lastUserMessage && lastCharMessage) break;
+  }
+
+  if (lastMessage) stateManager.setMetadata("lastMessage", lastMessage);
+  if (lastUserMessage) stateManager.setMetadata("lastUserMessage", lastUserMessage);
+  if (lastCharMessage) stateManager.setMetadata("lastCharMessage", lastCharMessage);
+  if (lastUserMessageAt) stateManager.setMetadata("lastUserMessageAt", lastUserMessageAt);
+  stateManager.setMetadata("model", model);
+}
+
 // Helper: load session with world definition (applies migration)
 async function loadSessionContext(sessionId: string, userId: string) {
   const sessionRows = await db
@@ -180,7 +215,6 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
   stateManager.incrementTurn();
 
   const useStructured = worldDef.settings?.structuredOutput === true;
-  const snapshot = stateManager.getSnapshot();
 
   // Load non-compacted message history for AI prompt (compacted ones excluded)
   const historyRows = await db
@@ -188,6 +222,10 @@ messageRoutes.post("/sessions/:sessionId/messages", async (c) => {
     .from(messages)
     .where(and(eq(messages.sessionId, sessionId), eq(messages.compacted, false)))
     .orderBy(messages.createdAt);
+
+  // Populate macro context (lastMessage, lastUserMessage, etc.)
+  populateMacroContext(stateManager, historyRows, model);
+  const snapshot = stateManager.getSnapshot();
 
   // Load session summary (from compaction) and persistent memories
   const sessionRows = await db
@@ -582,7 +620,6 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
 
   const stateManager = new GameStateManager(worldDef, gameState);
   const useStructured = worldDef.settings?.structuredOutput === true;
-  const snapshot = stateManager.getSnapshot();
 
   // Get non-compacted messages up to (but not including) the one being regenerated
   const historyRows = await db
@@ -593,6 +630,10 @@ messageRoutes.post("/messages/:id/regenerate", async (c) => {
 
   const msgIndex = historyRows.findIndex((m) => m.id === messageId);
   const priorMessages = historyRows.slice(0, msgIndex);
+
+  // Populate macro context from prior messages
+  populateMacroContext(stateManager, priorMessages, model);
+  const snapshot = stateManager.getSnapshot();
 
   // Deterministic entry retrieval (engine-level matching)
   const regenClamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
@@ -828,13 +869,16 @@ messageRoutes.post("/sessions/:sessionId/continue", async (c) => {
   // Build prompt with full history, but the last assistant message becomes a partial turn
   const stateManager = new GameStateManager(worldDef, gameState);
   const useStructured = worldDef.settings?.structuredOutput === true;
-  const snapshot = stateManager.getSnapshot();
 
   const historyRows = await db
     .select()
     .from(messages)
     .where(and(eq(messages.sessionId, sessionId), eq(messages.compacted, false)))
     .orderBy(messages.createdAt);
+
+  // Populate macro context
+  populateMacroContext(stateManager, historyRows, model);
+  const snapshot = stateManager.getSnapshot();
 
   // Load session summary + memories
   const sessionRows = await db

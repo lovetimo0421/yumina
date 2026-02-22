@@ -71,7 +71,10 @@ export type { RuleEvalResult, ActionRuleResult } from "./rules/rules-engine.js";
 
 // Prompts
 export { PromptBuilder } from "./prompts/prompt-builder.js";
-export type { ChatMessage } from "./prompts/prompt-builder.js";
+export type { ChatMessage, PromptCostBreakdown, PromptCostBlock } from "./prompts/prompt-builder.js";
+export { expandMacros } from "./prompts/macros.js";
+export type { MacroContext } from "./prompts/macros.js";
+export { estimateTokens } from "./prompts/token-utils.js";
 
 // Components
 export { resolveComponents } from "./components/index.js";
