@@ -108,5 +108,9 @@ export type {
 // Migration
 export { migrateWorldDefinition } from "./migration/migrate-v1-to-v2.js";
 
+// Validation
+export { validateWorld } from "./validation/world-validator.js";
+export type { WorldWarning } from "./validation/world-validator.js";
+
 // Import
 export { importSillyTavernCard } from "./import/st-card-importer.js";

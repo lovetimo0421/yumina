@@ -15,7 +15,6 @@ import {
   MessageSquare,
   BookOpen,
   Variable,
-  ScrollText,
   Music,
   Cog,
   Code,
@@ -31,7 +30,6 @@ import {
   CanvasPanel,
   LorebookPanel,
   VariablesPanel,
-  RulesPanel,
   AudioPanel,
   SettingsPanel,
   CodeViewPanel,
@@ -49,7 +47,6 @@ const PANEL_COMPONENTS: Record<
   canvas: CanvasPanel,
   lorebook: LorebookPanel,
   variables: VariablesPanel,
-  rules: RulesPanel,
   audio: AudioPanel,
   settings: SettingsPanel,
   "code-view": CodeViewPanel,
@@ -58,8 +55,7 @@ const PANEL_COMPONENTS: Record<
 
 const PANEL_MENU = [
   { id: "lorebook", label: "Lorebook", icon: BookOpen },
-  { id: "variables", label: "Variables", icon: Variable },
-  { id: "rules", label: "Rules", icon: ScrollText },
+  { id: "variables", label: "Variables & Rules", icon: Variable },
   { id: "audio", label: "Audio", icon: Music },
   { id: "settings", label: "Settings", icon: Cog },
   { id: "code-view", label: "Code View", icon: Code },

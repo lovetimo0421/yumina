@@ -2,7 +2,6 @@ export { AiChatPanel } from "./ai-chat-panel";
 export { CanvasPanel } from "./canvas-panel";
 export { LorebookPanel } from "./lorebook-panel";
 export { VariablesPanel } from "./variables-panel";
-export { RulesPanel } from "./rules-panel";
 export { AudioPanel } from "./audio-panel";
 export { SettingsPanel } from "./settings-panel";
 export { CodeViewPanel } from "./code-view-panel";

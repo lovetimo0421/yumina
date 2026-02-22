@@ -1,6 +1,6 @@
 import { useEditorStore } from "@/stores/editor";
 import type { StudioAction } from "@/stores/studio";
-import type { WorldEntry } from "@yumina/engine";
+import type { WorldEntry, VariableCategory } from "@yumina/engine";
 
 /**
  * Applies structured studio actions from the AI to the editor store.
@@ -27,6 +27,8 @@ export function applyStudioActions(actions: StudioAction[]): string {
               description: (d.description as string) ?? "",
               min: d.min as number | undefined,
               max: d.max as number | undefined,
+              category: d.category as VariableCategory | undefined,
+              updateHints: d.updateHints as string | undefined,
             });
           }
           summaries.push(`Added variable "${d.name}"`);
@@ -168,6 +170,11 @@ export function applyStudioActions(actions: StudioAction[]): string {
               conditionLogic: (d.conditionLogic as "all" | "any") ?? "all",
               effects: d.effects as [] ?? [],
               priority: (d.priority as number) ?? 0,
+              trigger: d.trigger as "condition" | "action" | undefined,
+              actionId: d.actionId as string | undefined,
+              notification: d.notification as "silent" | "always" | "conditional" | undefined,
+              notificationTemplate: d.notificationTemplate as string | undefined,
+              notificationConditions: d.notificationConditions as [] ?? undefined,
             });
           }
           summaries.push(`Added rule "${d.name}"`);

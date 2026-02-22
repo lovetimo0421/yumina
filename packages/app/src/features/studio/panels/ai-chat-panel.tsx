@@ -4,6 +4,7 @@ import { Send, Loader2, Bot, User, Sparkles } from "lucide-react";
 import { useStudioStore } from "@/stores/studio";
 import { useEditorStore } from "@/stores/editor";
 import { useModelsStore } from "@/stores/models";
+import { useConfigStore } from "@/stores/config";
 import { applyStudioActions } from "../lib/action-applier";
 
 const CURATED_MODELS = [
@@ -15,7 +16,8 @@ const CURATED_MODELS = [
 
 export function AiChatPanel(_props: IDockviewPanelProps) {
   const [input, setInput] = useState("");
-  const [model, setModel] = useState("openai/gpt-4o-mini");
+  const globalModel = useConfigStore((s) => s.selectedModel);
+  const [model, setModel] = useState(globalModel);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 

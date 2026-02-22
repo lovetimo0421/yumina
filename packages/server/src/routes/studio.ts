@@ -154,13 +154,13 @@ ALWAYS respond with a JSON object in this format:
 }
 
 Available action types:
-- addVariable: { id, name, type: "number"|"string"|"boolean", defaultValue, description?, min?, max? }
+- addVariable: { id, name, type: "number"|"string"|"boolean", defaultValue, description?, min?, max?, category?: "stat"|"inventory"|"resource"|"flag"|"relationship"|"custom", updateHints? }
 - updateVariable: { id, ...fieldsToUpdate }
 - removeVariable: { id }
 - addEntry: { id, name, content, role: "system"|"character"|"personality"|"scenario"|"lore"|"plot"|"style"|"example"|"greeting"|"custom", position: "top"|"before_char"|"character"|"after_char"|"persona"|"bottom"|"depth"|"greeting"|"post_history", depth?, alwaysSend?, keywords?, conditions?, conditionLogic?, priority?, enabled? }
 - updateEntry: { id, ...fieldsToUpdate }
 - removeEntry: { id }
-- addRule: { id, name, description?, conditions, conditionLogic, effects, priority }
+- addRule: { id, name, description?, conditions, conditionLogic, effects, priority, trigger?: "condition"|"action", actionId?, notification?: "silent"|"always"|"conditional", notificationTemplate?, notificationConditions? }
 - updateRule: { id, ...fieldsToUpdate }
 - removeRule: { id }
 - addComponent: { id, type, name, order, visible, config }
@@ -185,10 +185,20 @@ Entry position slots (in prompt order):
 - "greeting": First assistant message only (not in system prompt)
 - "post_history": After all chat history — jailbreak / post-history instructions
 
-Macros (automatically resolved in entry content):
-- {{char}} — replaced with the name of the first enabled character entry
-- {{user}} — replaced with playerName from settings (default "User")
-- {{variableId}} — replaced with the current value of a game variable
+Macros (resolved in entry content at prompt build time):
+- {{char}} — character name (first enabled character entry)
+- {{user}} — player name from settings
+- {{variableId}} — current value of a game variable
+- {{turnCount}} — current turn number
+- {{random::a::b::c}} — random item (re-rolls each time)
+- {{pick::a::b::c}} — stable random (same per turn+position)
+- {{roll::NdS+M}} — dice roll (e.g. {{roll::2d6+3}})
+- {{time}}, {{date}}, {{weekday}}, {{isodate}}, {{isotime}} — current date/time
+- {{idle}} — time since last user message
+- {{lastMessage}}, {{lastUserMessage}}, {{lastCharMessage}} — chat history refs
+- {{model}} — current model name
+- {{// comment}} — removed from output
+- {{trim}} — collapses surrounding whitespace
 
 Rules:
 - "message" is REQUIRED — explain what you did in plain language
@@ -204,7 +214,11 @@ Rules:
 
   if (worldDef.variables.length > 0) {
     const varList = worldDef.variables
-      .map((v) => `  - ${v.id}: ${v.name} (${v.type}, default: ${v.defaultValue})`)
+      .map((v) => {
+        const cat = v.category ? ` [${v.category}]` : "";
+        const hints = v.updateHints ? ` — hints: "${v.updateHints}"` : "";
+        return `  - ${v.id}: ${v.name} (${v.type}, default: ${v.defaultValue})${cat}${hints}`;
+      })
       .join("\n");
     parts.push(`\nVariables:\n${varList}`);
   } else {
@@ -220,7 +234,11 @@ Rules:
 
   if (worldDef.rules.length > 0) {
     const ruleList = worldDef.rules
-      .map((r) => `  - ${r.id}: ${r.name} (priority: ${r.priority})`)
+      .map((r) => {
+        const trigger = r.trigger === "action" ? `, action: "${r.actionId}"` : "";
+        const notify = r.notification && r.notification !== "silent" ? `, notify: ${r.notification}` : "";
+        return `  - ${r.id}: ${r.name} (priority: ${r.priority}${trigger}${notify})`;
+      })
       .join("\n");
     parts.push(`\nRules:\n${ruleList}`);
   }

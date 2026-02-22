@@ -1,12 +1,14 @@
 import { useState, useMemo } from "react";
-import { Play, Loader2, MessageSquare, BarChart3 } from "lucide-react";
+import { Play, Loader2, MessageSquare, BarChart3, AlertTriangle, Info } from "lucide-react";
 import { useEditorStore } from "@/stores/editor";
 import { useConfigStore } from "@/stores/config";
 import {
   expandMacros,
   PromptBuilder,
+  validateWorld,
   type GameState,
   type PromptCostBreakdown,
+  type WorldWarning,
 } from "@yumina/engine";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -69,6 +71,12 @@ export function PreviewSection() {
     const structured = worldDraft.settings?.structuredOutput === true;
     return builder.buildPromptCostBreakdown(worldDraft, sampleState, structured);
   }, [worldDraft, sampleState]);
+
+  // World validation warnings
+  const worldWarnings = useMemo<WorldWarning[]>(
+    () => validateWorld(worldDraft),
+    [worldDraft]
+  );
 
   const maxContext = worldDraft.settings?.maxContext ?? 200000;
   const costPercent = maxContext > 0
@@ -191,6 +199,35 @@ export function PreviewSection() {
           Test your world before publishing
         </p>
       </div>
+
+      {/* World Warnings */}
+      {worldWarnings.length > 0 && (
+        <div>
+          <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            World Warnings ({worldWarnings.length})
+          </h3>
+          <div className="space-y-1.5">
+            {worldWarnings.map((w, i) => (
+              <div
+                key={i}
+                className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
+                  w.severity === "warning"
+                    ? "border-amber-500/20 bg-amber-500/5 text-amber-200"
+                    : "border-blue-500/20 bg-blue-500/5 text-blue-200"
+                }`}
+              >
+                {w.severity === "warning" ? (
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                ) : (
+                  <Info className="mt-0.5 h-3 w-3 shrink-0" />
+                )}
+                <span>{w.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Token Cost Breakdown */}
       {costBreakdown.blocks.length > 0 && (
