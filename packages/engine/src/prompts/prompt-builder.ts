@@ -2,6 +2,8 @@ import type {
   WorldDefinition,
   GameState,
   WorldEntry,
+  Variable,
+  VariableCategory,
 } from "../types/index.js";
 
 export interface ChatMessage {
@@ -208,7 +210,11 @@ export class PromptBuilder {
 
       if (world.variables.length > 0) {
         const varList = world.variables
-          .map((v) => `  - ${v.id} (${v.type}): ${v.description || v.name}`)
+          .map((v) => {
+            const desc = v.description || v.name;
+            const hint = v.updateHints ? ` — ${v.updateHints}` : "";
+            return `  - ${v.id} (${v.type}): ${desc}${hint}`;
+          })
           .join("\n");
         parts.push(`Available variables you can modify:\n${varList}`);
       }
@@ -269,11 +275,59 @@ export class PromptBuilder {
   ): string {
     if (world.variables.length === 0) return "";
 
-    return world.variables
-      .map((v) => {
-        const value = state.variables[v.id] ?? v.defaultValue;
-        return `- ${v.name}: ${value}`;
-      })
-      .join("\n");
+    const CATEGORY_LABELS: Record<VariableCategory, string> = {
+      stat: "Stats",
+      inventory: "Inventory",
+      resource: "Resources",
+      flag: "Flags",
+      relationship: "Relationships",
+      custom: "Custom",
+    };
+
+    // Check if any variable has a category
+    const hasCategories = world.variables.some((v) => v.category);
+
+    if (!hasCategories) {
+      // Simple flat list for backward compat
+      return world.variables
+        .map((v) => this.formatVariableLine(v, state))
+        .join("\n");
+    }
+
+    // Group by category
+    const groups = new Map<string, Variable[]>();
+    for (const v of world.variables) {
+      const key = v.category ?? "other";
+      const group = groups.get(key) ?? [];
+      group.push(v);
+      groups.set(key, group);
+    }
+
+    // Ordered category keys: known categories first, then "other"
+    const categoryOrder: string[] = ["stat", "inventory", "resource", "flag", "relationship", "custom", "other"];
+    const sortedKeys = [...groups.keys()].sort(
+      (a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b)
+    );
+
+    const parts: string[] = [];
+    for (const key of sortedKeys) {
+      const vars = groups.get(key)!;
+      const label = key === "other" ? "Other" : CATEGORY_LABELS[key as VariableCategory] ?? key;
+      parts.push(`${label}:`);
+      for (const v of vars) {
+        parts.push(this.formatVariableLine(v, state));
+      }
+    }
+
+    return parts.join("\n");
+  }
+
+  private formatVariableLine(v: Variable, state: GameState): string {
+    const value = state.variables[v.id] ?? v.defaultValue;
+    const hints: string[] = [];
+    if (v.description) hints.push(v.description);
+    if (v.updateHints) hints.push(v.updateHints);
+    const suffix = hints.length > 0 ? ` (${hints.join(". ")})` : "";
+    return `- ${v.name}: ${value}${suffix}`;
   }
 }

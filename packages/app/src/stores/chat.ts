@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { connectSSE } from "@/lib/sse";
 import { useAudioStore } from "./audio";
 import { useConfigStore } from "./config";
+import { RulesEngine, GameStateManager } from "@yumina/engine";
+import type { WorldDefinition, Effect } from "@yumina/engine";
 
 export interface Attachment {
   type: string;
@@ -53,6 +55,12 @@ export interface SessionData {
   } | null;
 }
 
+interface PendingSilentChange {
+  ruleId: string;
+  effects: Effect[];
+  timestamp: number;
+}
+
 interface ChatState {
   // Current session
   session: SessionData | null;
@@ -68,6 +76,9 @@ interface ChatState {
 
   // AI-provided choices
   pendingChoices: string[];
+
+  // Silent action rule changes pending next AI message
+  pendingSilentChanges: PendingSilentChange[];
 
   // Error state
   error: string | null;
@@ -104,6 +115,9 @@ interface ChatState {
   // Direct variable update (from custom components)
   setVariableDirectly: (id: string, value: number | string | boolean) => void;
 
+  // Action rule execution (from custom component buttons)
+  executeActionRule: (actionId: string) => void;
+
   // Load session data from API
   loadSession: (sessionId: string) => Promise<void>;
 }
@@ -120,6 +134,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamStartTime: null,
   abortController: null,
   pendingChoices: [],
+  pendingSilentChanges: [],
   checkpoints: [],
   error: null,
 
@@ -195,6 +210,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       streamingContent: "",
       streamStartTime: Date.now(),
       pendingChoices: [],
+      pendingSilentChanges: [],
       error: null,
       messages: [
         ...s.messages,
@@ -518,6 +534,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         messages: data.messages ?? [],
         gameState: newGameState,
         pendingChoices: [],
+        pendingSilentChanges: [],
       });
     } catch {
       set({ error: "Failed to revert" });
@@ -547,6 +564,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         messages: data.messages ?? [],
         gameState: newGameState,
         pendingChoices: [],
+        pendingSilentChanges: [],
       });
     } catch {
       set({ error: "Failed to revert" });
@@ -578,6 +596,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         messages: data.messages ?? [],
         gameState: newGameState,
         pendingChoices: [],
+        pendingSilentChanges: [],
         error: null,
       });
     } catch {
@@ -698,6 +717,78 @@ export const useChatStore = create<ChatState>((set, get) => ({
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ state: { variables: newState } }),
+      }).catch(() => {});
+    }
+  },
+
+  executeActionRule: (actionId: string) => {
+    const { session, gameState } = get();
+    if (!session) return;
+
+    const worldDef = session.world?.schema as unknown as WorldDefinition | undefined;
+    if (!worldDef) return;
+
+    const rulesEngine = new RulesEngine();
+    const currentState = {
+      worldId: worldDef.id,
+      variables: { ...gameState },
+      turnCount: 0,
+      metadata: {},
+    };
+
+    const result = rulesEngine.evaluateAction(
+      actionId,
+      currentState,
+      worldDef.rules,
+      worldDef.variables
+    );
+
+    if (result.effects.length === 0) return;
+
+    // Apply effects locally via GameStateManager
+    const gsm = new GameStateManager(worldDef, currentState);
+    gsm.applyEffects(result.effects);
+    const newSnapshot = gsm.getSnapshot();
+    const newGameState = newSnapshot.variables;
+
+    // Process audio effects if any
+    if (result.audioEffects.length > 0) {
+      useAudioStore.getState().processAudioEffects(result.audioEffects);
+    }
+
+    if (result.shouldNotify && result.notificationMessage) {
+      // Notified loop: clear pending buffer, update state, send message to AI
+      set({
+        gameState: newGameState,
+        pendingSilentChanges: [],
+      });
+      // Persist state then send message
+      const sessionId = session.id;
+      fetch(`${apiBase}/api/sessions/${sessionId}/state`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ state: { variables: newGameState } }),
+      })
+        .then(() => {
+          get().sendMessage(result.notificationMessage!);
+        })
+        .catch(() => {});
+    } else {
+      // Silent loop: accumulate in pending buffer, persist state
+      set((s) => ({
+        gameState: newGameState,
+        pendingSilentChanges: [
+          ...s.pendingSilentChanges,
+          { ruleId: actionId, effects: result.effects, timestamp: Date.now() },
+        ],
+      }));
+      const sessionId = session.id;
+      fetch(`${apiBase}/api/sessions/${sessionId}/state`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ state: { variables: newGameState } }),
       }).catch(() => {});
     }
   },

@@ -1,8 +1,11 @@
 // Types
 export type {
   Variable,
+  VariableCategory,
   Condition,
   Rule,
+  RuleTrigger,
+  RuleNotification,
   Effect,
   Character,
   WorldDefinition,
@@ -64,7 +67,7 @@ export { GameStateManager } from "./state/game-state-manager.js";
 
 // Rules
 export { RulesEngine } from "./rules/rules-engine.js";
-export type { RuleEvalResult } from "./rules/rules-engine.js";
+export type { RuleEvalResult, ActionRuleResult } from "./rules/rules-engine.js";
 
 // Prompts
 export { PromptBuilder } from "./prompts/prompt-builder.js";

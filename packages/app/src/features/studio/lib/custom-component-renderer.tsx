@@ -5,6 +5,7 @@ import { compileTSX } from "./tsx-compiler";
 export interface YuminaAPI {
   sendMessage: (text: string) => void;
   setVariable: (id: string, value: number | string | boolean) => void;
+  executeAction: (actionId: string) => void;
   variables: Record<string, number | string | boolean>;
   worldName: string;
 }
@@ -12,6 +13,7 @@ export interface YuminaAPI {
 const defaultAPI: YuminaAPI = {
   sendMessage: () => {},
   setVariable: () => {},
+  executeAction: () => {},
   variables: {},
   worldName: "",
 };
@@ -74,6 +76,7 @@ export function CustomComponentRenderer({
     () => ({
       sendMessage: api?.sendMessage ?? defaultAPI.sendMessage,
       setVariable: api?.setVariable ?? defaultAPI.setVariable,
+      executeAction: api?.executeAction ?? defaultAPI.executeAction,
       variables,
       worldName,
     }),

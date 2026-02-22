@@ -8,7 +8,6 @@ import {
   Variable,
   LayoutGrid,
   Music,
-  ScrollText,
   Play,
   Wand2,
   ChevronDown,
@@ -20,18 +19,16 @@ import { EntriesSection } from "./sections/entries";
 import { VariablesSection } from "./sections/variables";
 import { ComponentsSection } from "./sections/components";
 import { AudioSection } from "./sections/audio";
-import { RulesSection } from "./sections/rules";
 import { PreviewSection } from "./sections/preview";
 import { AssetsSection } from "./sections/assets";
 
 const SECTIONS: { id: EditorSection; label: string; icon: typeof FileText }[] =
   [
     { id: "entries", label: "Entries", icon: FileText },
-    { id: "variables", label: "Variables", icon: Variable },
+    { id: "variables", label: "Variables & Rules", icon: Variable },
     { id: "components", label: "Components", icon: LayoutGrid },
     { id: "audio", label: "Audio", icon: Music },
     { id: "assets", label: "Assets", icon: FolderOpen },
-    { id: "rules", label: "Rules", icon: ScrollText },
     { id: "preview", label: "Preview", icon: Play },
   ];
 
@@ -41,7 +38,6 @@ const SECTION_COMPONENTS: Record<EditorSection, React.FC> = {
   components: ComponentsSection,
   audio: AudioSection,
   assets: AssetsSection,
-  rules: RulesSection,
   preview: PreviewSection,
 };
 

@@ -1,3 +1,6 @@
+/** Variable category for grouping in prompts and editor */
+export type VariableCategory = "stat" | "inventory" | "resource" | "flag" | "relationship" | "custom";
+
 /** A variable in the game state (e.g., health, gold, relationship score) */
 export interface Variable {
   id: string;
@@ -7,6 +10,9 @@ export interface Variable {
   description?: string;
   min?: number;
   max?: number;
+  category?: VariableCategory;
+  /** Hints for the AI on when/how to update this variable */
+  updateHints?: string;
 }
 
 /** A condition that checks game state */
@@ -36,6 +42,12 @@ export interface AudioEffect {
   fadeDuration?: number;
 }
 
+/** Rule trigger type */
+export type RuleTrigger = "condition" | "action";
+
+/** Rule notification mode */
+export type RuleNotification = "silent" | "always" | "conditional";
+
 /** A rule that triggers effects when conditions are met */
 export interface Rule {
   id: string;
@@ -46,6 +58,16 @@ export interface Rule {
   effects: Effect[];
   audioEffects?: AudioEffect[];
   priority: number;
+  /** How this rule is triggered (default "condition" for backward compat) */
+  trigger?: RuleTrigger;
+  /** For trigger="action" — the action ID that fires this rule */
+  actionId?: string;
+  /** Whether to notify the AI when this rule fires (default "silent") */
+  notification?: RuleNotification;
+  /** Template message sent to AI when notifying, e.g. "User ate {item}. Hunger: {hunger}." */
+  notificationTemplate?: string;
+  /** For notification="conditional" — conditions that must be met to notify */
+  notificationConditions?: Condition[];
 }
 
 /** An effect that modifies game state */

@@ -9,6 +9,8 @@ export const variableSchema = z.object({
   description: z.string().optional(),
   min: z.number().optional(),
   max: z.number().optional(),
+  category: z.enum(["stat", "inventory", "resource", "flag", "relationship", "custom"]).optional(),
+  updateHints: z.string().optional(),
 });
 
 export const conditionSchema = z.object({
@@ -57,6 +59,11 @@ export const ruleSchema = z.object({
   effects: z.array(effectSchema),
   audioEffects: z.array(audioEffectSchema).optional(),
   priority: z.number().int().default(0),
+  trigger: z.enum(["condition", "action"]).optional(),
+  actionId: z.string().optional(),
+  notification: z.enum(["silent", "always", "conditional"]).optional(),
+  notificationTemplate: z.string().optional(),
+  notificationConditions: z.array(conditionSchema).optional(),
 });
 
 /** @deprecated Use worldEntrySchema instead */

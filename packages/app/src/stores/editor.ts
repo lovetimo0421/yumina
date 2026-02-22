@@ -69,7 +69,6 @@ export type EditorSection =
   | "components"
   | "audio"
   | "assets"
-  | "rules"
   | "preview";
 
 interface EditorState {
@@ -134,7 +133,7 @@ interface EditorState {
   removeDisplayTransform: (id: string) => void;
 
   // Rule actions
-  addRule: () => void;
+  addRule: (variableId?: string) => void;
   updateRule: (id: string, updates: Partial<Rule>) => void;
   removeRule: (id: string) => void;
   reorderRules: (ruleIds: string[]) => void;
@@ -637,7 +636,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
-  addRule: () => {
+  addRule: (variableId?: string) => {
     set((s) => {
       const newRule: Rule = {
         id: crypto.randomUUID(),
@@ -645,7 +644,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         description: "",
         conditions: [],
         conditionLogic: "all",
-        effects: [],
+        effects: variableId
+          ? [{ variableId, operation: "set", value: 0 }]
+          : [],
         priority: s.worldDraft.rules.length,
       };
       const draft = {

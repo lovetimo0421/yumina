@@ -54,6 +54,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
       sendMessage: (text: string) => useChatStore.getState().sendMessage(text),
       setVariable: (id: string, value: number | string | boolean) =>
         useChatStore.getState().setVariableDirectly(id, value),
+      executeAction: (actionId: string) =>
+        useChatStore.getState().executeActionRule(actionId),
       variables: gameState,
       worldName: worldDef?.name ?? "",
     }),
